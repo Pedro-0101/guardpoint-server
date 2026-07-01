@@ -51,9 +51,18 @@ func main() {
 	userRepo := repository.NewUserRepository(pool)
 	empresaRepo := repository.NewEmpresaRepository(pool)
 	sessaoDispositivoRepo := repository.NewSessaoDispositivoRepository(pool)
+	postoRepo := repository.NewPostoRepository(pool)
+	turnoRepo := repository.NewTurnoRepository(pool)
+	checkinRepo := repository.NewCheckinRepository(pool)
 
 	authService := service.NewAuthService(jwtService, userRepo, empresaRepo, sessaoDispositivoRepo)
 	authHandler := handler.NewAuthHandler(authService)
+
+	postoService := service.NewPostoService(postoRepo)
+	postoHandler := handler.NewPostoHandler(postoService)
+
+	turnoService := service.NewTurnoService(turnoRepo, checkinRepo, postoRepo, userRepo, sessaoDispositivoRepo)
+	turnoHandler := handler.NewTurnoHandler(turnoService)
 
 	if cfg.Env == "development" {
 		if err := seed.Run(ctx, empresaRepo, userRepo); err != nil {
@@ -84,6 +93,30 @@ func main() {
 					r.Use(handler.RequireRole("admin"))
 					r.Post("/register", authHandler.Register)
 				})
+			})
+		})
+
+		r.Group(func(r chi.Router) {
+			r.Use(handler.AuthMiddleware(jwtService))
+
+			r.Route("/postos", func(r chi.Router) {
+				r.Get("/", postoHandler.List)
+				r.Post("/", postoHandler.Create)
+				r.Get("/{id}", postoHandler.GetByID)
+				r.Put("/{id}", postoHandler.Update)
+				r.Delete("/{id}", postoHandler.Delete)
+			})
+
+			r.Route("/turnos", func(r chi.Router) {
+				r.Post("/iniciar", turnoHandler.Iniciar)
+				r.Post("/checkin", turnoHandler.Checkin)
+				r.Post("/finalizar", turnoHandler.Finalizar)
+				r.Post("/sabotagem", turnoHandler.Sabotagem)
+				r.Get("/status", turnoHandler.Status)
+				r.Get("/ativos", turnoHandler.Ativos)
+				r.Get("/historico", turnoHandler.Historico)
+				r.Get("/{id}", turnoHandler.GetByID)
+				r.Post("/{id}/revogar", turnoHandler.Revogar)
 			})
 		})
 	})
