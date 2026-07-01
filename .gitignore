@@ -1,0 +1,17 @@
+.env
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+vendor/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+tmp/
+temp/

@@ -327,10 +327,10 @@ CREATE TABLE sessoes_dispositivo (
 
 ### Fase 1 — Fundação
 - [x] Scaffold do projeto Go (módulo, estrutura de diretórios)
-- [ ] Docker Compose com PostgreSQL
-- [ ] Migrations iniciais (empresas, usuarios, postos, turnos)
-- [ ] Config loader (.env)
-- [ ] Logger estruturado (zerolog ou slog)
+- [x] Docker Compose com PostgreSQL
+- [x] Migrations iniciais (empresas, usuarios, postos, turnos)
+- [x] Config loader (.env)
+- [x] Logger estruturado (zerolog ou slog)
 
 ### Fase 2 — Autenticação e Multi-Tenancy
 - [ ] Registro e login com JWT
