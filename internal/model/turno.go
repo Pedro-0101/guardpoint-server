@@ -11,6 +11,7 @@ type Turno struct {
 	EmpresaID      uuid.UUID  `json:"empresa_id"`
 	UsuarioID      uuid.UUID  `json:"usuario_id"`
 	PostoID        uuid.UUID  `json:"posto_id"`
+	PostoNome      string     `json:"posto_nome,omitempty"`
 	Status         string     `json:"status"`
 	InicioPrevisto time.Time  `json:"inicio_previsto"`
 	FimPrevisto    time.Time  `json:"fim_previsto"`
@@ -59,6 +60,7 @@ type TurnoStatusResponse struct {
 type CheckinResponse struct {
 	Checkin         Checkin    `json:"checkin"`
 	Status          string     `json:"status"`
+	PostoNome       string     `json:"posto_nome,omitempty"`
 	ProximoDeadline *time.Time `json:"proximo_deadline,omitempty"`
 	Atrasado        bool       `json:"atrasado"`
 }

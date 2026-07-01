@@ -95,6 +95,7 @@ func (s *TurnoService) Iniciar(ctx context.Context, userID, empresaID string, re
 		EmpresaID:      parsedEmpresaID,
 		UsuarioID:      parsedUserID,
 		PostoID:        parsedPostoID,
+		PostoNome:      posto.Nome,
 		Status:         "em_andamento",
 		InicioPrevisto: now,
 		FimPrevisto:    fimPrevisto,
@@ -177,9 +178,16 @@ func (s *TurnoService) Checkin(ctx context.Context, userID, empresaID string, re
 		_ = s.turnoRepo.UpdateStatus(ctx, parsedTurnoID, parsedEmpresaID, "critico", nil)
 	}
 
+	posto, err := s.postoRepo.FindByID(ctx, parsedEmpresaID, turno.PostoID)
+	postoNome := ""
+	if err == nil {
+		postoNome = posto.Nome
+	}
+
 	return &model.CheckinResponse{
 		Checkin:         *checkin,
 		Status:          turno.Status,
+		PostoNome:       postoNome,
 		ProximoDeadline: proximoDeadline,
 		Atrasado:        atrasado,
 	}, nil
@@ -444,6 +452,101 @@ func (s *TurnoService) Sabotagem(ctx context.Context, userID, empresaID string, 
 		Status:   "registrado",
 		Mensagem: "sabotagem reportada com sucesso",
 	}, nil
+}
+
+func (s *TurnoService) ProcessarLote(ctx context.Context, userID, empresaID string, checkins []model.CheckinRequest) ([]model.CheckinResponse, error) {
+	parsedUserID, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, fmt.Errorf("user_id invalido: %w", err)
+	}
+	parsedEmpresaID, err := uuid.Parse(empresaID)
+	if err != nil {
+		return nil, fmt.Errorf("empresa_id invalido: %w", err)
+	}
+
+	resultados := make([]model.CheckinResponse, 0, len(checkins))
+
+	for _, req := range checkins {
+		parsedTurnoID, err := uuid.Parse(req.TurnoID)
+		if err != nil {
+			continue
+		}
+
+		turno, err := s.turnoRepo.FindByID(ctx, parsedEmpresaID, parsedTurnoID)
+		if err != nil {
+			continue
+		}
+
+		if turno.UsuarioID != parsedUserID {
+			continue
+		}
+
+		if turno.Status == "finalizado" {
+			continue
+		}
+
+		timestampCriacao, err := time.Parse(time.RFC3339, req.Timestamp)
+		if err != nil {
+			timestampCriacao = time.Now()
+		}
+
+		flagGeofence := s.calcularGeofence(ctx, turno.PostoID, parsedEmpresaID, req.Latitude, req.Longitude)
+
+		origemRede := "offline_sincronizado"
+
+		checkin := &model.Checkin{
+			TurnoID:          parsedTurnoID,
+			EmpresaID:        parsedEmpresaID,
+			Latitude:         req.Latitude,
+			Longitude:        req.Longitude,
+			TimestampCriacao: timestampCriacao,
+			TipoSenha:        req.TipoSenha,
+			FlagGeofence:     flagGeofence,
+			OrigemRede:       origemRede,
+		}
+
+		if err := s.checkinRepo.Create(ctx, checkin); err != nil {
+			continue
+		}
+
+		if turno.Status == "critico" && req.TipoSenha != "coacao" {
+			agora := time.Now()
+			_ = s.turnoRepo.UpdateStatus(ctx, parsedTurnoID, parsedEmpresaID, "em_andamento", nil)
+			turno.FimReal = &agora
+		}
+
+		if req.TipoSenha == "coacao" {
+			_ = s.turnoRepo.UpdateStatus(ctx, parsedTurnoID, parsedEmpresaID, "critico", nil)
+		}
+
+		ultimo := s.checkinRepo.FindUltimoByTurnoNoError(ctx, turno.ID)
+		atrasado := false
+		dl := timestampCriacao.Add(time.Duration(turno.IntervaloMin) * time.Minute)
+		proximoDeadline := &dl
+
+		if ultimo != nil && ultimo.ID != checkin.ID {
+			janelaDeadline := ultimo.TimestampCriacao.Add(time.Duration(turno.IntervaloMin) * time.Minute)
+			if timestampCriacao.After(janelaDeadline) {
+				atrasado = true
+			}
+		}
+
+		posto, err := s.postoRepo.FindByID(ctx, parsedEmpresaID, turno.PostoID)
+		postoNome := ""
+		if err == nil {
+			postoNome = posto.Nome
+		}
+
+		resultados = append(resultados, model.CheckinResponse{
+			Checkin:         *checkin,
+			Status:          turno.Status,
+			PostoNome:       postoNome,
+			ProximoDeadline: proximoDeadline,
+			Atrasado:        atrasado,
+		})
+	}
+
+	return resultados, nil
 }
 
 func (s *TurnoService) calcularGeofence(ctx context.Context, postoID, empresaID uuid.UUID, lat, lon float64) *string {

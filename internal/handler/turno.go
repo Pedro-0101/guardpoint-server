@@ -242,6 +242,47 @@ func (h *TurnoHandler) Sabotagem(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusAccepted, resp)
 }
 
+func (h *TurnoHandler) Lote(w http.ResponseWriter, r *http.Request) {
+	userID := GetUserID(r.Context())
+	empresaID := GetEmpresaID(r.Context())
+
+	var reqs []model.CheckinRequest
+	if err := json.NewDecoder(r.Body).Decode(&reqs); err != nil {
+		writeError(w, http.StatusBadRequest, "json invalido")
+		return
+	}
+
+	if len(reqs) == 0 {
+		writeError(w, http.StatusBadRequest, "lote vazio")
+		return
+	}
+
+	if len(reqs) > 500 {
+		writeError(w, http.StatusBadRequest, "lote excede limite de 500 checkins")
+		return
+	}
+
+	for i := range reqs {
+		if err := h.validate.Struct(reqs[i]); err != nil {
+			writeValidationError(w, err)
+			return
+		}
+	}
+
+	resultados, err := h.turnoService.ProcessarLote(r.Context(), userID, empresaID, reqs)
+	if err != nil {
+		slog.Error("lote checkin failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "erro ao processar lote")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"recebidos":   len(reqs),
+		"processados": len(resultados),
+		"checkins":    resultados,
+	})
+}
+
 func (h *TurnoHandler) Historico(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 

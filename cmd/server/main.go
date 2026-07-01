@@ -64,6 +64,9 @@ func main() {
 	turnoService := service.NewTurnoService(turnoRepo, checkinRepo, postoRepo, userRepo, sessaoDispositivoRepo)
 	turnoHandler := handler.NewTurnoHandler(turnoService)
 
+	dashboardService := service.NewDashboardService(pool)
+	dashboardHandler := handler.NewDashboardHandler(dashboardService)
+
 	if cfg.Env == "development" {
 		if err := seed.Run(ctx, empresaRepo, userRepo); err != nil {
 			slog.Error("seed failed", "error", err)
@@ -99,6 +102,8 @@ func main() {
 		r.Group(func(r chi.Router) {
 			r.Use(handler.AuthMiddleware(jwtService))
 
+			r.Get("/dashboard/summary", dashboardHandler.Summary)
+
 			r.Route("/postos", func(r chi.Router) {
 				r.Get("/", postoHandler.List)
 				r.Post("/", postoHandler.Create)
@@ -118,6 +123,8 @@ func main() {
 				r.Get("/{id}", turnoHandler.GetByID)
 				r.Post("/{id}/revogar", turnoHandler.Revogar)
 			})
+
+			r.Post("/checkins/lote", turnoHandler.Lote)
 		})
 	})
 

@@ -339,11 +339,11 @@ CREATE TABLE sessoes_dispositivo (
 - [x] Seed de empresa e usuário admin para dev
 
 ### Fase 3 — Core: Turnos e Check-ins
-- [ ] CRUD de postos
-- [ ] Iniciar turno (`/api/turnos/iniciar`) com validação de escala
-- [ ] Check-in de reafirmação (`/api/turnos/checkin`)
-- [ ] Check-in de finalização (`/api/turnos/finalizar`)
-- [ ] Lógica de janela deslizante no service layer
+- [x] CRUD de postos
+- [x] Iniciar turno (`/api/turnos/iniciar`) com validação de escala
+- [x] Check-in de reafirmação (`/api/turnos/checkin`)
+- [x] Check-in de finalização (`/api/turnos/finalizar`)
+- [x] Lógica de janela deslizante no service layer
 
 ### Fase 4 — Geofencing
 - [ ] Implementação do cálculo Haversine
