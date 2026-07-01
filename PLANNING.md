@@ -333,10 +333,10 @@ CREATE TABLE sessoes_dispositivo (
 - [x] Logger estruturado (zerolog ou slog)
 
 ### Fase 2 — Autenticação e Multi-Tenancy
-- [ ] Registro e login com JWT
-- [ ] Middleware de autenticação e extração de `empresa_id`
-- [ ] RBAC básico (role no JWT, middleware de autorização)
-- [ ] Seed de empresa e usuário admin para dev
+- [x] Registro e login com JWT
+- [x] Middleware de autenticação e extração de `empresa_id`
+- [x] RBAC básico (role no JWT, middleware de autorização)
+- [x] Seed de empresa e usuário admin para dev
 
 ### Fase 3 — Core: Turnos e Check-ins
 - [ ] CRUD de postos

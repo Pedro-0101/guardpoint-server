@@ -12,8 +12,14 @@ import (
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
 
+	"github.com/guardpoint/guardpoint-server/internal/auth"
 	"github.com/guardpoint/guardpoint-server/internal/config"
+	"github.com/guardpoint/guardpoint-server/internal/db"
+	"github.com/guardpoint/guardpoint-server/internal/handler"
 	"github.com/guardpoint/guardpoint-server/internal/middleware"
+	"github.com/guardpoint/guardpoint-server/internal/repository"
+	"github.com/guardpoint/guardpoint-server/internal/seed"
+	"github.com/guardpoint/guardpoint-server/internal/service"
 )
 
 func main() {
@@ -28,18 +34,64 @@ func main() {
 
 	slog.Info("starting guardpoint-server", "env", cfg.Env)
 
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	pool, err := db.NewPool(ctx, cfg.DatabaseURL)
+	if err != nil {
+		slog.Error("failed to connect to database", "error", err)
+		os.Exit(1)
+	}
+	defer pool.Close()
+
+	slog.Info("database connected")
+
+	jwtService := auth.NewJWTService(cfg.JWTSecret)
+
+	userRepo := repository.NewUserRepository(pool)
+	empresaRepo := repository.NewEmpresaRepository(pool)
+	sessaoDispositivoRepo := repository.NewSessaoDispositivoRepository(pool)
+
+	authService := service.NewAuthService(jwtService, userRepo, empresaRepo, sessaoDispositivoRepo)
+	authHandler := handler.NewAuthHandler(authService)
+
+	if cfg.Env == "development" {
+		if err := seed.Run(ctx, empresaRepo, userRepo); err != nil {
+			slog.Error("seed failed", "error", err)
+			os.Exit(1)
+		}
+	}
+
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID)
-	r.Use(chimw.RealIP)
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
 	r.Use(middleware.CORS)
 	r.Use(chimw.Timeout(30 * time.Second))
 
+	r.Route("/api", func(r chi.Router) {
+		r.Route("/auth", func(r chi.Router) {
+			r.Post("/login", authHandler.Login)
+			r.Post("/refresh", authHandler.Refresh)
+			r.Post("/biometric/login", authHandler.BiometricLogin)
+
+			r.Group(func(r chi.Router) {
+				r.Use(handler.AuthMiddleware(jwtService))
+				r.Post("/logout", authHandler.Logout)
+				r.Post("/biometric/register", authHandler.BiometricRegister)
+
+				r.Group(func(r chi.Router) {
+					r.Use(handler.RequireRole("admin"))
+					r.Post("/register", authHandler.Register)
+				})
+			})
+		})
+	})
+
 	r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
-		w.Write([]byte(`{"status":"ok"}`))
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
 
 	srv := &http.Server{
@@ -64,10 +116,10 @@ func main() {
 
 	slog.Info("shutting down server...")
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
+	shutdownCtx, shutdownCancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer shutdownCancel()
 
-	if err := srv.Shutdown(ctx); err != nil {
+	if err := srv.Shutdown(shutdownCtx); err != nil {
 		slog.Error("server forced to shutdown", "error", err)
 	}
 

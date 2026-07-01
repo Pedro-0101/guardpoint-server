@@ -7,22 +7,22 @@ import (
 )
 
 type Config struct {
-	Env       string
-	Port      string
+	Env         string
+	Port        string
 	DatabaseURL string
-	LogLevel  string
-	LogFormat string
-	JWTSecret string
+	LogLevel    string
+	LogFormat   string
+	JWTSecret   string
 }
 
 func Load() (*Config, error) {
 	cfg := &Config{
-		Env:       getEnv("ENV", "development"),
-		Port:      getEnv("PORT", "8080"),
+		Env:         getEnv("ENV", "development"),
+		Port:        getEnv("PORT", "8080"),
 		DatabaseURL: getEnv("DATABASE_URL", ""),
-		LogLevel:  getEnv("LOG_LEVEL", "info"),
-		LogFormat: getEnv("LOG_FORMAT", "text"),
-		JWTSecret: getEnv("JWT_SECRET", ""),
+		LogLevel:    getEnv("LOG_LEVEL", "info"),
+		LogFormat:   getEnv("LOG_FORMAT", "text"),
+		JWTSecret:   getEnv("JWT_SECRET", ""),
 	}
 
 	var missing []string
