@@ -2,10 +2,12 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/guardpoint/guardpoint-server/internal/model"
@@ -21,20 +23,40 @@ func NewCheckinRepository(db *pgxpool.Pool) *CheckinRepository {
 
 func (r *CheckinRepository) Create(ctx context.Context, c *model.Checkin) error {
 	query := `
-		INSERT INTO checkins (turno_id, empresa_id, latitude, longitude, timestamp_criacao, tipo_senha, flag_geofence, origem_rede)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		INSERT INTO checkins (turno_id, empresa_id, latitude, longitude, timestamp_criacao, tipo_senha, flag_geofence, origem_rede, cliente_checkin_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
 		RETURNING id, timestamp_recebimento, created_at
 	`
 	return r.db.QueryRow(ctx, query,
 		c.TurnoID, c.EmpresaID, c.Latitude, c.Longitude,
-		c.TimestampCriacao, c.TipoSenha, c.FlagGeofence, c.OrigemRede,
+		c.TimestampCriacao, c.TipoSenha, c.FlagGeofence, c.OrigemRede, c.ClienteCheckinID,
 	).Scan(&c.ID, &c.TimestampRecebimento, &c.CreatedAt)
+}
+
+func (r *CheckinRepository) CreateIdempotent(ctx context.Context, c *model.Checkin) (bool, error) {
+	query := `
+		INSERT INTO checkins (turno_id, empresa_id, latitude, longitude, timestamp_criacao, tipo_senha, flag_geofence, origem_rede, cliente_checkin_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		ON CONFLICT ON CONSTRAINT uq_checkins_cliente DO NOTHING
+		RETURNING id, timestamp_recebimento, created_at
+	`
+	err := r.db.QueryRow(ctx, query,
+		c.TurnoID, c.EmpresaID, c.Latitude, c.Longitude,
+		c.TimestampCriacao, c.TipoSenha, c.FlagGeofence, c.OrigemRede, c.ClienteCheckinID,
+	).Scan(&c.ID, &c.TimestampRecebimento, &c.CreatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return false, nil
+		}
+		return false, fmt.Errorf("criar checkin idempotente: %w", err)
+	}
+	return true, nil
 }
 
 func (r *CheckinRepository) FindUltimoByTurno(ctx context.Context, turnoID uuid.UUID) (*model.Checkin, error) {
 	query := `
 		SELECT id, turno_id, empresa_id, latitude, longitude, timestamp_criacao,
-		       timestamp_recebimento, tipo_senha, flag_geofence, origem_rede, created_at
+		       timestamp_recebimento, tipo_senha, flag_geofence, origem_rede, cliente_checkin_id, created_at
 		FROM checkins
 		WHERE turno_id = $1
 		ORDER BY timestamp_criacao DESC
@@ -44,7 +66,7 @@ func (r *CheckinRepository) FindUltimoByTurno(ctx context.Context, turnoID uuid.
 	err := r.db.QueryRow(ctx, query, turnoID).Scan(
 		&c.ID, &c.TurnoID, &c.EmpresaID, &c.Latitude, &c.Longitude,
 		&c.TimestampCriacao, &c.TimestampRecebimento, &c.TipoSenha,
-		&c.FlagGeofence, &c.OrigemRede, &c.CreatedAt,
+		&c.FlagGeofence, &c.OrigemRede, &c.ClienteCheckinID, &c.CreatedAt,
 	)
 	if err != nil {
 		return nil, fmt.Errorf("buscar ultimo checkin: %w", err)
@@ -68,7 +90,7 @@ func (r *CheckinRepository) CountByTurnoHoje(ctx context.Context, turnoID uuid.U
 func (r *CheckinRepository) ListByTurno(ctx context.Context, turnoID uuid.UUID) ([]model.Checkin, error) {
 	query := `
 		SELECT id, turno_id, empresa_id, latitude, longitude, timestamp_criacao,
-		       timestamp_recebimento, tipo_senha, flag_geofence, origem_rede, created_at
+		       timestamp_recebimento, tipo_senha, flag_geofence, origem_rede, cliente_checkin_id, created_at
 		FROM checkins
 		WHERE turno_id = $1
 		ORDER BY timestamp_criacao ASC
@@ -85,7 +107,7 @@ func (r *CheckinRepository) ListByTurno(ctx context.Context, turnoID uuid.UUID) 
 		if err := rows.Scan(
 			&c.ID, &c.TurnoID, &c.EmpresaID, &c.Latitude, &c.Longitude,
 			&c.TimestampCriacao, &c.TimestampRecebimento, &c.TipoSenha,
-			&c.FlagGeofence, &c.OrigemRede, &c.CreatedAt,
+			&c.FlagGeofence, &c.OrigemRede, &c.ClienteCheckinID, &c.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan checkin: %w", err)
 		}

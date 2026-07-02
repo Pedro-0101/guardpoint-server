@@ -8,20 +8,24 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
 
 	"github.com/guardpoint/guardpoint-server/internal/model"
 	"github.com/guardpoint/guardpoint-server/internal/service"
+	"github.com/guardpoint/guardpoint-server/internal/worker"
 )
 
 type TurnoHandler struct {
-	turnoService *service.TurnoService
-	validate     *validator.Validate
+	turnoService   *service.TurnoService
+	syncReconciler *worker.SyncReconciler
+	validate       *validator.Validate
 }
 
-func NewTurnoHandler(turnoService *service.TurnoService) *TurnoHandler {
+func NewTurnoHandler(turnoService *service.TurnoService, syncReconciler *worker.SyncReconciler) *TurnoHandler {
 	return &TurnoHandler{
-		turnoService: turnoService,
-		validate:     validator.New(),
+		turnoService:   turnoService,
+		syncReconciler: syncReconciler,
+		validate:       validator.New(),
 	}
 }
 
@@ -277,6 +281,14 @@ func (h *TurnoHandler) Lote(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	parsedEmpresaID, err := uuid.Parse(empresaID)
+	if err == nil {
+		turnoIDs := collectUniqueTurnoIDs(reqs)
+		for _, turnoID := range turnoIDs {
+			_ = h.syncReconciler.Reconcile(r.Context(), parsedEmpresaID, turnoID)
+		}
+	}
+
 	writeJSON(w, http.StatusOK, map[string]interface{}{
 		"recebidos":   len(reqs),
 		"processados": len(resultados),
@@ -314,4 +326,21 @@ func (h *TurnoHandler) Historico(w http.ResponseWriter, r *http.Request) {
 		"data":  turnos,
 		"total": total,
 	})
+}
+
+func collectUniqueTurnoIDs(reqs []model.CheckinRequest) []uuid.UUID {
+	seen := make(map[string]struct{})
+	var ids []uuid.UUID
+	for _, req := range reqs {
+		if _, ok := seen[req.TurnoID]; ok {
+			continue
+		}
+		id, err := uuid.Parse(req.TurnoID)
+		if err != nil {
+			continue
+		}
+		seen[req.TurnoID] = struct{}{}
+		ids = append(ids, id)
+	}
+	return ids
 }

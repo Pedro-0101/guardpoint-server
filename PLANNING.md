@@ -358,9 +358,12 @@ CREATE TABLE sessoes_dispositivo (
 - [x] Endpoints de alertas (listar, reconhecer, encerrar)
 
 ### Fase 6 — Offline e Sincronização
-- [ ] Endpoint de lote (`/api/checkins/lote`)
-- [ ] Sync Reconciler Worker
-- [ ] Resolução de falsos positivos
+- [x] Endpoint de lote (`/api/checkins/lote`)
+- [x] Sync Reconciler Worker
+- [x] Resolução de falsos positivos
+- [x] Correção S1: lote não reverte status "critico" (check-in "padrao" sob coação preserva emergência)
+- [x] Correção S2: idempotência com `cliente_checkin_id` (UUID gerado pelo app Android), constraint UNIQUE parcial e INSERT ON CONFLICT DO NOTHING
+- [x] Correção S3: GET `/api/turnos/ativos` inclui `checkins[]` com último check-in para o mapa do Manager
 
 ### Fase 7 — WebSockets
 - [ ] Hub e Client em Go

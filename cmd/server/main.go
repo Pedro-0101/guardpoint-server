@@ -67,7 +67,8 @@ func main() {
 	alertaService := service.NewAlertaService(alertaRepo, configEscalonamentoRepo, turnoRepo, checkinRepo)
 
 	turnoService := service.NewTurnoService(turnoRepo, checkinRepo, postoRepo, userRepo, sessaoDispositivoRepo, alertaService)
-	turnoHandler := handler.NewTurnoHandler(turnoService)
+	syncReconciler := worker.NewSyncReconciler(alertaRepo, checkinRepo, turnoRepo)
+	turnoHandler := handler.NewTurnoHandler(turnoService, syncReconciler)
 
 	usuarioService := service.NewUsuarioService(userRepo)
 	usuarioHandler := handler.NewUsuarioHandler(usuarioService)

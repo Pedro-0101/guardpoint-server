@@ -17,5 +17,6 @@ type Checkin struct {
 	TipoSenha            string    `json:"tipo_senha"`
 	FlagGeofence         *string   `json:"flag_geofence,omitempty"`
 	OrigemRede           string    `json:"origem_rede"`
+	ClienteCheckinID     *string   `json:"cliente_checkin_id,omitempty"`
 	CreatedAt            time.Time `json:"created_at"`
 }

@@ -201,6 +201,21 @@ func (r *AlertaRepository) CountPorTipo(ctx context.Context, empresaID uuid.UUID
 	return result, rows.Err()
 }
 
+func (r *AlertaRepository) CloseAlertasFalsoPositivo(ctx context.Context, turnoID uuid.UUID) (int64, error) {
+	now := time.Now()
+	query := `
+		UPDATE alertas SET status = 'falso_positivo', resolvido_em = $1
+		WHERE turno_id = $2
+		  AND tipo LIKE 'atraso_%'
+		  AND status IN ('aberto', 'reconhecido')
+	`
+	ct, err := r.db.Exec(ctx, query, now, turnoID)
+	if err != nil {
+		return 0, fmt.Errorf("marcar alertas falso positivo: %w", err)
+	}
+	return ct.RowsAffected(), nil
+}
+
 func (r *AlertaRepository) CountPorHora(ctx context.Context, empresaID uuid.UUID) ([]model.AlertaPorHora, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT TO_CHAR(created_at, 'HH24:00'), COUNT(*)

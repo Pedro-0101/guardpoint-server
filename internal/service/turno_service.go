@@ -329,6 +329,11 @@ func (s *TurnoService) GetAtivos(ctx context.Context, empresaID string) ([]model
 			detalhe.Usuario = &u
 		}
 
+		ultimo := s.checkinRepo.FindUltimoByTurnoNoError(ctx, t.ID)
+		if ultimo != nil {
+			detalhe.Checkins = []model.Checkin{*ultimo}
+		}
+
 		result = append(result, detalhe)
 	}
 
@@ -540,15 +545,22 @@ func (s *TurnoService) ProcessarLote(ctx context.Context, userID, empresaID stri
 			OrigemRede:       origemRede,
 		}
 
-		if err := s.checkinRepo.Create(ctx, checkin); err != nil {
-			continue
+		var criado bool
+		if req.ClienteCheckinID != "" {
+			cid := req.ClienteCheckinID
+			checkin.ClienteCheckinID = &cid
+			var err error
+			criado, err = s.checkinRepo.CreateIdempotent(ctx, checkin)
+			if err != nil {
+				continue
+			}
+		} else {
+			if err := s.checkinRepo.Create(ctx, checkin); err != nil {
+				continue
+			}
+			criado = true
 		}
-
-		if turno.Status == "critico" && req.TipoSenha != "coacao" {
-			agora := time.Now()
-			_ = s.turnoRepo.UpdateStatus(ctx, parsedTurnoID, parsedEmpresaID, "em_andamento", nil)
-			turno.FimReal = &agora
-		}
+		_ = criado
 
 		if req.TipoSenha == "coacao" {
 			_ = s.turnoRepo.UpdateStatus(ctx, parsedTurnoID, parsedEmpresaID, "critico", nil)
