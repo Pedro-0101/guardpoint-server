@@ -188,7 +188,8 @@ func (h *TurnoHandler) Revogar(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
 
-	if err := h.turnoService.Revogar(r.Context(), empresaID, id); err != nil {
+	resp, err := h.turnoService.Revogar(r.Context(), empresaID, id)
+	if err != nil {
 		if errors.Is(err, service.ErrTurnoNaoEncontrado) {
 			writeError(w, http.StatusNotFound, "turno nao encontrado")
 			return
@@ -202,7 +203,7 @@ func (h *TurnoHandler) Revogar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusOK, map[string]string{"message": "turno revogado com sucesso"})
+	writeJSON(w, http.StatusOK, resp)
 }
 
 func (h *TurnoHandler) Sabotagem(w http.ResponseWriter, r *http.Request) {

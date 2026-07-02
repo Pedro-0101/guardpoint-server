@@ -19,6 +19,8 @@ type Turno struct {
 	FimReal        *time.Time `json:"fim_real,omitempty"`
 	TokenSessao    *string    `json:"token_sessao,omitempty"`
 	IntervaloMin   int        `json:"intervalo_min"`
+	Pin            *string    `json:"pin,omitempty"`
+	PinValidoAte   *time.Time `json:"pin_valido_ate,omitempty"`
 	CreatedAt      time.Time  `json:"created_at"`
 }
 
@@ -77,6 +79,11 @@ type SabotagemResponse struct {
 	AlertaID string `json:"alerta_id"`
 	Status   string `json:"status"`
 	Mensagem string `json:"mensagem"`
+}
+
+type RevogarResponse struct {
+	PinNovoDispositivo string `json:"pin_novo_dispositivo"`
+	ValidadeMinutos    int    `json:"validade_minutos"`
 }
 
 type HistoricoFilter struct {

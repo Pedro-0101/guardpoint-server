@@ -8,14 +8,16 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/guardpoint/guardpoint-server/internal/model"
+	"github.com/guardpoint/guardpoint-server/internal/repository"
 )
 
 type DashboardService struct {
-	db *pgxpool.Pool
+	db         *pgxpool.Pool
+	alertaRepo *repository.AlertaRepository
 }
 
-func NewDashboardService(db *pgxpool.Pool) *DashboardService {
-	return &DashboardService{db: db}
+func NewDashboardService(db *pgxpool.Pool, alertaRepo *repository.AlertaRepository) *DashboardService {
+	return &DashboardService{db: db, alertaRepo: alertaRepo}
 }
 
 func (s *DashboardService) Summary(ctx context.Context, empresaID string) (*model.DashboardSummary, error) {
@@ -36,12 +38,25 @@ func (s *DashboardService) Summary(ctx context.Context, empresaID string) (*mode
 		summary.DesviosRota = desviosRota
 	}
 
+	parsedEmpresaID, err := uuid.Parse(empresaID)
+	if err == nil {
+		alertasAbertos, err := s.alertaRepo.CountAbertos(ctx, parsedEmpresaID)
+		if err == nil {
+			summary.AlertasAbertos = alertasAbertos
+		}
+
+		recentes, err := s.alertaRepo.ListRecentes(ctx, parsedEmpresaID, 5)
+		if err == nil {
+			summary.AlertasRecentes = recentes
+		}
+	}
+
 	turnosPorPosto, err := s.aggregateTurnosPorPosto(ctx, empresaID)
 	if err == nil {
 		summary.TurnosPorPosto = turnosPorPosto
 	}
 
-	summary.AlertasRecentes = []model.AlertaRecente{}
+	summary.AlertasRecentes = safeSlice(summary.AlertasRecentes, func() []model.AlertaRecente { return []model.AlertaRecente{} })
 	summary.TurnosPorPosto = safeSlice(summary.TurnosPorPosto, func() []model.TurnoPorPosto { return []model.TurnoPorPosto{} })
 
 	return summary, nil

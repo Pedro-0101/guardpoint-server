@@ -352,10 +352,10 @@ CREATE TABLE sessoes_dispositivo (
 - [x] Correção: check-in de sabotagem grava `tipo_senha="sabotagem"` (não `coacao`)
 
 ### Fase 5 — Alertas e Workers
-- [ ] Timeout Checker Worker
-- [ ] CRUD de configuração de escalonamento
-- [ ] Alert Dispatcher Worker (stub do WhatsApp inicialmente)
-- [ ] Endpoints de alertas (listar, reconhecer, encerrar)
+- [x] Timeout Checker Worker
+- [x] CRUD de configuração de escalonamento
+- [x] Alert Dispatcher Worker (stub do WhatsApp inicialmente)
+- [x] Endpoints de alertas (listar, reconhecer, encerrar)
 
 ### Fase 6 — Offline e Sincronização
 - [ ] Endpoint de lote (`/api/checkins/lote`)

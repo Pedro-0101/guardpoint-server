@@ -1,0 +1,3 @@
+ALTER TABLE turnos
+DROP COLUMN IF EXISTS pin,
+DROP COLUMN IF EXISTS pin_valido_ate;

@@ -20,6 +20,7 @@ import (
 	"github.com/guardpoint/guardpoint-server/internal/repository"
 	"github.com/guardpoint/guardpoint-server/internal/seed"
 	"github.com/guardpoint/guardpoint-server/internal/service"
+	"github.com/guardpoint/guardpoint-server/internal/worker"
 )
 
 func main() {
@@ -54,6 +55,8 @@ func main() {
 	postoRepo := repository.NewPostoRepository(pool)
 	turnoRepo := repository.NewTurnoRepository(pool)
 	checkinRepo := repository.NewCheckinRepository(pool)
+	alertaRepo := repository.NewAlertaRepository(pool)
+	configEscalonamentoRepo := repository.NewConfigEscalonamentoRepository(pool)
 
 	authService := service.NewAuthService(jwtService, userRepo, empresaRepo, sessaoDispositivoRepo)
 	authHandler := handler.NewAuthHandler(authService)
@@ -61,14 +64,18 @@ func main() {
 	postoService := service.NewPostoService(postoRepo)
 	postoHandler := handler.NewPostoHandler(postoService)
 
-	turnoService := service.NewTurnoService(turnoRepo, checkinRepo, postoRepo, userRepo, sessaoDispositivoRepo)
+	alertaService := service.NewAlertaService(alertaRepo, configEscalonamentoRepo, turnoRepo, checkinRepo)
+
+	turnoService := service.NewTurnoService(turnoRepo, checkinRepo, postoRepo, userRepo, sessaoDispositivoRepo, alertaService)
 	turnoHandler := handler.NewTurnoHandler(turnoService)
 
 	usuarioService := service.NewUsuarioService(userRepo)
 	usuarioHandler := handler.NewUsuarioHandler(usuarioService)
 
-	dashboardService := service.NewDashboardService(pool)
+	dashboardService := service.NewDashboardService(pool, alertaRepo)
 	dashboardHandler := handler.NewDashboardHandler(dashboardService)
+
+	alertaHandler := handler.NewAlertaHandler(alertaService)
 
 	if cfg.Env == "development" {
 		if err := seed.Run(ctx, empresaRepo, userRepo); err != nil {
@@ -76,6 +83,15 @@ func main() {
 			os.Exit(1)
 		}
 	}
+
+	timeoutChecker := worker.NewTimeoutChecker(pool, alertaService, configEscalonamentoRepo)
+	alertDispatcher := worker.NewAlertDispatcher(alertaService.AlertChannel())
+
+	workerCtx, workerCancel := context.WithCancel(context.Background())
+	defer workerCancel()
+
+	go timeoutChecker.Run(workerCtx)
+	go alertDispatcher.Run(workerCtx)
 
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID)
@@ -137,6 +153,23 @@ func main() {
 				r.Put("/{id}", usuarioHandler.Update)
 				r.Delete("/{id}", usuarioHandler.Delete)
 			})
+
+			r.Route("/alertas", func(r chi.Router) {
+				r.Use(handler.RequireRole("admin", "supervisor"))
+				r.Get("/", alertaHandler.List)
+				r.Get("/estatisticas", alertaHandler.Estatisticas)
+				r.Put("/{id}/reconhecer", alertaHandler.Reconhecer)
+				r.Put("/{id}/encerrar", alertaHandler.Encerrar)
+			})
+
+			r.Route("/config", func(r chi.Router) {
+				r.Use(handler.RequireRole("admin"))
+				r.Get("/escalonamento", alertaHandler.GetEscalonamento)
+				r.Put("/escalonamento", alertaHandler.PutEscalonamento)
+				r.Post("/escalonamento", alertaHandler.CreateEscalonamento)
+				r.Put("/escalonamento/{id}", alertaHandler.UpdateEscalonamento)
+				r.Delete("/escalonamento/{id}", alertaHandler.DeleteEscalonamento)
+			})
 		})
 	})
 
@@ -165,6 +198,9 @@ func main() {
 	quit := make(chan os.Signal, 1)
 	signal.Notify(quit, syscall.SIGINT, syscall.SIGTERM)
 	<-quit
+
+	slog.Info("shutting down workers...")
+	workerCancel()
 
 	slog.Info("shutting down server...")
 

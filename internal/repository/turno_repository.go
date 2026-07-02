@@ -192,9 +192,9 @@ func (r *TurnoRepository) ListHistorico(ctx context.Context, empresaID uuid.UUID
 	return turnos, total, rows.Err()
 }
 
-func (r *TurnoRepository) RevogarToken(ctx context.Context, id, empresaID uuid.UUID) error {
-	query := `UPDATE turnos SET token_sessao = NULL, status = 'finalizado', fim_real = now() WHERE id = $1 AND empresa_id = $2`
-	ct, err := r.db.Exec(ctx, query, id, empresaID)
+func (r *TurnoRepository) RevogarToken(ctx context.Context, id, empresaID uuid.UUID, pin string, pinValidoAte time.Time) error {
+	query := `UPDATE turnos SET token_sessao = NULL, status = 'finalizado', fim_real = now(), pin = $3, pin_valido_ate = $4 WHERE id = $1 AND empresa_id = $2`
+	ct, err := r.db.Exec(ctx, query, id, empresaID, pin, pinValidoAte)
 	if err != nil {
 		return fmt.Errorf("revogar turno: %w", err)
 	}

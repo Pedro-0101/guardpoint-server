@@ -2,9 +2,11 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
 	"errors"
 	"fmt"
 	"math"
+	"math/big"
 	"time"
 
 	"github.com/google/uuid"
@@ -28,6 +30,7 @@ type TurnoService struct {
 	postoRepo             *repository.PostoRepository
 	userRepo              *repository.UserRepository
 	sessaoDispositivoRepo *repository.SessaoDispositivoRepository
+	alertaService         *AlertaService
 }
 
 func NewTurnoService(
@@ -36,6 +39,7 @@ func NewTurnoService(
 	postoRepo *repository.PostoRepository,
 	userRepo *repository.UserRepository,
 	sessaoDispositivoRepo *repository.SessaoDispositivoRepository,
+	alertaService *AlertaService,
 ) *TurnoService {
 	return &TurnoService{
 		turnoRepo:             turnoRepo,
@@ -43,6 +47,7 @@ func NewTurnoService(
 		postoRepo:             postoRepo,
 		userRepo:              userRepo,
 		sessaoDispositivoRepo: sessaoDispositivoRepo,
+		alertaService:         alertaService,
 	}
 }
 
@@ -176,6 +181,7 @@ func (s *TurnoService) Checkin(ctx context.Context, userID, empresaID string, re
 
 	if req.TipoSenha == "coacao" {
 		_ = s.turnoRepo.UpdateStatus(ctx, parsedTurnoID, parsedEmpresaID, "critico", nil)
+		_, _ = s.alertaService.CreateAlertaImediato(ctx, parsedEmpresaID, parsedTurnoID, "coacao", 1, "Senha de coacao detectada no check-in")
 	}
 
 	posto, err := s.postoRepo.FindByID(ctx, parsedEmpresaID, turno.PostoID)
@@ -367,25 +373,48 @@ func (s *TurnoService) GetByID(ctx context.Context, empresaID, turnoID string) (
 	return detalhe, nil
 }
 
-func (s *TurnoService) Revogar(ctx context.Context, empresaID, turnoID string) error {
+func (s *TurnoService) Revogar(ctx context.Context, empresaID, turnoID string) (*model.RevogarResponse, error) {
 	parsedEmpresaID, err := uuid.Parse(empresaID)
 	if err != nil {
-		return fmt.Errorf("empresa_id invalido: %w", err)
+		return nil, fmt.Errorf("empresa_id invalido: %w", err)
 	}
 	parsedTurnoID, err := uuid.Parse(turnoID)
 	if err != nil {
-		return fmt.Errorf("turno_id invalido: %w", err)
+		return nil, fmt.Errorf("turno_id invalido: %w", err)
 	}
 
 	turno, err := s.turnoRepo.FindByID(ctx, parsedEmpresaID, parsedTurnoID)
 	if err != nil {
-		return fmt.Errorf("turno: %w", ErrTurnoNaoEncontrado)
+		return nil, fmt.Errorf("turno: %w", ErrTurnoNaoEncontrado)
 	}
 	if turno.Status == "finalizado" {
-		return ErrTurnoJaFinalizado
+		return nil, ErrTurnoJaFinalizado
 	}
 
-	return s.turnoRepo.RevogarToken(ctx, parsedTurnoID, parsedEmpresaID)
+	pin, err := generatePIN(6)
+	if err != nil {
+		return nil, fmt.Errorf("gerar pin: %w", err)
+	}
+	validadeMinutos := 15
+	pinValidoAte := time.Now().Add(time.Duration(validadeMinutos) * time.Minute)
+
+	if err := s.turnoRepo.RevogarToken(ctx, parsedTurnoID, parsedEmpresaID, pin, pinValidoAte); err != nil {
+		return nil, fmt.Errorf("revogar turno: %w", err)
+	}
+
+	return &model.RevogarResponse{
+		PinNovoDispositivo: pin,
+		ValidadeMinutos:    validadeMinutos,
+	}, nil
+}
+
+func generatePIN(digits int) (string, error) {
+	max := new(big.Int).Exp(big.NewInt(10), big.NewInt(int64(digits)), nil)
+	n, err := rand.Int(rand.Reader, max)
+	if err != nil {
+		return "", fmt.Errorf("gerar numero aleatorio: %w", err)
+	}
+	return fmt.Sprintf("%0*d", digits, n), nil
 }
 
 func (s *TurnoService) GetHistorico(ctx context.Context, empresaID string, filter model.HistoricoFilter) ([]model.Turno, int, error) {
@@ -445,8 +474,13 @@ func (s *TurnoService) Sabotagem(ctx context.Context, userID, empresaID string, 
 	}
 	_ = s.checkinRepo.Create(ctx, checkin)
 
-	// TODO(F5): registrar alerta real na tabela alertas (Fase 5)
-	alertaID := uuid.New().String()
+	alerta, err := s.alertaService.CreateAlertaImediato(ctx, parsedEmpresaID, parsedTurnoID, "sabotagem", 1, "Sabotagem reportada pelo vigia. Motivo: "+req.Motivo)
+	alertaID := ""
+	if err == nil && alerta != nil {
+		alertaID = alerta.ID.String()
+	} else {
+		alertaID = uuid.New().String()
+	}
 
 	return &model.SabotagemResponse{
 		AlertaID: alertaID,
@@ -518,6 +552,7 @@ func (s *TurnoService) ProcessarLote(ctx context.Context, userID, empresaID stri
 
 		if req.TipoSenha == "coacao" {
 			_ = s.turnoRepo.UpdateStatus(ctx, parsedTurnoID, parsedEmpresaID, "critico", nil)
+			_, _ = s.alertaService.CreateAlertaImediato(ctx, parsedEmpresaID, parsedTurnoID, "coacao", 1, "Senha de coacao detectada em lote offline")
 		}
 
 		ultimo := s.checkinRepo.FindUltimoByTurnoNoError(ctx, turno.ID)
