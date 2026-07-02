@@ -60,6 +60,7 @@ func main() {
 	checkinRepo := repository.NewCheckinRepository(pool)
 	alertaRepo := repository.NewAlertaRepository(pool)
 	configEscalonamentoRepo := repository.NewConfigEscalonamentoRepository(pool)
+	escalaRepo := repository.NewEscalaRepository(pool)
 
 	authService := service.NewAuthService(jwtService, userRepo, empresaRepo, sessaoDispositivoRepo)
 	authHandler := handler.NewAuthHandler(authService)
@@ -69,7 +70,7 @@ func main() {
 
 	alertaService := service.NewAlertaService(alertaRepo, configEscalonamentoRepo, turnoRepo, checkinRepo, hub)
 
-	turnoService := service.NewTurnoService(turnoRepo, checkinRepo, postoRepo, userRepo, sessaoDispositivoRepo, alertaService, hub)
+	turnoService := service.NewTurnoService(turnoRepo, checkinRepo, postoRepo, userRepo, sessaoDispositivoRepo, escalaRepo, alertaService, hub)
 	syncReconciler := worker.NewSyncReconciler(alertaRepo, checkinRepo, turnoRepo, hub)
 	turnoHandler := handler.NewTurnoHandler(turnoService, syncReconciler)
 
@@ -81,6 +82,9 @@ func main() {
 
 	alertaHandler := handler.NewAlertaHandler(alertaService)
 
+	escalaService := service.NewEscalaService(escalaRepo)
+	escalaHandler := handler.NewEscalaHandler(escalaService)
+
 	if cfg.Env == "development" {
 		if err := seed.Run(ctx, empresaRepo, userRepo); err != nil {
 			slog.Error("seed failed", "error", err)
@@ -88,7 +92,7 @@ func main() {
 		}
 	}
 
-	timeoutChecker := worker.NewTimeoutChecker(pool, alertaService, configEscalonamentoRepo)
+	timeoutChecker := worker.NewTimeoutChecker(pool, alertaService, configEscalonamentoRepo, escalaRepo)
 	alertDispatcher := worker.NewAlertDispatcher(alertaService.AlertChannel())
 
 	workerCtx, workerCancel := context.WithCancel(context.Background())
@@ -173,6 +177,15 @@ func main() {
 				r.Post("/escalonamento", alertaHandler.CreateEscalonamento)
 				r.Put("/escalonamento/{id}", alertaHandler.UpdateEscalonamento)
 				r.Delete("/escalonamento/{id}", alertaHandler.DeleteEscalonamento)
+			})
+
+			r.Route("/escalas", func(r chi.Router) {
+				r.Use(handler.RequireRole("admin", "supervisor"))
+				r.Get("/", escalaHandler.List)
+				r.Post("/", escalaHandler.Create)
+				r.Get("/{id}", escalaHandler.GetByID)
+				r.Put("/{id}", escalaHandler.Update)
+				r.Delete("/{id}", escalaHandler.Delete)
 			})
 		})
 	})

@@ -154,13 +154,15 @@ func (r *AlertaRepository) ListRecentes(ctx context.Context, empresaID uuid.UUID
 	for rows.Next() {
 		var ar model.AlertaRecente
 		var id uuid.UUID
-		var turnoID uuid.UUID
+		var turnoID *uuid.UUID
 		var createdAt time.Time
 		if err := rows.Scan(&id, &ar.Tipo, &turnoID, &ar.Nivel, &ar.Mensagem, &createdAt); err != nil {
 			return nil, fmt.Errorf("scan alerta recente: %w", err)
 		}
 		ar.ID = id.String()
-		ar.TurnoID = turnoID.String()
+		if turnoID != nil {
+			ar.TurnoID = turnoID.String()
+		}
 		ar.CreatedAt = createdAt.Format(time.RFC3339)
 		alertas = append(alertas, ar)
 	}

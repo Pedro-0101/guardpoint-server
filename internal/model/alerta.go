@@ -9,7 +9,7 @@ import (
 type Alerta struct {
 	ID          uuid.UUID  `json:"id"`
 	EmpresaID   uuid.UUID  `json:"empresa_id"`
-	TurnoID     uuid.UUID  `json:"turno_id"`
+	TurnoID     *uuid.UUID `json:"turno_id"`
 	Tipo        string     `json:"tipo"`
 	Nivel       int        `json:"nivel"`
 	Status      string     `json:"status"`

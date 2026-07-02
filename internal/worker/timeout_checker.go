@@ -17,17 +17,20 @@ type TimeoutChecker struct {
 	db         *pgxpool.Pool
 	alertaSvc  *service.AlertaService
 	configRepo *repository.ConfigEscalonamentoRepository
+	escalaRepo *repository.EscalaRepository
 }
 
 func NewTimeoutChecker(
 	db *pgxpool.Pool,
 	alertaSvc *service.AlertaService,
 	configRepo *repository.ConfigEscalonamentoRepository,
+	escalaRepo *repository.EscalaRepository,
 ) *TimeoutChecker {
 	return &TimeoutChecker{
 		db:         db,
 		alertaSvc:  alertaSvc,
 		configRepo: configRepo,
+		escalaRepo: escalaRepo,
 	}
 }
 
@@ -52,12 +55,13 @@ func (w *TimeoutChecker) check(ctx context.Context) {
 	turnos, err := w.listTurnosAtivos(ctx)
 	if err != nil {
 		slog.Error("timeout checker: listar turnos ativos", "error", err)
-		return
+	} else {
+		for _, t := range turnos {
+			w.processTurno(ctx, t)
+		}
 	}
 
-	for _, t := range turnos {
-		w.processTurno(ctx, t)
-	}
+	w.checkNoShow(ctx)
 }
 
 type turnoAtivoInfo struct {
@@ -152,4 +156,65 @@ func (w *TimeoutChecker) getUltimoCheckin(ctx context.Context, turnoID uuid.UUID
 		return nil, err
 	}
 	return &ts, nil
+}
+
+func (w *TimeoutChecker) checkNoShow(ctx context.Context) {
+	now := time.Now()
+	escalas, err := w.escalaRepo.FindEscalasSemTurno(ctx, now)
+	if err != nil {
+		slog.Error("timeout checker: buscar escalas sem turno", "error", err)
+		return
+	}
+
+	for _, e := range escalas {
+		existe, err := w.alertaJaExiste(ctx, e.EmpresaID, e.UsuarioID, e.PostoID, now)
+		if err != nil {
+			slog.Error("timeout checker: verificar alerta existente", "error", err, "escala_id", e.ID)
+			continue
+		}
+		if existe {
+			continue
+		}
+
+		tolerancia := e.ToleranciaMin
+		if tolerancia <= 0 {
+			tolerancia = 15
+		}
+
+		// O sufixo [ref:<usuario_id>] serve de chave de deduplicacao: alertaJaExiste
+		// procura o usuario_id na mensagem para nao gerar um no-show a cada ciclo (30s).
+		mensagem := fmt.Sprintf(
+			"No-show detectado: vigia nao iniciou turno ate %s (tolerancia de %d min). Escala: %s as %s. [ref:%s]",
+			now.Format("15:04"), tolerancia, e.DataInicio.Format("2006-01-02"), e.HoraInicio, e.UsuarioID.String(),
+		)
+
+		_, err = w.alertaSvc.CreateAlertaImediato(ctx, e.EmpresaID, uuid.Nil, "no_show", 2, mensagem)
+		if err != nil {
+			slog.Error("timeout checker: criar alerta no-show", "error", err, "escala_id", e.ID)
+			continue
+		}
+
+		slog.Info("timeout checker: alerta no-show gerado",
+			"escala_id", e.ID.String(),
+			"usuario_id", e.UsuarioID.String(),
+			"posto_id", e.PostoID.String(),
+			"hora_inicio", e.HoraInicio,
+		)
+	}
+}
+
+func (w *TimeoutChecker) alertaJaExiste(ctx context.Context, empresaID, usuarioID, postoID uuid.UUID, data time.Time) (bool, error) {
+	var count int
+	err := w.db.QueryRow(ctx, `
+		SELECT COUNT(*) FROM alertas
+		WHERE empresa_id = $1
+		  AND tipo = 'no_show'
+		  AND status = 'aberto'
+		  AND created_at::date = $2::date
+		  AND COALESCE(mensagem, '') LIKE '%' || $3::text || '%'
+	`, empresaID, data, usuarioID.String()).Scan(&count)
+	if err != nil {
+		return false, err
+	}
+	return count > 0, nil
 }

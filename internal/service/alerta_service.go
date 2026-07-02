@@ -62,9 +62,11 @@ func (s *AlertaService) CreateAlerta(ctx context.Context, empresaID, turnoID uui
 		msg = nil
 	}
 
+	turnoRef, turnoStr := nullableTurno(turnoID)
+
 	alerta := &model.Alerta{
 		EmpresaID: empresaID,
-		TurnoID:   turnoID,
+		TurnoID:   turnoRef,
 		Tipo:      tipo,
 		Nivel:     nivel,
 		Status:    "aberto",
@@ -75,7 +77,7 @@ func (s *AlertaService) CreateAlerta(ctx context.Context, empresaID, turnoID uui
 		return nil, fmt.Errorf("criar alerta: %w", err)
 	}
 
-	s.hub.Broadcast(empresaID.String(), ws.NewAlertEvent(alerta.ID.String(), tipo, turnoID.String(), nivel))
+	s.hub.Broadcast(empresaID.String(), ws.NewAlertEvent(alerta.ID.String(), tipo, turnoStr, nivel))
 
 	configs, _ := s.configRepo.FindByEmpresa(ctx, empresaID)
 	for _, cfg := range configs {
@@ -100,9 +102,11 @@ func (s *AlertaService) CreateAlertaImediato(ctx context.Context, empresaID, tur
 		msg = nil
 	}
 
+	turnoRef, turnoStr := nullableTurno(turnoID)
+
 	alerta := &model.Alerta{
 		EmpresaID: empresaID,
-		TurnoID:   turnoID,
+		TurnoID:   turnoRef,
 		Tipo:      tipo,
 		Nivel:     nivel,
 		Status:    "aberto",
@@ -113,7 +117,7 @@ func (s *AlertaService) CreateAlertaImediato(ctx context.Context, empresaID, tur
 		return nil, fmt.Errorf("criar alerta imediato: %w", err)
 	}
 
-	s.hub.Broadcast(empresaID.String(), ws.NewAlertEvent(alerta.ID.String(), tipo, turnoID.String(), nivel))
+	s.hub.Broadcast(empresaID.String(), ws.NewAlertEvent(alerta.ID.String(), tipo, turnoStr, nivel))
 
 	configs, _ := s.configRepo.FindByEmpresa(ctx, empresaID)
 	for _, cfg := range configs {
@@ -352,4 +356,15 @@ func strPtr(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+// nullableTurno converte um turnoID em ponteiro nulo quando for o UUID zero
+// (caso dos alertas de no-show, que nao possuem turno associado).
+// Retorna tambem a representacao string usada no evento WebSocket ("" quando nulo).
+func nullableTurno(turnoID uuid.UUID) (*uuid.UUID, string) {
+	if turnoID == uuid.Nil {
+		return nil, ""
+	}
+	id := turnoID
+	return &id, id.String()
 }

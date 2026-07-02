@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math"
 	"math/big"
 	"time"
@@ -31,6 +32,7 @@ type TurnoService struct {
 	postoRepo             *repository.PostoRepository
 	userRepo              *repository.UserRepository
 	sessaoDispositivoRepo *repository.SessaoDispositivoRepository
+	escalaRepo            *repository.EscalaRepository
 	alertaService         *AlertaService
 	hub                   *ws.Hub
 }
@@ -41,6 +43,7 @@ func NewTurnoService(
 	postoRepo *repository.PostoRepository,
 	userRepo *repository.UserRepository,
 	sessaoDispositivoRepo *repository.SessaoDispositivoRepository,
+	escalaRepo *repository.EscalaRepository,
 	alertaService *AlertaService,
 	hub *ws.Hub,
 ) *TurnoService {
@@ -50,6 +53,7 @@ func NewTurnoService(
 		postoRepo:             postoRepo,
 		userRepo:              userRepo,
 		sessaoDispositivoRepo: sessaoDispositivoRepo,
+		escalaRepo:            escalaRepo,
 		alertaService:         alertaService,
 		hub:                   hub,
 	}
@@ -90,12 +94,43 @@ func (s *TurnoService) Iniciar(ctx context.Context, userID, empresaID string, re
 		return nil, fmt.Errorf("posto inativo")
 	}
 
+	now := time.Now()
+	diaSemana := int16(now.Weekday())
+	esc, _ := s.escalaRepo.FindAtivaByUsuarioPostoData(ctx, parsedEmpresaID, parsedUserID, parsedPostoID, now, diaSemana)
+
+	if esc != nil {
+		horaInicio := esc.HoraInicio
+		if len(horaInicio) == 8 {
+			horaInicio = horaInicio[:5]
+		}
+		horaInicioTime, err := time.Parse("15:04", horaInicio)
+		if err == nil {
+			horaAtualTime, _ := time.Parse("15:04", now.Format("15:04"))
+			diferencaMin := int(horaAtualTime.Sub(horaInicioTime).Minutes())
+			if diferencaMin < 0 {
+				diferencaMin = -diferencaMin
+			}
+			if diferencaMin > esc.ToleranciaMin {
+				slog.Warn("turno iniciado fora da tolerancia da escala",
+					"usuario_id", parsedUserID,
+					"posto_id", parsedPostoID,
+					"tolerancia_min", esc.ToleranciaMin,
+					"diferenca_min", diferencaMin,
+				)
+			}
+		}
+	} else {
+		slog.Warn("turno iniciado sem escala ativa",
+			"usuario_id", parsedUserID,
+			"posto_id", parsedPostoID,
+		)
+	}
+
 	intervaloMin := req.IntervaloMin
 	if intervaloMin <= 0 {
 		intervaloMin = 30
 	}
 
-	now := time.Now()
 	tokenSessao := uuid.New().String()
 
 	fimPrevisto := now.Add(12 * time.Hour)
