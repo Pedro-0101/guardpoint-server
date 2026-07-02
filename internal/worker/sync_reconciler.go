@@ -9,23 +9,27 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/guardpoint/guardpoint-server/internal/repository"
+	"github.com/guardpoint/guardpoint-server/internal/ws"
 )
 
 type SyncReconciler struct {
 	alertaRepo  *repository.AlertaRepository
 	checkinRepo *repository.CheckinRepository
 	turnoRepo   *repository.TurnoRepository
+	hub         *ws.Hub
 }
 
 func NewSyncReconciler(
 	alertaRepo *repository.AlertaRepository,
 	checkinRepo *repository.CheckinRepository,
 	turnoRepo *repository.TurnoRepository,
+	hub *ws.Hub,
 ) *SyncReconciler {
 	return &SyncReconciler{
 		alertaRepo:  alertaRepo,
 		checkinRepo: checkinRepo,
 		turnoRepo:   turnoRepo,
+		hub:         hub,
 	}
 }
 
@@ -81,6 +85,7 @@ func (r *SyncReconciler) Reconcile(ctx context.Context, empresaID, turnoID uuid.
 			"turno_id", turnoID.String(),
 			"alertas_fechados", count,
 		)
+		r.hub.Broadcast(empresaID.String(), ws.NewSyncResolvedEvent(turnoID.String(), "falha_infra"))
 	}
 
 	return nil

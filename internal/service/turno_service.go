@@ -13,6 +13,7 @@ import (
 
 	"github.com/guardpoint/guardpoint-server/internal/model"
 	"github.com/guardpoint/guardpoint-server/internal/repository"
+	"github.com/guardpoint/guardpoint-server/internal/ws"
 )
 
 var (
@@ -31,6 +32,7 @@ type TurnoService struct {
 	userRepo              *repository.UserRepository
 	sessaoDispositivoRepo *repository.SessaoDispositivoRepository
 	alertaService         *AlertaService
+	hub                   *ws.Hub
 }
 
 func NewTurnoService(
@@ -40,6 +42,7 @@ func NewTurnoService(
 	userRepo *repository.UserRepository,
 	sessaoDispositivoRepo *repository.SessaoDispositivoRepository,
 	alertaService *AlertaService,
+	hub *ws.Hub,
 ) *TurnoService {
 	return &TurnoService{
 		turnoRepo:             turnoRepo,
@@ -48,6 +51,7 @@ func NewTurnoService(
 		userRepo:              userRepo,
 		sessaoDispositivoRepo: sessaoDispositivoRepo,
 		alertaService:         alertaService,
+		hub:                   hub,
 	}
 }
 
@@ -112,6 +116,8 @@ func (s *TurnoService) Iniciar(ctx context.Context, userID, empresaID string, re
 	if err := s.turnoRepo.Create(ctx, turno); err != nil {
 		return nil, fmt.Errorf("criar turno: %w", err)
 	}
+
+	s.hub.Broadcast(empresaID, ws.NewStatusChangeEvent(turno.ID.String(), "em_andamento"))
 
 	return turno, nil
 }
@@ -182,7 +188,10 @@ func (s *TurnoService) Checkin(ctx context.Context, userID, empresaID string, re
 	if req.TipoSenha == "coacao" {
 		_ = s.turnoRepo.UpdateStatus(ctx, parsedTurnoID, parsedEmpresaID, "critico", nil)
 		_, _ = s.alertaService.CreateAlertaImediato(ctx, parsedEmpresaID, parsedTurnoID, "coacao", 1, "Senha de coacao detectada no check-in")
+		s.hub.Broadcast(empresaID, ws.NewStatusChangeEvent(req.TurnoID, "critico"))
 	}
+
+	s.emitirGPSUpdate(empresaID, req.TurnoID, req.Latitude, req.Longitude, timestampCriacao, flagGeofence)
 
 	posto, err := s.postoRepo.FindByID(ctx, parsedEmpresaID, turno.PostoID)
 	postoNome := ""
@@ -252,6 +261,9 @@ func (s *TurnoService) Finalizar(ctx context.Context, userID, empresaID string, 
 	if err := s.turnoRepo.UpdateStatus(ctx, parsedTurnoID, parsedEmpresaID, "finalizado", &now); err != nil {
 		return nil, fmt.Errorf("finalizar turno: %w", err)
 	}
+
+	s.hub.Broadcast(empresaID, ws.NewStatusChangeEvent(req.TurnoID, "finalizado"))
+	s.emitirGPSUpdate(empresaID, req.TurnoID, req.Latitude, req.Longitude, timestampCriacao, flagGeofence)
 
 	turno.Status = "finalizado"
 	turno.FimReal = &now
@@ -466,6 +478,7 @@ func (s *TurnoService) Sabotagem(ctx context.Context, userID, empresaID string, 
 	flagGeofence := s.calcularGeofence(ctx, turno.PostoID, parsedEmpresaID, req.Latitude, req.Longitude)
 
 	_ = s.turnoRepo.UpdateStatus(ctx, parsedTurnoID, parsedEmpresaID, "critico", nil)
+	s.hub.Broadcast(empresaID, ws.NewStatusChangeEvent(req.TurnoID, "critico"))
 
 	checkin := &model.Checkin{
 		TurnoID:          parsedTurnoID,
@@ -478,6 +491,8 @@ func (s *TurnoService) Sabotagem(ctx context.Context, userID, empresaID string, 
 		OrigemRede:       "online",
 	}
 	_ = s.checkinRepo.Create(ctx, checkin)
+
+	s.emitirGPSUpdate(empresaID, req.TurnoID, req.Latitude, req.Longitude, timestampCriacao, flagGeofence)
 
 	alerta, err := s.alertaService.CreateAlertaImediato(ctx, parsedEmpresaID, parsedTurnoID, "sabotagem", 1, "Sabotagem reportada pelo vigia. Motivo: "+req.Motivo)
 	alertaID := ""
@@ -565,7 +580,10 @@ func (s *TurnoService) ProcessarLote(ctx context.Context, userID, empresaID stri
 		if req.TipoSenha == "coacao" {
 			_ = s.turnoRepo.UpdateStatus(ctx, parsedTurnoID, parsedEmpresaID, "critico", nil)
 			_, _ = s.alertaService.CreateAlertaImediato(ctx, parsedEmpresaID, parsedTurnoID, "coacao", 1, "Senha de coacao detectada em lote offline")
+			s.hub.Broadcast(empresaID, ws.NewStatusChangeEvent(req.TurnoID, "critico"))
 		}
+
+		s.emitirGPSUpdate(empresaID, req.TurnoID, req.Latitude, req.Longitude, timestampCriacao, flagGeofence)
 
 		ultimo := s.checkinRepo.FindUltimoByTurnoNoError(ctx, turno.ID)
 		atrasado := false
@@ -628,4 +646,11 @@ func haversine(lat1, lon1, lat2, lon2 float64) float64 {
 	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
 
 	return earthRadius * c
+}
+
+func (s *TurnoService) emitirGPSUpdate(empresaID, turnoID string, lat, lon float64, ts time.Time, flagGeofence *string) {
+	if s.hub == nil {
+		return
+	}
+	s.hub.Broadcast(empresaID, ws.NewGPSUpdateEvent(turnoID, ts.UTC().Format(time.RFC3339), lat, lon, flagGeofence))
 }

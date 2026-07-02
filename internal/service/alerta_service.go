@@ -10,6 +10,7 @@ import (
 
 	"github.com/guardpoint/guardpoint-server/internal/model"
 	"github.com/guardpoint/guardpoint-server/internal/repository"
+	"github.com/guardpoint/guardpoint-server/internal/ws"
 )
 
 var (
@@ -23,6 +24,7 @@ type AlertaService struct {
 	turnoRepo    *repository.TurnoRepository
 	checkinRepo  *repository.CheckinRepository
 	alertChannel chan *model.PendingAlert
+	hub          *ws.Hub
 }
 
 func NewAlertaService(
@@ -30,6 +32,7 @@ func NewAlertaService(
 	configRepo *repository.ConfigEscalonamentoRepository,
 	turnoRepo *repository.TurnoRepository,
 	checkinRepo *repository.CheckinRepository,
+	hub *ws.Hub,
 ) *AlertaService {
 	return &AlertaService{
 		alertaRepo:   alertaRepo,
@@ -37,6 +40,7 @@ func NewAlertaService(
 		turnoRepo:    turnoRepo,
 		checkinRepo:  checkinRepo,
 		alertChannel: make(chan *model.PendingAlert, 100),
+		hub:          hub,
 	}
 }
 
@@ -70,6 +74,8 @@ func (s *AlertaService) CreateAlerta(ctx context.Context, empresaID, turnoID uui
 	if err := s.alertaRepo.Create(ctx, alerta); err != nil {
 		return nil, fmt.Errorf("criar alerta: %w", err)
 	}
+
+	s.hub.Broadcast(empresaID.String(), ws.NewAlertEvent(alerta.ID.String(), tipo, turnoID.String(), nivel))
 
 	configs, _ := s.configRepo.FindByEmpresa(ctx, empresaID)
 	for _, cfg := range configs {
@@ -106,6 +112,8 @@ func (s *AlertaService) CreateAlertaImediato(ctx context.Context, empresaID, tur
 	if err := s.alertaRepo.Create(ctx, alerta); err != nil {
 		return nil, fmt.Errorf("criar alerta imediato: %w", err)
 	}
+
+	s.hub.Broadcast(empresaID.String(), ws.NewAlertEvent(alerta.ID.String(), tipo, turnoID.String(), nivel))
 
 	configs, _ := s.configRepo.FindByEmpresa(ctx, empresaID)
 	for _, cfg := range configs {

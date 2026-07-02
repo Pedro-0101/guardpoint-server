@@ -21,6 +21,7 @@ import (
 	"github.com/guardpoint/guardpoint-server/internal/seed"
 	"github.com/guardpoint/guardpoint-server/internal/service"
 	"github.com/guardpoint/guardpoint-server/internal/worker"
+	"github.com/guardpoint/guardpoint-server/internal/ws"
 )
 
 func main() {
@@ -47,6 +48,8 @@ func main() {
 
 	slog.Info("database connected")
 
+	hub := ws.NewHub()
+
 	jwtService := auth.NewJWTService(cfg.JWTSecret)
 
 	userRepo := repository.NewUserRepository(pool)
@@ -64,10 +67,10 @@ func main() {
 	postoService := service.NewPostoService(postoRepo)
 	postoHandler := handler.NewPostoHandler(postoService)
 
-	alertaService := service.NewAlertaService(alertaRepo, configEscalonamentoRepo, turnoRepo, checkinRepo)
+	alertaService := service.NewAlertaService(alertaRepo, configEscalonamentoRepo, turnoRepo, checkinRepo, hub)
 
-	turnoService := service.NewTurnoService(turnoRepo, checkinRepo, postoRepo, userRepo, sessaoDispositivoRepo, alertaService)
-	syncReconciler := worker.NewSyncReconciler(alertaRepo, checkinRepo, turnoRepo)
+	turnoService := service.NewTurnoService(turnoRepo, checkinRepo, postoRepo, userRepo, sessaoDispositivoRepo, alertaService, hub)
+	syncReconciler := worker.NewSyncReconciler(alertaRepo, checkinRepo, turnoRepo, hub)
 	turnoHandler := handler.NewTurnoHandler(turnoService, syncReconciler)
 
 	usuarioService := service.NewUsuarioService(userRepo)
@@ -98,7 +101,7 @@ func main() {
 	r.Use(chimw.RequestID)
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
-	r.Use(middleware.CORS)
+	r.Use(middleware.CORS(cfg.CORSOrigin))
 	r.Use(chimw.Timeout(30 * time.Second))
 
 	r.Route("/api", func(r chi.Router) {
@@ -179,6 +182,8 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
+
+	r.Get("/ws", ws.HandleWebSocket(hub, jwtService, cfg.CORSOrigin))
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

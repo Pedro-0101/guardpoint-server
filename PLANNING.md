@@ -366,10 +366,10 @@ CREATE TABLE sessoes_dispositivo (
 - [x] Correção S3: GET `/api/turnos/ativos` inclui `checkins[]` com último check-in para o mapa do Manager
 
 ### Fase 7 — WebSockets
-- [ ] Hub e Client em Go
-- [ ] Handshake JWT no WebSocket
-- [ ] Broadcast seletivo por empresa
-- [ ] Emissão de eventos: gps_update, status_change, new_alert
+- [x] Hub e Client em Go
+- [x] Handshake JWT no WebSocket
+- [x] Broadcast seletivo por empresa
+- [x] Emissão de eventos: gps_update, status_change, new_alert
 
 ### Fase 8 — Escalas e Agenda
 - [ ] CRUD de escalas (obra x vigia x período)

@@ -13,6 +13,7 @@ type Config struct {
 	LogLevel    string
 	LogFormat   string
 	JWTSecret   string
+	CORSOrigin  string
 }
 
 func Load() (*Config, error) {
@@ -23,6 +24,7 @@ func Load() (*Config, error) {
 		LogLevel:    getEnv("LOG_LEVEL", "info"),
 		LogFormat:   getEnv("LOG_FORMAT", "text"),
 		JWTSecret:   getEnv("JWT_SECRET", ""),
+		CORSOrigin:  getEnv("CORS_ORIGIN", "*"),
 	}
 
 	var missing []string
