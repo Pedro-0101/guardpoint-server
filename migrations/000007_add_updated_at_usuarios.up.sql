@@ -1,0 +1,1 @@
+ALTER TABLE usuarios ADD COLUMN updated_at TIMESTAMPTZ DEFAULT now();

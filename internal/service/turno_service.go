@@ -439,12 +439,13 @@ func (s *TurnoService) Sabotagem(ctx context.Context, userID, empresaID string, 
 		Latitude:         req.Latitude,
 		Longitude:        req.Longitude,
 		TimestampCriacao: timestampCriacao,
-		TipoSenha:        "coacao",
+		TipoSenha:        "sabotagem",
 		FlagGeofence:     flagGeofence,
 		OrigemRede:       "online",
 	}
 	_ = s.checkinRepo.Create(ctx, checkin)
 
+	// TODO(F5): registrar alerta real na tabela alertas (Fase 5)
 	alertaID := uuid.New().String()
 
 	return &model.SabotagemResponse{

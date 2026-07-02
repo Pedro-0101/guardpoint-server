@@ -39,7 +39,7 @@ type CheckinRequest struct {
 	TurnoID   string  `json:"turno_id" validate:"required,uuid"`
 	Latitude  float64 `json:"latitude" validate:"required,latitude"`
 	Longitude float64 `json:"longitude" validate:"required,longitude"`
-	TipoSenha string  `json:"tipo_senha" validate:"required,oneof=padrao coacao finalizacao"`
+	TipoSenha string  `json:"tipo_senha" validate:"required,oneof=padrao coacao finalizacao sabotagem"`
 	Timestamp string  `json:"timestamp" validate:"required"`
 }
 

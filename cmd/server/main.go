@@ -64,6 +64,9 @@ func main() {
 	turnoService := service.NewTurnoService(turnoRepo, checkinRepo, postoRepo, userRepo, sessaoDispositivoRepo)
 	turnoHandler := handler.NewTurnoHandler(turnoService)
 
+	usuarioService := service.NewUsuarioService(userRepo)
+	usuarioHandler := handler.NewUsuarioHandler(usuarioService)
+
 	dashboardService := service.NewDashboardService(pool)
 	dashboardHandler := handler.NewDashboardHandler(dashboardService)
 
@@ -125,6 +128,15 @@ func main() {
 			})
 
 			r.Post("/checkins/lote", turnoHandler.Lote)
+
+			r.Route("/usuarios", func(r chi.Router) {
+				r.Use(handler.RequireRole("admin"))
+				r.Get("/", usuarioHandler.List)
+				r.Post("/", usuarioHandler.Create)
+				r.Get("/{id}", usuarioHandler.GetByID)
+				r.Put("/{id}", usuarioHandler.Update)
+				r.Delete("/{id}", usuarioHandler.Delete)
+			})
 		})
 	})
 

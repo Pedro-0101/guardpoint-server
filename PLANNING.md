@@ -131,7 +131,7 @@ CREATE TABLE checkins (
     timestamp_criacao TIMESTAMPTZ NOT NULL,  -- HORA DO CELULAR (confiável)
     timestamp_recebimento TIMESTAMPTZ DEFAULT now(),
     tipo_senha      VARCHAR(20) NOT NULL,
-        -- 'padrao', 'coacao', 'finalizacao'
+        -- 'padrao', 'coacao', 'finalizacao', 'sabotagem'
     flag_geofence   VARCHAR(20),
         -- 'ok', 'desvio_rota'
     origem_rede     VARCHAR(20) DEFAULT 'online',
@@ -346,9 +346,10 @@ CREATE TABLE sessoes_dispositivo (
 - [x] Lógica de janela deslizante no service layer
 
 ### Fase 4 — Geofencing
-- [ ] Implementação do cálculo Haversine
-- [ ] Flag `desvio_rota` nos check-ins
-- [ ] Endpoint de sabotagem
+- [x] Implementação do cálculo Haversine
+- [x] Flag `desvio_rota` nos check-ins
+- [x] Endpoint de sabotagem
+- [x] Correção: check-in de sabotagem grava `tipo_senha="sabotagem"` (não `coacao`)
 
 ### Fase 5 — Alertas e Workers
 - [ ] Timeout Checker Worker
@@ -382,6 +383,25 @@ CREATE TABLE sessoes_dispositivo (
 - [ ] Health checks (`/health`, `/ready`)
 - [ ] Métricas e tracing (Prometheus, Jaeger — opcional)
 - [ ] Deploy no Railway via GitHub Actions CI/CD
+
+### (Extra) CRUD de Usuários — Fora da Numeração Original
+
+**Motivo**: O Manager já possui UI de Gestão de Usuários chamando `/api/usuarios`, mas este conjunto de endpoints não estava previsto em nenhuma fase original. Implementado sob demanda.
+
+| Método | Rota | Descrição |
+| ------ | ---- | --------- |
+| GET | `/api/usuarios` | Lista usuários da empresa |
+| GET | `/api/usuarios/{id}` | Detalhe do usuário |
+| POST | `/api/usuarios` | Cria usuário |
+| PUT | `/api/usuarios/{id}` | Atualiza usuário |
+| DELETE | `/api/usuarios/{id}` | Soft delete (ativo=false) |
+
+- Todos os endpoints exigem autenticação + role `admin`.
+- Isolamento rigoroso por `empresa_id` extraído do JWT.
+- O JSON usa `cargo` (camelCase) mapeado internamente para a coluna `role`.
+- Senha é hasheada com bcrypt (mesmo custo do `/auth/register`). `senha_hash` nunca é retornada nas respostas.
+- Migration `000007` adiciona coluna `updated_at` à tabela `usuarios`.
+- **Escalas NÃO entram aqui** — permanecem planejadas para a Fase 8.
 
 ## 10. Requisitos Não-Funcionais
 
