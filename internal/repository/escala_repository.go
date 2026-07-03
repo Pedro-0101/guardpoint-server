@@ -184,16 +184,34 @@ func (r *EscalaRepository) FindAtivaByUsuarioPostoData(ctx context.Context, empr
 	return &esc, nil
 }
 
+// FindEscalasSemTurno busca escalas cuja tolerancia de inicio ja estourou sem
+// que exista turno ativo (no-show). A aritmetica usa timestamps completos
+// (data + hora + tolerancia) para nao quebrar quando hora_inicio + tolerancia
+// cruza a meia-noite, e considera tambem a escala noturna iniciada ontem
+// enquanto o turno dela ainda estaria em andamento.
 func (r *EscalaRepository) FindEscalasSemTurno(ctx context.Context, horaCorte time.Time) ([]escalaSemTurno, error) {
+	ontem := horaCorte.AddDate(0, 0, -1)
 	query := `
 		SELECT e.id, e.empresa_id, e.usuario_id, e.posto_id, e.data_inicio,
 		       e.hora_inicio::text, e.tolerancia_min
 		FROM escalas e
 		WHERE e.ativo = true
-		  AND e.data_inicio <= $1::date
-		  AND e.data_fim >= $1::date
-		  AND $2 = ANY(e.dias_semana)
-		  AND (e.hora_inicio + (e.tolerancia_min || ' minutes')::interval) <= $1::time
+		  AND (
+		      (
+		          e.data_inicio <= $1::date AND e.data_fim >= $1::date
+		          AND $2 = ANY(e.dias_semana)
+		          AND ($1::date + e.hora_inicio + (e.tolerancia_min || ' minutes')::interval) <= ($1::date + $3::time)
+		          AND (e.hora_fim <= e.hora_inicio OR $3::time < e.hora_fim)
+		      )
+		      OR
+		      (
+		          e.hora_fim <= e.hora_inicio
+		          AND e.data_inicio <= $4::date AND e.data_fim >= $4::date
+		          AND $5 = ANY(e.dias_semana)
+		          AND ($4::date + e.hora_inicio + (e.tolerancia_min || ' minutes')::interval) <= ($1::date + $3::time)
+		          AND $3::time < e.hora_fim
+		      )
+		  )
 		  AND NOT EXISTS (
 		      SELECT 1 FROM turnos t
 		      WHERE t.usuario_id = e.usuario_id
@@ -202,7 +220,10 @@ func (r *EscalaRepository) FindEscalasSemTurno(ctx context.Context, horaCorte ti
 		        AND t.status IN ('em_andamento', 'pausado', 'critico')
 		  )
 	`
-	rows, err := r.db.Query(ctx, query, horaCorte, int16(horaCorte.Weekday()))
+	rows, err := r.db.Query(ctx, query,
+		horaCorte.Format("2006-01-02"), int16(horaCorte.Weekday()), horaCorte.Format("15:04:05"),
+		ontem.Format("2006-01-02"), int16(ontem.Weekday()),
+	)
 	if err != nil {
 		return nil, fmt.Errorf("buscar escalas sem turno: %w", err)
 	}

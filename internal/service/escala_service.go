@@ -48,6 +48,10 @@ func (s *EscalaService) Create(ctx context.Context, empresaID uuid.UUID, req mod
 		return nil, fmt.Errorf("data_fim deve ser posterior a data_inicio")
 	}
 
+	if err := validarHorasEscala(req.HoraInicio, req.HoraFim); err != nil {
+		return nil, err
+	}
+
 	toleranciaMin := req.ToleranciaMin
 	if toleranciaMin <= 0 {
 		toleranciaMin = 15
@@ -135,6 +139,10 @@ func (s *EscalaService) Update(ctx context.Context, empresaID, id uuid.UUID, req
 		esc.Ativo = *req.Ativo
 	}
 
+	if err := validarHorasEscala(esc.HoraInicio, esc.HoraFim); err != nil {
+		return nil, err
+	}
+
 	if err := s.escalaRepo.Update(ctx, empresaID, id, esc); err != nil {
 		return nil, fmt.Errorf("atualizar escala: %w", err)
 	}
@@ -152,50 +160,74 @@ func (s *EscalaService) Delete(ctx context.Context, empresaID, id uuid.UUID) err
 	return s.escalaRepo.Update(ctx, empresaID, id, esc)
 }
 
-func (s *EscalaService) ValidarEscala(ctx context.Context, empresaID, usuarioID, postoID uuid.UUID) (*model.Escala, error) {
-	now := time.Now()
-	diaSemana := int16(now.Weekday())
-
-	esc, err := s.escalaRepo.FindAtivaByUsuarioPostoData(ctx, empresaID, usuarioID, postoID, now, diaSemana)
-	if err != nil {
-		return nil, fmt.Errorf("validar escala: %w", err)
-	}
-
-	return esc, nil
-}
-
-func (s *EscalaService) VerificarTolerancia(esc *model.Escala) (bool, string) {
-	now := time.Now()
-	horaAtual := now.Format("15:04")
-
+// VerificarToleranciaEscala valida se `now` esta dentro da tolerancia de inicio
+// da escala. A diferenca e a distancia circular no relogio de 24h, entao escalas
+// noturnas que cruzam a meia-noite (ex.: 22:00 -> 06:00) funcionam: 23:55 esta a
+// 5 min de uma escala que inicia 00:00, e nao a 1435.
+func VerificarToleranciaEscala(esc *model.Escala, now time.Time) (bool, string) {
 	if esc == nil {
 		return false, "nenhuma escala ativa encontrada"
 	}
 
-	horaInicio := esc.HoraInicio
-	if len(horaInicio) == 8 {
-		horaInicio = horaInicio[:5]
-	}
-
-	horaInicioTime, err := time.Parse("15:04", horaInicio)
+	inicioMin, err := horaEmMinutos(esc.HoraInicio)
 	if err != nil {
-		return false, fmt.Sprintf("hora_inicio invalida na escala: %s", horaInicio)
+		return false, fmt.Sprintf("hora_inicio invalida na escala: %s", esc.HoraInicio)
 	}
 
-	horaAtualTime, err := time.Parse("15:04", horaAtual)
-	if err != nil {
-		return false, "erro ao processar hora atual"
+	nowMin := now.Hour()*60 + now.Minute()
+	diferenca := nowMin - inicioMin
+	if diferenca < 0 {
+		diferenca = -diferenca
+	}
+	if diferenca > 720 {
+		diferenca = 1440 - diferenca
 	}
 
-	diferencaMinutos := int(horaAtualTime.Sub(horaInicioTime).Minutes())
-
-	if diferencaMinutos < 0 {
-		diferencaMinutos = -diferencaMinutos
-	}
-
-	if diferencaMinutos <= esc.ToleranciaMin {
+	if diferenca <= esc.ToleranciaMin {
 		return true, ""
 	}
+	return false, fmt.Sprintf("fora da tolerancia: %d minutos de diferenca (max: %d)", diferenca, esc.ToleranciaMin)
+}
 
-	return false, fmt.Sprintf("fora da tolerancia: %d minutos de diferenca (max: %d)", diferencaMinutos, esc.ToleranciaMin)
+// EscalaCruzaMeiaNoite indica se a escala termina no dia seguinte ao inicio
+// (hora_fim <= hora_inicio).
+func EscalaCruzaMeiaNoite(esc *model.Escala) bool {
+	inicio, err := horaEmMinutos(esc.HoraInicio)
+	if err != nil {
+		return false
+	}
+	fim, err := horaEmMinutos(esc.HoraFim)
+	if err != nil {
+		return false
+	}
+	return fim <= inicio
+}
+
+// validarHorasEscala aceita escalas noturnas (hora_fim < hora_inicio significa
+// que o turno vira o dia), mas rejeita inicio igual ao fim por ser ambiguo.
+func validarHorasEscala(horaInicio, horaFim string) error {
+	inicio, err := horaEmMinutos(horaInicio)
+	if err != nil {
+		return fmt.Errorf("hora_inicio invalida: %s", horaInicio)
+	}
+	fim, err := horaEmMinutos(horaFim)
+	if err != nil {
+		return fmt.Errorf("hora_fim invalida: %s", horaFim)
+	}
+	if inicio == fim {
+		return errors.New("hora_fim deve ser diferente de hora_inicio")
+	}
+	return nil
+}
+
+// horaEmMinutos converte "HH:MM" ou "HH:MM:SS" em minutos desde a meia-noite.
+func horaEmMinutos(hora string) (int, error) {
+	if len(hora) > 5 {
+		hora = hora[:5]
+	}
+	t, err := time.Parse("15:04", hora)
+	if err != nil {
+		return 0, err
+	}
+	return t.Hour()*60 + t.Minute(), nil
 }

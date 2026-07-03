@@ -94,32 +94,14 @@ func (s *TurnoService) Iniciar(ctx context.Context, userID, empresaID string, re
 	}
 
 	now := time.Now()
-	diaSemana := int16(now.Weekday())
-	esc, err := s.escalaRepo.FindAtivaByUsuarioPostoData(ctx, parsedEmpresaID, parsedUserID, parsedPostoID, now, diaSemana)
+	esc, err := s.buscarEscalaParaInicio(ctx, parsedEmpresaID, parsedUserID, parsedPostoID, now)
 	if err != nil {
-		return nil, fmt.Errorf("validar escala: %w", err)
+		return nil, err
 	}
 	if esc == nil {
 		return nil, ErrEscalaSemEscala
 	}
-
-	horaInicio := esc.HoraInicio
-	if len(horaInicio) == 8 {
-		horaInicio = horaInicio[:5]
-	}
-	horaInicioTime, err := time.Parse("15:04", horaInicio)
-	if err != nil {
-		return nil, fmt.Errorf("hora_inicio invalida na escala: %w", err)
-	}
-	horaAtualTime, err := time.Parse("15:04", now.Format("15:04"))
-	if err != nil {
-		return nil, fmt.Errorf("processar hora atual: %w", err)
-	}
-	diferencaMin := int(horaAtualTime.Sub(horaInicioTime).Minutes())
-	if diferencaMin < 0 {
-		diferencaMin = -diferencaMin
-	}
-	if diferencaMin > esc.ToleranciaMin {
+	if ok, _ := VerificarToleranciaEscala(esc, now); !ok {
 		return nil, ErrEscalaForaTolerancia
 	}
 
@@ -152,6 +134,39 @@ func (s *TurnoService) Iniciar(ctx context.Context, userID, empresaID string, re
 	s.hub.Broadcast(empresaID, ws.NewStatusChangeEvent(turno.ID.String(), "em_andamento"))
 
 	return turno, nil
+}
+
+// buscarEscalaParaInicio procura a escala ativa compativel com o inicio de turno
+// em `now`. Alem da data/dia-da-semana de hoje, tenta a escala de ontem quando
+// ela cruza a meia-noite: um vigia da escala 23:50->07:00 pode iniciar o turno
+// ja no dia seguinte, dentro da tolerancia.
+func (s *TurnoService) buscarEscalaParaInicio(ctx context.Context, empresaID, usuarioID, postoID uuid.UUID, now time.Time) (*model.Escala, error) {
+	hoje, err := s.escalaRepo.FindAtivaByUsuarioPostoData(ctx, empresaID, usuarioID, postoID, now, int16(now.Weekday()))
+	if err != nil {
+		return nil, fmt.Errorf("validar escala: %w", err)
+	}
+	if hoje != nil {
+		if ok, _ := VerificarToleranciaEscala(hoje, now); ok {
+			return hoje, nil
+		}
+	}
+
+	ontem := now.AddDate(0, 0, -1)
+	escOntem, err := s.escalaRepo.FindAtivaByUsuarioPostoData(ctx, empresaID, usuarioID, postoID, ontem, int16(ontem.Weekday()))
+	if err != nil {
+		return nil, fmt.Errorf("validar escala: %w", err)
+	}
+	if escOntem != nil && EscalaCruzaMeiaNoite(escOntem) {
+		if ok, _ := VerificarToleranciaEscala(escOntem, now); ok {
+			return escOntem, nil
+		}
+		if hoje == nil {
+			hoje = escOntem
+		}
+	}
+
+	// nil (sem escala) ou uma candidata fora da tolerancia; o chamador decide o erro
+	return hoje, nil
 }
 
 func (s *TurnoService) Checkin(ctx context.Context, userID, empresaID string, req model.CheckinRequest) (*model.CheckinResponse, error) {
@@ -199,23 +214,20 @@ func (s *TurnoService) Checkin(ctx context.Context, userID, empresaID string, re
 		OrigemRede:       "online",
 	}
 
+	// o ultimo check-in precisa ser capturado antes do INSERT, senao a ancora
+	// da janela deslizante vira o proprio check-in recem-criado (A2)
+	var anterior *time.Time
+	if ultimo := s.checkinRepo.FindUltimoByTurnoNoError(ctx, turno.ID); ultimo != nil {
+		anterior = &ultimo.TimestampCriacao
+	}
+
 	if err := s.checkinRepo.Create(ctx, checkin); err != nil {
 		return nil, fmt.Errorf("criar checkin: %w", err)
 	}
 
-	atrasado := false
-	var proximoDeadline *time.Time
-
-	ultimo := s.checkinRepo.FindUltimoByTurnoNoError(ctx, turno.ID)
+	atrasado := checkinAtrasado(anterior, turno.InicioReal, turno.IntervaloMin, timestampCriacao)
 	dl := timestampCriacao.Add(time.Duration(turno.IntervaloMin) * time.Minute)
-	proximoDeadline = &dl
-
-	if ultimo != nil && ultimo.ID != checkin.ID {
-		janelaDeadline := ultimo.TimestampCriacao.Add(time.Duration(turno.IntervaloMin) * time.Minute)
-		if timestampCriacao.After(janelaDeadline) {
-			atrasado = true
-		}
-	}
+	proximoDeadline := &dl
 
 	if req.TipoSenha == "coacao" {
 		_ = s.turnoRepo.UpdateStatus(ctx, parsedTurnoID, parsedEmpresaID, "critico", nil)
@@ -592,22 +604,22 @@ func (s *TurnoService) ProcessarLote(ctx context.Context, userID, empresaID stri
 			OrigemRede:       origemRede,
 		}
 
-		var criado bool
+		var anterior *time.Time
+		if ultimo := s.checkinRepo.FindUltimoByTurnoNoError(ctx, turno.ID); ultimo != nil {
+			anterior = &ultimo.TimestampCriacao
+		}
+
 		if req.ClienteCheckinID != "" {
 			cid := req.ClienteCheckinID
 			checkin.ClienteCheckinID = &cid
-			var err error
-			criado, err = s.checkinRepo.CreateIdempotent(ctx, checkin)
-			if err != nil {
+			if _, err := s.checkinRepo.CreateIdempotent(ctx, checkin); err != nil {
 				continue
 			}
 		} else {
 			if err := s.checkinRepo.Create(ctx, checkin); err != nil {
 				continue
 			}
-			criado = true
 		}
-		_ = criado
 
 		if req.TipoSenha == "coacao" {
 			_ = s.turnoRepo.UpdateStatus(ctx, parsedTurnoID, parsedEmpresaID, "critico", nil)
@@ -617,17 +629,9 @@ func (s *TurnoService) ProcessarLote(ctx context.Context, userID, empresaID stri
 
 		s.emitirGPSUpdate(empresaID, req.TurnoID, req.Latitude, req.Longitude, timestampCriacao, flagGeofence)
 
-		ultimo := s.checkinRepo.FindUltimoByTurnoNoError(ctx, turno.ID)
-		atrasado := false
+		atrasado := checkinAtrasado(anterior, turno.InicioReal, turno.IntervaloMin, timestampCriacao)
 		dl := timestampCriacao.Add(time.Duration(turno.IntervaloMin) * time.Minute)
 		proximoDeadline := &dl
-
-		if ultimo != nil && ultimo.ID != checkin.ID {
-			janelaDeadline := ultimo.TimestampCriacao.Add(time.Duration(turno.IntervaloMin) * time.Minute)
-			if timestampCriacao.After(janelaDeadline) {
-				atrasado = true
-			}
-		}
 
 		posto, err := s.postoRepo.FindByID(ctx, parsedEmpresaID, turno.PostoID)
 		postoNome := ""
@@ -654,15 +658,29 @@ func (s *TurnoService) calcularGeofence(ctx context.Context, postoID, empresaID 
 		return &geofence
 	}
 
-	distancia := haversine(lat, lon, posto.Latitude, posto.Longitude)
-
-	if distancia > float64(posto.RaioM) {
-		geofence := "desvio_rota"
-		return &geofence
-	}
-
-	geofence := "ok"
+	geofence := classificarGeofence(lat, lon, posto.Latitude, posto.Longitude, posto.RaioM)
 	return &geofence
+}
+
+func classificarGeofence(lat, lon, postoLat, postoLon float64, raioM int) string {
+	if haversine(lat, lon, postoLat, postoLon) > float64(raioM) {
+		return "desvio_rota"
+	}
+	return "ok"
+}
+
+// checkinAtrasado indica se um check-in em `ts` estourou a janela deslizante.
+// A ancora e o check-in imediatamente anterior ou, no primeiro check-in do
+// turno, o inicio real.
+func checkinAtrasado(anterior, inicioReal *time.Time, intervaloMin int, ts time.Time) bool {
+	ancora := anterior
+	if ancora == nil {
+		ancora = inicioReal
+	}
+	if ancora == nil {
+		return false
+	}
+	return ts.After(ancora.Add(time.Duration(intervaloMin) * time.Minute))
 }
 
 func haversine(lat1, lon1, lat2, lon2 float64) float64 {
