@@ -372,11 +372,11 @@ CREATE TABLE sessoes_dispositivo (
 - [x] Emissão de eventos: gps_update, status_change, new_alert
 
 ### Fase 8 — Escalas e Agenda
-- [ ] CRUD de escalas (obra x vigia x período)
-- [ ] Validação de escala ao iniciar turno
-- [ ] Tolerância de início e alerta de no-show
+- [x] CRUD de escalas (obra x vigia x período)
+- [x] Validação de escala ao iniciar turno
+- [x] Tolerância de início e alerta de no-show
 
-### Fase 9 — Integração WhatsApp
+### Fase 9 — Integração WhatsApp (SUSPENSO, ADIAR IMPLEMENTACAO)
 - [ ] Integração com API do WhatsApp Business (Twilio / Meta)
 - [ ] Templates de mensagem por tipo de alerta
 - [ ] Rate limiting e retry com backoff

@@ -58,6 +58,14 @@ func (h *TurnoHandler) Iniciar(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusForbidden, "dispositivo nao registrado - faca login biometrico primeiro")
 			return
 		}
+		if errors.Is(err, service.ErrEscalaSemEscala) {
+			writeError(w, http.StatusForbidden, "nenhuma escala ativa encontrada para este usuario, posto e horario")
+			return
+		}
+		if errors.Is(err, service.ErrEscalaForaTolerancia) {
+			writeError(w, http.StatusForbidden, "horario de inicio fora da tolerancia da escala")
+			return
+		}
 		slog.Error("iniciar turno failed", "error", err)
 		writeError(w, http.StatusInternalServerError, "erro ao iniciar turno")
 		return

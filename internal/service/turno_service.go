@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
-	"log/slog"
 	"math"
 	"math/big"
 	"time"
@@ -96,34 +95,32 @@ func (s *TurnoService) Iniciar(ctx context.Context, userID, empresaID string, re
 
 	now := time.Now()
 	diaSemana := int16(now.Weekday())
-	esc, _ := s.escalaRepo.FindAtivaByUsuarioPostoData(ctx, parsedEmpresaID, parsedUserID, parsedPostoID, now, diaSemana)
+	esc, err := s.escalaRepo.FindAtivaByUsuarioPostoData(ctx, parsedEmpresaID, parsedUserID, parsedPostoID, now, diaSemana)
+	if err != nil {
+		return nil, fmt.Errorf("validar escala: %w", err)
+	}
+	if esc == nil {
+		return nil, ErrEscalaSemEscala
+	}
 
-	if esc != nil {
-		horaInicio := esc.HoraInicio
-		if len(horaInicio) == 8 {
-			horaInicio = horaInicio[:5]
-		}
-		horaInicioTime, err := time.Parse("15:04", horaInicio)
-		if err == nil {
-			horaAtualTime, _ := time.Parse("15:04", now.Format("15:04"))
-			diferencaMin := int(horaAtualTime.Sub(horaInicioTime).Minutes())
-			if diferencaMin < 0 {
-				diferencaMin = -diferencaMin
-			}
-			if diferencaMin > esc.ToleranciaMin {
-				slog.Warn("turno iniciado fora da tolerancia da escala",
-					"usuario_id", parsedUserID,
-					"posto_id", parsedPostoID,
-					"tolerancia_min", esc.ToleranciaMin,
-					"diferenca_min", diferencaMin,
-				)
-			}
-		}
-	} else {
-		slog.Warn("turno iniciado sem escala ativa",
-			"usuario_id", parsedUserID,
-			"posto_id", parsedPostoID,
-		)
+	horaInicio := esc.HoraInicio
+	if len(horaInicio) == 8 {
+		horaInicio = horaInicio[:5]
+	}
+	horaInicioTime, err := time.Parse("15:04", horaInicio)
+	if err != nil {
+		return nil, fmt.Errorf("hora_inicio invalida na escala: %w", err)
+	}
+	horaAtualTime, err := time.Parse("15:04", now.Format("15:04"))
+	if err != nil {
+		return nil, fmt.Errorf("processar hora atual: %w", err)
+	}
+	diferencaMin := int(horaAtualTime.Sub(horaInicioTime).Minutes())
+	if diferencaMin < 0 {
+		diferencaMin = -diferencaMin
+	}
+	if diferencaMin > esc.ToleranciaMin {
+		return nil, ErrEscalaForaTolerancia
 	}
 
 	intervaloMin := req.IntervaloMin
