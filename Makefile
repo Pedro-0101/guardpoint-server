@@ -44,3 +44,16 @@ docker-run:
 		--env-file .env \
 		-e DATABASE_URL=postgres://guardpoint:guardpoint@host.docker.internal:5432/guardpoint?sslmode=disable \
 		guardpoint-server:local
+
+# --- Testes de integracao (Postgres efemero na porta 5433) ---
+
+test-db-up:
+	docker run -d --name guardpoint-test-pg \
+		-e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=guardpoint_test \
+		-p 5433:5432 postgres:16-alpine
+
+test-db-down:
+	docker rm -f guardpoint-test-pg
+
+test-integration:
+	go test ./... -tags integration -p 1 -count=1 -race

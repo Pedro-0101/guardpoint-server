@@ -15,6 +15,7 @@ import (
 
 var (
 	ErrAlertaNaoEncontrado          = errors.New("alerta nao encontrado")
+	ErrAlertaTransicaoInvalida      = errors.New("transicao de status do alerta invalida")
 	ErrConfigEscalonamentoDuplicado = errors.New("nivel de escalonamento ja existe para esta empresa")
 )
 
@@ -137,7 +138,7 @@ func (s *AlertaService) Reconhecer(ctx context.Context, empresaID, alertaID stri
 	}
 
 	if alerta.Status != "aberto" {
-		return fmt.Errorf("alerta nao esta aberto")
+		return fmt.Errorf("%w: alerta nao esta aberto", ErrAlertaTransicaoInvalida)
 	}
 
 	if err := s.alertaRepo.UpdateStatus(ctx, parsedAlertaID, parsedEmpresaID, "reconhecido", nil); err != nil {
@@ -162,7 +163,7 @@ func (s *AlertaService) Encerrar(ctx context.Context, empresaID, alertaID string
 	}
 
 	if alerta.Status == "encerrado" {
-		return fmt.Errorf("alerta ja esta encerrado")
+		return fmt.Errorf("%w: alerta ja esta encerrado", ErrAlertaTransicaoInvalida)
 	}
 
 	now := time.Now()

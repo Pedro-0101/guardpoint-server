@@ -46,12 +46,14 @@ func (w *TimeoutChecker) Run(ctx context.Context) {
 			slog.Info("timeout checker worker stopped")
 			return
 		case <-ticker.C:
-			w.check(ctx)
+			w.CheckOnce(ctx)
 		}
 	}
 }
 
-func (w *TimeoutChecker) check(ctx context.Context) {
+// CheckOnce roda um ciclo de verificacao (atrasos de check-in + no-show).
+// Exportado para permitir teste deterministico sem o ticker.
+func (w *TimeoutChecker) CheckOnce(ctx context.Context) {
 	turnos, err := w.listTurnosAtivos(ctx)
 	if err != nil {
 		slog.Error("timeout checker: listar turnos ativos", "error", err)

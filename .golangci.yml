@@ -33,6 +33,7 @@ linters-settings:
       - validade
       - correspondente
       - emergencias
+      - comando
   revive:
     rules:
       - name: blank-imports

@@ -64,6 +64,10 @@ func (h *AlertaHandler) Reconhecer(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusNotFound, "alerta nao encontrado")
 			return
 		}
+		if errors.Is(err, service.ErrAlertaTransicaoInvalida) {
+			writeError(w, http.StatusConflict, "alerta nao esta aberto")
+			return
+		}
 		slog.Error("reconhecer alerta failed", "error", err)
 		writeError(w, http.StatusInternalServerError, "erro ao reconhecer alerta")
 		return
@@ -79,6 +83,10 @@ func (h *AlertaHandler) Encerrar(w http.ResponseWriter, r *http.Request) {
 	if err := h.alertaService.Encerrar(r.Context(), empresaID, alertaID); err != nil {
 		if errors.Is(err, service.ErrAlertaNaoEncontrado) {
 			writeError(w, http.StatusNotFound, "alerta nao encontrado")
+			return
+		}
+		if errors.Is(err, service.ErrAlertaTransicaoInvalida) {
+			writeError(w, http.StatusConflict, "alerta ja foi encerrado")
 			return
 		}
 		slog.Error("encerrar alerta failed", "error", err)

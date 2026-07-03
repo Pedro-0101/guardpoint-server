@@ -16,7 +16,9 @@ func HandleWebSocket(hub *Hub, jwtService *auth.JWTService, corsOrigin string) h
 		WriteBufferSize: 1024,
 		CheckOrigin: func(r *http.Request) bool {
 			origin := r.Header.Get("Origin")
-			if corsOrigin == "*" || corsOrigin == "" {
+			// Origin ausente = cliente nao-browser (app Android); a checagem
+			// de origem protege apenas contra CSWSH em navegadores.
+			if origin == "" || corsOrigin == "*" || corsOrigin == "" {
 				return true
 			}
 			for _, o := range strings.Split(corsOrigin, ",") {
