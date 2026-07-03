@@ -1,0 +1,48 @@
+name: Deploy
+
+# Runs only after the CI workflow completes successfully on main, checked out
+# at the exact commit CI validated. This is scaffolding: it will not succeed
+# until a Railway project exists and the secrets below are configured
+# (see the comments on each step).
+on:
+  workflow_run:
+    workflows: ["CI"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  deploy:
+    if: github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: ${{ secrets.DATABASE_URL }}
+      RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+
+      - name: Install migrate CLI
+        run: |
+          curl -L https://github.com/golang-migrate/migrate/releases/download/v4.18.1/migrate.linux-amd64.tar.gz | tar xvz
+          sudo mv migrate /usr/local/bin/migrate
+
+      - name: Run database migrations
+        # DATABASE_URL must be Railway's PUBLIC/proxy connection string —
+        # GitHub-hosted runners cannot reach Railway's internal-only hostnames.
+        run: migrate -path migrations -database "$DATABASE_URL" up
+
+      - name: Install Railway CLI
+        # Pinned to 5.2.0: @railway/cli@5.3.0 had a known "Not signed in"
+        # regression authenticating with RAILWAY_TOKEN project tokens in CI.
+        # Re-check for a fixed release before bumping this pin.
+        run: npm i -g @railway/cli@5.2.0
+
+      - name: Deploy to Railway
+        # Requires, one time, outside of CI: `railway login && railway link`
+        # to create/link the project and service, a project token generated
+        # under Project Settings -> Tokens saved as the RAILWAY_TOKEN repo
+        # secret, and the Postgres connection string saved as the
+        # DATABASE_URL repo secret. Replace the service name below with the
+        # real one once the project exists.
+        run: railway up --service guardpoint-server --detach

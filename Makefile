@@ -1,4 +1,4 @@
-.PHONY: build run test lint clean dev db-up db-down migrate-up migrate-down
+.PHONY: build run test lint clean dev db-up db-down migrate-up migrate-down docker-build docker-run
 
 APP_NAME = server
 BUILD_DIR = bin
@@ -35,3 +35,12 @@ migrate-down:
 
 sqlc:
 	sqlc generate
+
+docker-build:
+	docker build -t guardpoint-server:local .
+
+docker-run:
+	docker run --rm -p 8080:8080 \
+		--env-file .env \
+		-e DATABASE_URL=postgres://guardpoint:guardpoint@host.docker.internal:5432/guardpoint?sslmode=disable \
+		guardpoint-server:local

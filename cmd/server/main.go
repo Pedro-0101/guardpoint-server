@@ -11,11 +11,13 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 
 	"github.com/guardpoint/guardpoint-server/internal/auth"
 	"github.com/guardpoint/guardpoint-server/internal/config"
 	"github.com/guardpoint/guardpoint-server/internal/db"
 	"github.com/guardpoint/guardpoint-server/internal/handler"
+	"github.com/guardpoint/guardpoint-server/internal/metrics"
 	"github.com/guardpoint/guardpoint-server/internal/middleware"
 	"github.com/guardpoint/guardpoint-server/internal/repository"
 	"github.com/guardpoint/guardpoint-server/internal/seed"
@@ -103,6 +105,7 @@ func main() {
 
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID)
+	r.Use(metrics.Middleware)
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
 	r.Use(middleware.CORS(cfg.CORSOrigin))
@@ -195,6 +198,23 @@ func main() {
 		w.WriteHeader(http.StatusOK)
 		_, _ = w.Write([]byte(`{"status":"ok"}`))
 	})
+
+	r.Get("/ready", func(w http.ResponseWriter, r *http.Request) {
+		pingCtx, pingCancel := context.WithTimeout(r.Context(), 3*time.Second)
+		defer pingCancel()
+
+		w.Header().Set("Content-Type", "application/json")
+		if err := pool.Ping(pingCtx); err != nil {
+			slog.Warn("readiness check failed", "error", err)
+			w.WriteHeader(http.StatusServiceUnavailable)
+			_, _ = w.Write([]byte(`{"status":"not ready","error":"database unreachable"}`))
+			return
+		}
+		w.WriteHeader(http.StatusOK)
+		_, _ = w.Write([]byte(`{"status":"ready"}`))
+	})
+
+	r.Get("/metrics", promhttp.Handler().ServeHTTP)
 
 	r.Get("/ws", ws.HandleWebSocket(hub, jwtService, cfg.CORSOrigin))
 

@@ -382,10 +382,10 @@ CREATE TABLE sessoes_dispositivo (
 - [ ] Rate limiting e retry com backoff
 
 ### Fase 10 — Produção e Observabilidade
-- [ ] Dockerfile otimizado (multi-stage build)
-- [ ] Health checks (`/health`, `/ready`)
-- [ ] Métricas e tracing (Prometheus, Jaeger — opcional)
-- [ ] Deploy no Railway via GitHub Actions CI/CD
+- [x] Dockerfile otimizado (multi-stage build, Go 1.25, usuário não-root, HEALTHCHECK, cache mounts)
+- [x] Health checks (`/health` liveness, `/ready` checando `pool.Ping`)
+- [x] Métricas Prometheus (`/metrics`, contadores e histogramas de requests HTTP) — tracing (Jaeger/OTel) permanece opcional, não implementado
+- [x] Deploy no Railway via GitHub Actions CI/CD (scaffolding: `railway.json` + `.github/workflows/ci.yml`/`deploy.yml`; deploy real depende de projeto Railway + secrets ainda não configurados)
 
 ### (Extra) CRUD de Usuários — Fora da Numeração Original
 

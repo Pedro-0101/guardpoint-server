@@ -1,0 +1,16 @@
+.git
+.github
+.vscode
+.idea
+bin/
+*.exe
+*.exe~
+*.test
+*.out
+coverage.out
+.env
+tmp/
+temp/
+*.md
+docker-compose.yml
+.golangci.yml
