@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -122,12 +121,4 @@ func (r *CheckinRepository) FindUltimoByTurnoNoError(ctx context.Context, turnoI
 		return nil
 	}
 	return c
-}
-
-func (r *CheckinRepository) FindUltimoTimestampByTurno(ctx context.Context, turnoID uuid.UUID) (*time.Time, error) {
-	c, err := r.FindUltimoByTurno(ctx, turnoID)
-	if err != nil {
-		return nil, err
-	}
-	return &c.TimestampCriacao, nil
 }

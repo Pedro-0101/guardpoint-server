@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -176,7 +177,7 @@ func (r *EscalaRepository) FindAtivaByUsuarioPostoData(ctx context.Context, empr
 		&esc.DiasSemana, &esc.ToleranciaMin, &esc.Ativo, &esc.CreatedAt, &esc.UpdatedAt,
 	)
 	if err != nil {
-		if err == pgx.ErrNoRows {
+		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("buscar escala ativa: %w", err)
@@ -189,7 +190,7 @@ func (r *EscalaRepository) FindAtivaByUsuarioPostoData(ctx context.Context, empr
 // (data + hora + tolerancia) para nao quebrar quando hora_inicio + tolerancia
 // cruza a meia-noite, e considera tambem a escala noturna iniciada ontem
 // enquanto o turno dela ainda estaria em andamento.
-func (r *EscalaRepository) FindEscalasSemTurno(ctx context.Context, horaCorte time.Time) ([]escalaSemTurno, error) {
+func (r *EscalaRepository) FindEscalasSemTurno(ctx context.Context, horaCorte time.Time) ([]EscalaSemTurno, error) {
 	ontem := horaCorte.AddDate(0, 0, -1)
 	query := `
 		SELECT e.id, e.empresa_id, e.usuario_id, e.posto_id, e.data_inicio,
@@ -229,9 +230,9 @@ func (r *EscalaRepository) FindEscalasSemTurno(ctx context.Context, horaCorte ti
 	}
 	defer rows.Close()
 
-	var result []escalaSemTurno
+	var result []EscalaSemTurno
 	for rows.Next() {
-		var e escalaSemTurno
+		var e EscalaSemTurno
 		if err := rows.Scan(&e.ID, &e.EmpresaID, &e.UsuarioID, &e.PostoID, &e.DataInicio, &e.HoraInicio, &e.ToleranciaMin); err != nil {
 			return nil, fmt.Errorf("scan escala sem turno: %w", err)
 		}
@@ -240,7 +241,9 @@ func (r *EscalaRepository) FindEscalasSemTurno(ctx context.Context, horaCorte ti
 	return result, rows.Err()
 }
 
-type escalaSemTurno struct {
+// EscalaSemTurno e a projecao retornada por FindEscalasSemTurno para o worker
+// de no-show.
+type EscalaSemTurno struct {
 	ID            uuid.UUID
 	EmpresaID     uuid.UUID
 	UsuarioID     uuid.UUID

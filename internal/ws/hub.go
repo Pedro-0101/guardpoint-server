@@ -77,24 +77,3 @@ func (h *Hub) Broadcast(empresaID string, event Event) {
 		}
 	}
 }
-
-func (h *Hub) BroadcastToAll(event Event) {
-	h.mu.RLock()
-	defer h.mu.RUnlock()
-
-	data, err := json.Marshal(event)
-	if err != nil {
-		slog.Error("ws marshal event", "error", err)
-		return
-	}
-
-	for _, clients := range h.clients {
-		for client := range clients {
-			select {
-			case client.send <- data:
-			default:
-				go h.Unregister(client)
-			}
-		}
-	}
-}

@@ -129,7 +129,7 @@ func (r *ConfigEscalonamentoRepository) ReplaceByEmpresa(ctx context.Context, em
 	if err != nil {
 		return fmt.Errorf("iniciar transacao: %w", err)
 	}
-	defer tx.Rollback(ctx)
+	defer func() { _ = tx.Rollback(ctx) }()
 
 	if _, err := tx.Exec(ctx, `DELETE FROM config_escalonamento WHERE empresa_id = $1`, empresaID); err != nil {
 		return fmt.Errorf("deletar configs existentes: %w", err)

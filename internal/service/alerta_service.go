@@ -48,6 +48,8 @@ func (s *AlertaService) AlertChannel() <-chan *model.PendingAlert {
 	return s.alertChannel
 }
 
+// CreateAlerta cria um alerta de escalonamento com deduplicacao por
+// (turno, tipo) e despacha WhatsApp apenas para o nivel correspondente.
 func (s *AlertaService) CreateAlerta(ctx context.Context, empresaID, turnoID uuid.UUID, tipo string, nivel int, mensagem string) (*model.Alerta, error) {
 	count, err := s.alertaRepo.CountByTurnoETipo(ctx, turnoID, tipo)
 	if err != nil {
@@ -57,6 +59,18 @@ func (s *AlertaService) CreateAlerta(ctx context.Context, empresaID, turnoID uui
 		return nil, nil
 	}
 
+	return s.criarAlerta(ctx, empresaID, turnoID, tipo, nivel, mensagem, false)
+}
+
+// CreateAlertaImediato cria um alerta de emergencia (coacao, sabotagem,
+// no-show) sem deduplicacao. Regra de produto: emergencias despacham WhatsApp
+// para TODOS os niveis de escalonamento configurados de uma vez, em vez de
+// seguir a escadinha por atraso.
+func (s *AlertaService) CreateAlertaImediato(ctx context.Context, empresaID, turnoID uuid.UUID, tipo string, nivel int, mensagem string) (*model.Alerta, error) {
+	return s.criarAlerta(ctx, empresaID, turnoID, tipo, nivel, mensagem, true)
+}
+
+func (s *AlertaService) criarAlerta(ctx context.Context, empresaID, turnoID uuid.UUID, tipo string, nivel int, mensagem string, notificarTodosNiveis bool) (*model.Alerta, error) {
 	msg := &mensagem
 	if mensagem == "" {
 		msg = nil
@@ -81,52 +95,18 @@ func (s *AlertaService) CreateAlerta(ctx context.Context, empresaID, turnoID uui
 
 	configs, _ := s.configRepo.FindByEmpresa(ctx, empresaID)
 	for _, cfg := range configs {
-		if cfg.Nivel == nivel {
-			select {
-			case s.alertChannel <- &model.PendingAlert{
-				Alerta:       alerta,
-				WhatsappPara: cfg.WhatsappPara,
-			}:
-			default:
-			}
-			break
+		if !notificarTodosNiveis && cfg.Nivel != nivel {
+			continue
 		}
-	}
-
-	return alerta, nil
-}
-
-func (s *AlertaService) CreateAlertaImediato(ctx context.Context, empresaID, turnoID uuid.UUID, tipo string, nivel int, mensagem string) (*model.Alerta, error) {
-	msg := &mensagem
-	if mensagem == "" {
-		msg = nil
-	}
-
-	turnoRef, turnoStr := nullableTurno(turnoID)
-
-	alerta := &model.Alerta{
-		EmpresaID: empresaID,
-		TurnoID:   turnoRef,
-		Tipo:      tipo,
-		Nivel:     nivel,
-		Status:    "aberto",
-		Mensagem:  msg,
-	}
-
-	if err := s.alertaRepo.Create(ctx, alerta); err != nil {
-		return nil, fmt.Errorf("criar alerta imediato: %w", err)
-	}
-
-	s.hub.Broadcast(empresaID.String(), ws.NewAlertEvent(alerta.ID.String(), tipo, turnoStr, nivel))
-
-	configs, _ := s.configRepo.FindByEmpresa(ctx, empresaID)
-	for _, cfg := range configs {
 		select {
 		case s.alertChannel <- &model.PendingAlert{
 			Alerta:       alerta,
 			WhatsappPara: cfg.WhatsappPara,
 		}:
 		default:
+		}
+		if !notificarTodosNiveis {
+			break
 		}
 	}
 

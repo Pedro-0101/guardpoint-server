@@ -23,6 +23,9 @@ jobs:
       - uses: golangci/golangci-lint-action@v6
         with:
           version: v1.64.8 # pinned to v1.x — .golangci.yml uses the v1 config schema
+          # binario oficial v1.64.8 foi compilado com Go < 1.25 e falha com a
+          # toolchain do go.mod; goinstall compila com o Go do proprio job
+          install-mode: goinstall
 
   docker:
     runs-on: ubuntu-latest

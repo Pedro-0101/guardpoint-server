@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"crypto/subtle"
 	"log/slog"
 	"net/http"
 	"os"
@@ -215,7 +216,18 @@ func main() {
 		_, _ = w.Write([]byte(`{"status":"ready"}`))
 	})
 
-	r.Get("/metrics", promhttp.Handler().ServeHTTP)
+	// METRICS_TOKEN vazio deixa /metrics aberto (ex.: rede privada do Railway);
+	// definido, exige Authorization: Bearer <token> (B3).
+	metricsHandler := promhttp.Handler()
+	r.Get("/metrics", func(w http.ResponseWriter, r *http.Request) {
+		if cfg.MetricsToken != "" {
+			if subtle.ConstantTimeCompare([]byte(r.Header.Get("Authorization")), []byte("Bearer "+cfg.MetricsToken)) != 1 {
+				w.WriteHeader(http.StatusUnauthorized)
+				return
+			}
+		}
+		metricsHandler.ServeHTTP(w, r)
+	})
 
 	r.Get("/ws", ws.HandleWebSocket(hub, jwtService, cfg.CORSOrigin))
 

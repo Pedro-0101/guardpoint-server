@@ -13,9 +13,9 @@ import (
 )
 
 var (
-	ErrEscalaNaoEncontrada    = errors.New("escala nao encontrada")
-	ErrEscalaSemEscala        = errors.New("nenhuma escala ativa para este usuario, posto e horario")
-	ErrEscalaForaTolerancia   = errors.New("inicio fora da tolerancia da escala")
+	ErrEscalaNaoEncontrada  = errors.New("escala nao encontrada")
+	ErrEscalaSemEscala      = errors.New("nenhuma escala ativa para este usuario, posto e horario")
+	ErrEscalaForaTolerancia = errors.New("inicio fora da tolerancia da escala")
 )
 
 type EscalaService struct {

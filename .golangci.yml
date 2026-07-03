@@ -27,6 +27,12 @@ linters-settings:
     simplify: true
   goimports:
     local-prefixes: github.com/guardpoint/guardpoint-server
+  misspell:
+    # dominios em portugues nos comentarios/campos
+    ignore-words:
+      - validade
+      - correspondente
+      - emergencias
   revive:
     rules:
       - name: blank-imports

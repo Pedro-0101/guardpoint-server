@@ -167,7 +167,7 @@ func (w *TimeoutChecker) checkNoShow(ctx context.Context) {
 	}
 
 	for _, e := range escalas {
-		existe, err := w.alertaJaExiste(ctx, e.EmpresaID, e.UsuarioID, e.PostoID, now)
+		existe, err := w.alertaJaExiste(ctx, e.EmpresaID, e.UsuarioID, now)
 		if err != nil {
 			slog.Error("timeout checker: verificar alerta existente", "error", err, "escala_id", e.ID)
 			continue
@@ -203,7 +203,7 @@ func (w *TimeoutChecker) checkNoShow(ctx context.Context) {
 	}
 }
 
-func (w *TimeoutChecker) alertaJaExiste(ctx context.Context, empresaID, usuarioID, postoID uuid.UUID, data time.Time) (bool, error) {
+func (w *TimeoutChecker) alertaJaExiste(ctx context.Context, empresaID, usuarioID uuid.UUID, data time.Time) (bool, error) {
 	var count int
 	err := w.db.QueryRow(ctx, `
 		SELECT COUNT(*) FROM alertas

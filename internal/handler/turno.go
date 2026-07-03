@@ -402,7 +402,7 @@ func (h *TurnoHandler) Historico(w http.ResponseWriter, r *http.Request) {
 
 func collectUniqueTurnoIDs(reqs []model.CheckinRequest) []uuid.UUID {
 	seen := make(map[string]struct{})
-	var ids []uuid.UUID
+	ids := make([]uuid.UUID, 0, len(reqs))
 	for _, req := range reqs {
 		if _, ok := seen[req.TurnoID]; ok {
 			continue
