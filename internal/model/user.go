@@ -84,12 +84,20 @@ type RefreshRequest struct {
 }
 
 type BiometricLoginRequest struct {
-	EmpresaID string `json:"empresa_id" validate:"required,uuid"`
-	DeviceID  string `json:"device_id" validate:"required"`
+	EmpresaID    string `json:"empresa_id" validate:"required,uuid"`
+	DeviceID     string `json:"device_id" validate:"required"`
+	DeviceSecret string `json:"device_secret" validate:"required"`
 }
 
 type BiometricRegisterRequest struct {
 	DeviceID string `json:"device_id" validate:"required"`
+}
+
+// BiometricRegisterResponse carrega o device_secret gerado no registro.
+// Ele e entregue UMA unica vez; o servidor guarda apenas o hash.
+type BiometricRegisterResponse struct {
+	SessaoDispositivo
+	DeviceSecret string `json:"device_secret"`
 }
 
 type TokenClaims struct {
@@ -101,9 +109,10 @@ type TokenClaims struct {
 }
 
 type SessaoDispositivo struct {
-	ID        uuid.UUID `json:"id"`
-	UsuarioID uuid.UUID `json:"usuario_id"`
-	EmpresaID uuid.UUID `json:"empresa_id"`
-	DeviceID  string    `json:"device_id"`
-	CriadoEm  time.Time `json:"criado_em"`
+	ID               uuid.UUID `json:"id"`
+	UsuarioID        uuid.UUID `json:"usuario_id"`
+	EmpresaID        uuid.UUID `json:"empresa_id"`
+	DeviceID         string    `json:"device_id"`
+	DeviceSecretHash *string   `json:"-"`
+	CriadoEm         time.Time `json:"criado_em"`
 }

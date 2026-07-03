@@ -21,14 +21,14 @@ func NewSessaoDispositivoRepository(db *pgxpool.Pool) *SessaoDispositivoReposito
 
 func (r *SessaoDispositivoRepository) FindByDeviceID(ctx context.Context, empresaID, deviceID string) (*model.SessaoDispositivo, error) {
 	query := `
-		SELECT id, usuario_id, empresa_id, device_id, criado_em
+		SELECT id, usuario_id, empresa_id, device_id, device_secret_hash, criado_em
 		FROM sessoes_dispositivo
 		WHERE device_id = $1 AND empresa_id = $2::uuid
 	`
 
 	var s model.SessaoDispositivo
 	err := r.db.QueryRow(ctx, query, deviceID, empresaID).Scan(
-		&s.ID, &s.UsuarioID, &s.EmpresaID, &s.DeviceID, &s.CriadoEm,
+		&s.ID, &s.UsuarioID, &s.EmpresaID, &s.DeviceID, &s.DeviceSecretHash, &s.CriadoEm,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -40,15 +40,21 @@ func (r *SessaoDispositivoRepository) FindByDeviceID(ctx context.Context, empres
 	return &s, nil
 }
 
+// Create faz upsert por (empresa_id, device_id): re-registrar biometria no
+// mesmo aparelho atualiza o dono e o segredo em vez de duplicar a linha.
 func (r *SessaoDispositivoRepository) Create(ctx context.Context, s *model.SessaoDispositivo) error {
 	query := `
-		INSERT INTO sessoes_dispositivo (usuario_id, empresa_id, device_id)
-		VALUES ($1, $2, $3)
+		INSERT INTO sessoes_dispositivo (usuario_id, empresa_id, device_id, device_secret_hash)
+		VALUES ($1, $2, $3, $4)
+		ON CONFLICT (empresa_id, device_id)
+		DO UPDATE SET usuario_id = EXCLUDED.usuario_id,
+		              device_secret_hash = EXCLUDED.device_secret_hash,
+		              criado_em = now()
 		RETURNING id, criado_em
 	`
 
 	return r.db.QueryRow(ctx, query,
-		s.UsuarioID, s.EmpresaID, s.DeviceID,
+		s.UsuarioID, s.EmpresaID, s.DeviceID, s.DeviceSecretHash,
 	).Scan(&s.ID, &s.CriadoEm)
 }
 

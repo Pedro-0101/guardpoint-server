@@ -1,0 +1,1 @@
+ALTER TABLE turnos DROP COLUMN IF EXISTS device_id;

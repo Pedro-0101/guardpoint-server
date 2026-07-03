@@ -18,10 +18,13 @@ type Turno struct {
 	InicioReal     *time.Time `json:"inicio_real,omitempty"`
 	FimReal        *time.Time `json:"fim_real,omitempty"`
 	TokenSessao    *string    `json:"token_sessao,omitempty"`
+	DeviceID       *string    `json:"device_id,omitempty"`
 	IntervaloMin   int        `json:"intervalo_min"`
-	Pin            *string    `json:"pin,omitempty"`
-	PinValidoAte   *time.Time `json:"pin_valido_ate,omitempty"`
-	CreatedAt      time.Time  `json:"created_at"`
+	// Pin so e preenchido pela consulta dedicada do fluxo de reassociacao;
+	// nunca e serializado para nao vazar o PIN ativo em listagens.
+	Pin          *string    `json:"-"`
+	PinValidoAte *time.Time `json:"-"`
+	CreatedAt    time.Time  `json:"created_at"`
 }
 
 type TurnoDetalhe struct {
@@ -39,6 +42,7 @@ type IniciarTurnoRequest struct {
 
 type CheckinRequest struct {
 	TurnoID          string  `json:"turno_id" validate:"required,uuid"`
+	DeviceID         string  `json:"device_id" validate:"required"`
 	Latitude         float64 `json:"latitude" validate:"required,latitude"`
 	Longitude        float64 `json:"longitude" validate:"required,longitude"`
 	TipoSenha        string  `json:"tipo_senha" validate:"required,oneof=padrao coacao finalizacao sabotagem"`
@@ -48,6 +52,7 @@ type CheckinRequest struct {
 
 type FinalizarTurnoRequest struct {
 	TurnoID   string  `json:"turno_id" validate:"required,uuid"`
+	DeviceID  string  `json:"device_id" validate:"required"`
 	Latitude  float64 `json:"latitude" validate:"required,latitude"`
 	Longitude float64 `json:"longitude" validate:"required,longitude"`
 	Timestamp string  `json:"timestamp" validate:"required"`
@@ -70,6 +75,7 @@ type CheckinResponse struct {
 
 type SabotagemRequest struct {
 	TurnoID   string  `json:"turno_id" validate:"required,uuid"`
+	DeviceID  string  `json:"device_id" validate:"required"`
 	Latitude  float64 `json:"latitude" validate:"required,latitude"`
 	Longitude float64 `json:"longitude" validate:"required,longitude"`
 	Motivo    string  `json:"motivo" validate:"required,min=3,max=500"`
@@ -85,6 +91,11 @@ type SabotagemResponse struct {
 type RevogarResponse struct {
 	PinNovoDispositivo string `json:"pin_novo_dispositivo"`
 	ValidadeMinutos    int    `json:"validade_minutos"`
+}
+
+type ReassociarRequest struct {
+	Pin      string `json:"pin" validate:"required,len=6,numeric"`
+	DeviceID string `json:"device_id" validate:"required"`
 }
 
 type HistoricoFilter struct {

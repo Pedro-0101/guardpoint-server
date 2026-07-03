@@ -23,21 +23,21 @@ func NewTurnoRepository(db *pgxpool.Pool) *TurnoRepository {
 
 func (r *TurnoRepository) Create(ctx context.Context, t *model.Turno) error {
 	query := `
-		INSERT INTO turnos (empresa_id, usuario_id, posto_id, status, inicio_previsto, fim_previsto, inicio_real, token_sessao, intervalo_min)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO turnos (empresa_id, usuario_id, posto_id, status, inicio_previsto, fim_previsto, inicio_real, token_sessao, device_id, intervalo_min)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
 		RETURNING id, created_at
 	`
 	return r.db.QueryRow(ctx, query,
 		t.EmpresaID, t.UsuarioID, t.PostoID, t.Status,
 		t.InicioPrevisto, t.FimPrevisto, t.InicioReal,
-		t.TokenSessao, t.IntervaloMin,
+		t.TokenSessao, t.DeviceID, t.IntervaloMin,
 	).Scan(&t.ID, &t.CreatedAt)
 }
 
 func (r *TurnoRepository) FindAtivoByUsuario(ctx context.Context, empresaID, usuarioID uuid.UUID) (*model.Turno, error) {
 	query := `
 		SELECT id, empresa_id, usuario_id, posto_id, status, inicio_previsto, fim_previsto,
-		       inicio_real, fim_real, token_sessao, intervalo_min, created_at
+		       inicio_real, fim_real, token_sessao, device_id, intervalo_min, created_at
 		FROM turnos
 		WHERE empresa_id = $1 AND usuario_id = $2 AND status IN ('em_andamento', 'pausado', 'critico')
 		LIMIT 1
@@ -46,7 +46,7 @@ func (r *TurnoRepository) FindAtivoByUsuario(ctx context.Context, empresaID, usu
 	err := r.db.QueryRow(ctx, query, empresaID, usuarioID).Scan(
 		&t.ID, &t.EmpresaID, &t.UsuarioID, &t.PostoID, &t.Status,
 		&t.InicioPrevisto, &t.FimPrevisto, &t.InicioReal, &t.FimReal,
-		&t.TokenSessao, &t.IntervaloMin, &t.CreatedAt,
+		&t.TokenSessao, &t.DeviceID, &t.IntervaloMin, &t.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -60,7 +60,7 @@ func (r *TurnoRepository) FindAtivoByUsuario(ctx context.Context, empresaID, usu
 func (r *TurnoRepository) FindByID(ctx context.Context, empresaID, id uuid.UUID) (*model.Turno, error) {
 	query := `
 		SELECT id, empresa_id, usuario_id, posto_id, status, inicio_previsto, fim_previsto,
-		       inicio_real, fim_real, token_sessao, intervalo_min, created_at
+		       inicio_real, fim_real, token_sessao, device_id, intervalo_min, created_at
 		FROM turnos
 		WHERE id = $1 AND empresa_id = $2
 	`
@@ -68,7 +68,7 @@ func (r *TurnoRepository) FindByID(ctx context.Context, empresaID, id uuid.UUID)
 	err := r.db.QueryRow(ctx, query, id, empresaID).Scan(
 		&t.ID, &t.EmpresaID, &t.UsuarioID, &t.PostoID, &t.Status,
 		&t.InicioPrevisto, &t.FimPrevisto, &t.InicioReal, &t.FimReal,
-		&t.TokenSessao, &t.IntervaloMin, &t.CreatedAt,
+		&t.TokenSessao, &t.DeviceID, &t.IntervaloMin, &t.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -94,7 +94,7 @@ func (r *TurnoRepository) UpdateStatus(ctx context.Context, id, empresaID uuid.U
 func (r *TurnoRepository) ListAtivos(ctx context.Context, empresaID uuid.UUID) ([]model.Turno, error) {
 	query := `
 		SELECT id, empresa_id, usuario_id, posto_id, status, inicio_previsto, fim_previsto,
-		       inicio_real, fim_real, token_sessao, intervalo_min, created_at
+		       inicio_real, fim_real, token_sessao, device_id, intervalo_min, created_at
 		FROM turnos
 		WHERE empresa_id = $1 AND status IN ('em_andamento', 'pausado', 'critico')
 		ORDER BY inicio_real DESC
@@ -111,7 +111,7 @@ func (r *TurnoRepository) ListAtivos(ctx context.Context, empresaID uuid.UUID) (
 		if err := rows.Scan(
 			&t.ID, &t.EmpresaID, &t.UsuarioID, &t.PostoID, &t.Status,
 			&t.InicioPrevisto, &t.FimPrevisto, &t.InicioReal, &t.FimReal,
-			&t.TokenSessao, &t.IntervaloMin, &t.CreatedAt,
+			&t.TokenSessao, &t.DeviceID, &t.IntervaloMin, &t.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan turno: %w", err)
 		}
@@ -166,7 +166,7 @@ func (r *TurnoRepository) ListHistorico(ctx context.Context, empresaID uuid.UUID
 
 	dataQuery := fmt.Sprintf(`
 		SELECT id, empresa_id, usuario_id, posto_id, status, inicio_previsto, fim_previsto,
-		       inicio_real, fim_real, token_sessao, intervalo_min, created_at
+		       inicio_real, fim_real, token_sessao, device_id, intervalo_min, created_at
 		FROM turnos %s ORDER BY created_at DESC LIMIT $%d OFFSET $%d
 	`, where, argIdx, argIdx+1)
 	args = append(args, filter.Limit, filter.Offset)
@@ -183,7 +183,7 @@ func (r *TurnoRepository) ListHistorico(ctx context.Context, empresaID uuid.UUID
 		if err := rows.Scan(
 			&t.ID, &t.EmpresaID, &t.UsuarioID, &t.PostoID, &t.Status,
 			&t.InicioPrevisto, &t.FimPrevisto, &t.InicioReal, &t.FimReal,
-			&t.TokenSessao, &t.IntervaloMin, &t.CreatedAt,
+			&t.TokenSessao, &t.DeviceID, &t.IntervaloMin, &t.CreatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan turno: %w", err)
 		}
@@ -192,11 +192,56 @@ func (r *TurnoRepository) ListHistorico(ctx context.Context, empresaID uuid.UUID
 	return turnos, total, rows.Err()
 }
 
+// RevogarToken invalida a sessao do dispositivo (token_sessao/device_id) sem
+// encerrar o turno: o vigia retoma em outro aparelho via PIN (PLANNING 8.5).
 func (r *TurnoRepository) RevogarToken(ctx context.Context, id, empresaID uuid.UUID, pin string, pinValidoAte time.Time) error {
-	query := `UPDATE turnos SET token_sessao = NULL, status = 'finalizado', fim_real = now(), pin = $3, pin_valido_ate = $4 WHERE id = $1 AND empresa_id = $2`
+	query := `UPDATE turnos SET token_sessao = NULL, device_id = NULL, pin = $3, pin_valido_ate = $4 WHERE id = $1 AND empresa_id = $2`
 	ct, err := r.db.Exec(ctx, query, id, empresaID, pin, pinValidoAte)
 	if err != nil {
 		return fmt.Errorf("revogar turno: %w", err)
+	}
+	if ct.RowsAffected() == 0 {
+		return fmt.Errorf("turno nao encontrado")
+	}
+	return nil
+}
+
+// FindAtivoComPinByUsuario busca o turno ativo do usuario incluindo pin e
+// pin_valido_ate; usado apenas no fluxo de reassociacao por PIN.
+func (r *TurnoRepository) FindAtivoComPinByUsuario(ctx context.Context, empresaID, usuarioID uuid.UUID) (*model.Turno, error) {
+	query := `
+		SELECT id, empresa_id, usuario_id, posto_id, status, inicio_previsto, fim_previsto,
+		       inicio_real, fim_real, token_sessao, device_id, intervalo_min, pin, pin_valido_ate, created_at
+		FROM turnos
+		WHERE empresa_id = $1 AND usuario_id = $2 AND status IN ('em_andamento', 'pausado', 'critico')
+		LIMIT 1
+	`
+	var t model.Turno
+	err := r.db.QueryRow(ctx, query, empresaID, usuarioID).Scan(
+		&t.ID, &t.EmpresaID, &t.UsuarioID, &t.PostoID, &t.Status,
+		&t.InicioPrevisto, &t.FimPrevisto, &t.InicioReal, &t.FimReal,
+		&t.TokenSessao, &t.DeviceID, &t.IntervaloMin, &t.Pin, &t.PinValidoAte, &t.CreatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("buscar turno ativo com pin: %w", err)
+	}
+	return &t, nil
+}
+
+// Reassociar vincula o turno a um novo dispositivo apos o resgate por PIN,
+// gerando nova sessao e consumindo o PIN.
+func (r *TurnoRepository) Reassociar(ctx context.Context, id, empresaID uuid.UUID, deviceID, tokenSessao string) error {
+	query := `
+		UPDATE turnos
+		SET device_id = $3, token_sessao = $4, pin = NULL, pin_valido_ate = NULL
+		WHERE id = $1 AND empresa_id = $2
+	`
+	ct, err := r.db.Exec(ctx, query, id, empresaID, deviceID, tokenSessao)
+	if err != nil {
+		return fmt.Errorf("reassociar turno: %w", err)
 	}
 	if ct.RowsAffected() == 0 {
 		return fmt.Errorf("turno nao encontrado")

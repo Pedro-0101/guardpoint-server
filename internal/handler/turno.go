@@ -103,6 +103,9 @@ func (h *TurnoHandler) Checkin(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusForbidden, "turno nao pertence a este usuario")
 			return
 		}
+		if writeSessaoError(w, err) {
+			return
+		}
 		slog.Error("checkin failed", "error", err)
 		writeError(w, http.StatusInternalServerError, "erro ao registrar check-in")
 		return
@@ -138,6 +141,9 @@ func (h *TurnoHandler) Finalizar(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.Is(err, service.ErrTurnoNaoPertenceAoUsuario) {
 			writeError(w, http.StatusForbidden, "turno nao pertence a este usuario")
+			return
+		}
+		if writeSessaoError(w, err) {
 			return
 		}
 		slog.Error("finalizar turno failed", "error", err)
@@ -218,6 +224,61 @@ func (h *TurnoHandler) Revogar(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// writeSessaoError trata os erros de sessao unica (A4); retorna true se o erro
+// foi respondido.
+func writeSessaoError(w http.ResponseWriter, err error) bool {
+	if errors.Is(err, service.ErrSessaoRevogada) {
+		writeError(w, http.StatusForbidden, "sessao revogada - reassocie o turno com o pin")
+		return true
+	}
+	if errors.Is(err, service.ErrSessaoOutroDispositivo) {
+		writeError(w, http.StatusForbidden, "turno associado a outro dispositivo")
+		return true
+	}
+	return false
+}
+
+func (h *TurnoHandler) Reassociar(w http.ResponseWriter, r *http.Request) {
+	userID := GetUserID(r.Context())
+	empresaID := GetEmpresaID(r.Context())
+
+	var req model.ReassociarRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "json invalido")
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		writeValidationError(w, err)
+		return
+	}
+
+	turno, err := h.turnoService.Reassociar(r.Context(), userID, empresaID, req)
+	if err != nil {
+		if errors.Is(err, service.ErrDeviceNaoRegistrado) {
+			writeError(w, http.StatusForbidden, "dispositivo nao registrado - faca login biometrico primeiro")
+			return
+		}
+		if errors.Is(err, service.ErrTurnoNaoEncontrado) {
+			writeError(w, http.StatusNotFound, "nenhum turno ativo encontrado")
+			return
+		}
+		if errors.Is(err, service.ErrPinInvalido) {
+			writeError(w, http.StatusForbidden, "pin invalido")
+			return
+		}
+		if errors.Is(err, service.ErrPinExpirado) {
+			writeError(w, http.StatusForbidden, "pin expirado - solicite nova revogacao")
+			return
+		}
+		slog.Error("reassociar turno failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "erro ao reassociar turno")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, turno)
+}
+
 func (h *TurnoHandler) Sabotagem(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserID(r.Context())
 	empresaID := GetEmpresaID(r.Context())
@@ -245,6 +306,9 @@ func (h *TurnoHandler) Sabotagem(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.Is(err, service.ErrTurnoNaoPertenceAoUsuario) {
 			writeError(w, http.StatusForbidden, "turno nao pertence a este usuario")
+			return
+		}
+		if writeSessaoError(w, err) {
 			return
 		}
 		slog.Error("sabotagem failed", "error", err)

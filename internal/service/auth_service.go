@@ -2,6 +2,10 @@ package service
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/sha256"
+	"crypto/subtle"
+	"encoding/hex"
 	"errors"
 	"fmt"
 
@@ -14,9 +18,10 @@ import (
 )
 
 var (
-	ErrInvalidCredentials = errors.New("email ou senha invalidos")
-	ErrEmailAlreadyExists = errors.New("email ja cadastrado")
-	ErrUserNotActive      = errors.New("usuario inativo")
+	ErrInvalidCredentials        = errors.New("email ou senha invalidos")
+	ErrEmailAlreadyExists        = errors.New("email ja cadastrado")
+	ErrUserNotActive             = errors.New("usuario inativo")
+	ErrDispositivoNaoReconhecido = errors.New("dispositivo nao reconhecido")
 )
 
 type AuthService struct {
@@ -157,7 +162,14 @@ func (s *AuthService) Logout(ctx context.Context, empresaID, deviceID string) er
 func (s *AuthService) BiometricLogin(ctx context.Context, req model.BiometricLoginRequest) (*model.LoginResponse, error) {
 	sessao, err := s.sessaoDispositivoRepo.FindByDeviceID(ctx, req.EmpresaID, req.DeviceID)
 	if err != nil {
-		return nil, fmt.Errorf("biometric: %w", err)
+		return nil, fmt.Errorf("biometric: %w", ErrDispositivoNaoReconhecido)
+	}
+
+	// device_id sozinho nao autentica: o aparelho precisa apresentar o
+	// device_secret entregue no registro. Sessoes antigas (hash NULL) exigem
+	// novo registro biometrico.
+	if sessao.DeviceSecretHash == nil || !deviceSecretConfere(req.DeviceSecret, *sessao.DeviceSecretHash) {
+		return nil, fmt.Errorf("biometric: %w", ErrDispositivoNaoReconhecido)
 	}
 
 	user, err := s.userRepo.FindByID(ctx, sessao.UsuarioID)
@@ -187,7 +199,7 @@ func (s *AuthService) BiometricLogin(ctx context.Context, req model.BiometricLog
 	}, nil
 }
 
-func (s *AuthService) RegisterBiometric(ctx context.Context, userID, empresaID string, req model.BiometricRegisterRequest) (*model.SessaoDispositivo, error) {
+func (s *AuthService) RegisterBiometric(ctx context.Context, userID, empresaID string, req model.BiometricRegisterRequest) (*model.BiometricRegisterResponse, error) {
 	parsedUserID, err := uuid.Parse(userID)
 	if err != nil {
 		return nil, fmt.Errorf("register biometric: user_id invalido: %w", err)
@@ -198,15 +210,43 @@ func (s *AuthService) RegisterBiometric(ctx context.Context, userID, empresaID s
 		return nil, fmt.Errorf("register biometric: empresa_id invalido: %w", err)
 	}
 
+	secret, err := gerarDeviceSecret()
+	if err != nil {
+		return nil, fmt.Errorf("register biometric: gerar device_secret: %w", err)
+	}
+	secretHash := hashDeviceSecret(secret)
+
 	sessao := &model.SessaoDispositivo{
-		UsuarioID: parsedUserID,
-		EmpresaID: parsedEmpresaID,
-		DeviceID:  req.DeviceID,
+		UsuarioID:        parsedUserID,
+		EmpresaID:        parsedEmpresaID,
+		DeviceID:         req.DeviceID,
+		DeviceSecretHash: &secretHash,
 	}
 
 	if err := s.sessaoDispositivoRepo.Create(ctx, sessao); err != nil {
 		return nil, fmt.Errorf("register biometric: %w", err)
 	}
 
-	return sessao, nil
+	return &model.BiometricRegisterResponse{
+		SessaoDispositivo: *sessao,
+		DeviceSecret:      secret,
+	}, nil
+}
+
+func gerarDeviceSecret() (string, error) {
+	buf := make([]byte, 32)
+	if _, err := rand.Read(buf); err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(buf), nil
+}
+
+func hashDeviceSecret(secret string) string {
+	sum := sha256.Sum256([]byte(secret))
+	return hex.EncodeToString(sum[:])
+}
+
+func deviceSecretConfere(secret, hashArmazenado string) bool {
+	calculado := hashDeviceSecret(secret)
+	return subtle.ConstantTimeCompare([]byte(calculado), []byte(hashArmazenado)) == 1
 }

@@ -147,6 +147,7 @@ func main() {
 				r.Post("/checkin", turnoHandler.Checkin)
 				r.Post("/finalizar", turnoHandler.Finalizar)
 				r.Post("/sabotagem", turnoHandler.Sabotagem)
+				r.Post("/reassociar", turnoHandler.Reassociar)
 				r.Get("/status", turnoHandler.Status)
 				r.Get("/ativos", turnoHandler.Ativos)
 				r.Get("/historico", turnoHandler.Historico)

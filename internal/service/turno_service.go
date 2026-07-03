@@ -23,6 +23,10 @@ var (
 	ErrPostoNaoEncontrado        = errors.New("posto nao encontrado")
 	ErrTurnoNaoPertenceAoUsuario = errors.New("turno nao pertence ao usuario")
 	ErrDeviceNaoRegistrado       = errors.New("device nao registrado para biometric login")
+	ErrSessaoRevogada            = errors.New("sessao do turno foi revogada; reassocie com o pin")
+	ErrSessaoOutroDispositivo    = errors.New("turno associado a outro dispositivo")
+	ErrPinInvalido               = errors.New("pin invalido")
+	ErrPinExpirado               = errors.New("pin expirado")
 )
 
 type TurnoService struct {
@@ -114,6 +118,8 @@ func (s *TurnoService) Iniciar(ctx context.Context, userID, empresaID string, re
 
 	fimPrevisto := now.Add(12 * time.Hour)
 
+	deviceID := req.DeviceID
+
 	turno := &model.Turno{
 		EmpresaID:      parsedEmpresaID,
 		UsuarioID:      parsedUserID,
@@ -124,6 +130,7 @@ func (s *TurnoService) Iniciar(ctx context.Context, userID, empresaID string, re
 		FimPrevisto:    fimPrevisto,
 		InicioReal:     &now,
 		TokenSessao:    &tokenSessao,
+		DeviceID:       &deviceID,
 		IntervaloMin:   intervaloMin,
 	}
 
@@ -194,6 +201,10 @@ func (s *TurnoService) Checkin(ctx context.Context, userID, empresaID string, re
 
 	if turno.Status == "finalizado" {
 		return nil, ErrTurnoJaFinalizado
+	}
+
+	if err := validarSessaoTurno(turno, req.DeviceID); err != nil {
+		return nil, err
 	}
 
 	timestampCriacao, err := time.Parse(time.RFC3339, req.Timestamp)
@@ -277,6 +288,10 @@ func (s *TurnoService) Finalizar(ctx context.Context, userID, empresaID string, 
 
 	if turno.Status == "finalizado" {
 		return nil, ErrTurnoJaFinalizado
+	}
+
+	if err := validarSessaoTurno(turno, req.DeviceID); err != nil {
+		return nil, err
 	}
 
 	timestampCriacao, err := time.Parse(time.RFC3339, req.Timestamp)
@@ -434,6 +449,23 @@ func (s *TurnoService) GetByID(ctx context.Context, empresaID, turnoID string) (
 	return detalhe, nil
 }
 
+// validarSessaoTurno garante sessao unica por turno: token_sessao nulo indica
+// sessao revogada (aguardando resgate por PIN) e, quando o turno registrou o
+// dispositivo de origem, o check-in deve vir dele. Turnos antigos sem
+// device_id gravado nao sao bloqueados.
+func validarSessaoTurno(turno *model.Turno, deviceID string) error {
+	if turno.TokenSessao == nil {
+		return ErrSessaoRevogada
+	}
+	if turno.DeviceID != nil && *turno.DeviceID != deviceID {
+		return ErrSessaoOutroDispositivo
+	}
+	return nil
+}
+
+// Revogar invalida a sessao do dispositivo atual do turno e gera um PIN de uso
+// unico para o vigia reassociar o turno em um novo aparelho. O turno permanece
+// em andamento (PLANNING 8.5).
 func (s *TurnoService) Revogar(ctx context.Context, empresaID, turnoID string) (*model.RevogarResponse, error) {
 	parsedEmpresaID, err := uuid.Parse(empresaID)
 	if err != nil {
@@ -467,6 +499,52 @@ func (s *TurnoService) Revogar(ctx context.Context, empresaID, turnoID string) (
 		PinNovoDispositivo: pin,
 		ValidadeMinutos:    validadeMinutos,
 	}, nil
+}
+
+// Reassociar consome o PIN gerado na revogacao e vincula o turno ativo do
+// usuario a um novo dispositivo (que ja deve ter biometria registrada),
+// emitindo um novo token de sessao.
+func (s *TurnoService) Reassociar(ctx context.Context, userID, empresaID string, req model.ReassociarRequest) (*model.Turno, error) {
+	parsedUserID, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, fmt.Errorf("user_id invalido: %w", err)
+	}
+	parsedEmpresaID, err := uuid.Parse(empresaID)
+	if err != nil {
+		return nil, fmt.Errorf("empresa_id invalido: %w", err)
+	}
+
+	sessao, err := s.sessaoDispositivoRepo.FindByDeviceID(ctx, empresaID, req.DeviceID)
+	if err != nil || sessao.UsuarioID != parsedUserID {
+		return nil, ErrDeviceNaoRegistrado
+	}
+
+	turno, err := s.turnoRepo.FindAtivoComPinByUsuario(ctx, parsedEmpresaID, parsedUserID)
+	if err != nil {
+		return nil, fmt.Errorf("buscar turno ativo: %w", err)
+	}
+	if turno == nil {
+		return nil, ErrTurnoNaoEncontrado
+	}
+	if turno.Pin == nil || *turno.Pin != req.Pin {
+		return nil, ErrPinInvalido
+	}
+	if turno.PinValidoAte == nil || time.Now().After(*turno.PinValidoAte) {
+		return nil, ErrPinExpirado
+	}
+
+	tokenSessao := uuid.New().String()
+	if err := s.turnoRepo.Reassociar(ctx, turno.ID, parsedEmpresaID, req.DeviceID, tokenSessao); err != nil {
+		return nil, fmt.Errorf("reassociar turno: %w", err)
+	}
+
+	turno.TokenSessao = &tokenSessao
+	deviceID := req.DeviceID
+	turno.DeviceID = &deviceID
+	turno.Pin = nil
+	turno.PinValidoAte = nil
+
+	return turno, nil
 }
 
 func generatePIN(digits int) (string, error) {
@@ -512,6 +590,10 @@ func (s *TurnoService) Sabotagem(ctx context.Context, userID, empresaID string, 
 
 	if turno.Status == "finalizado" {
 		return nil, ErrTurnoJaFinalizado
+	}
+
+	if err := validarSessaoTurno(turno, req.DeviceID); err != nil {
+		return nil, err
 	}
 
 	timestampCriacao, err := time.Parse(time.RFC3339, req.Timestamp)
@@ -581,6 +663,10 @@ func (s *TurnoService) ProcessarLote(ctx context.Context, userID, empresaID stri
 		}
 
 		if turno.Status == "finalizado" {
+			continue
+		}
+
+		if err := validarSessaoTurno(turno, req.DeviceID); err != nil {
 			continue
 		}
 
