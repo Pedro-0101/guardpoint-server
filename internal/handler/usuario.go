@@ -26,6 +26,12 @@ func NewUsuarioHandler(usuarioService *service.UsuarioService) *UsuarioHandler {
 	}
 }
 
+// List godoc
+// @Summary      Lista os usuarios da empresa (somente admin)
+// @Tags         usuarios
+// @Success      200 {array} model.UsuarioResponse
+// @Failure      400 {object} map[string]string
+// @Router       /usuarios [get]
 func (h *UsuarioHandler) List(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 
@@ -49,6 +55,14 @@ func (h *UsuarioHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, usuarios)
 }
 
+// GetByID godoc
+// @Summary      Busca um usuario pelo ID (somente admin)
+// @Tags         usuarios
+// @Param        id path string true "ID do usuario (uuid)"
+// @Success      200 {object} model.UsuarioResponse
+// @Failure      400 {object} map[string]string
+// @Failure      404 {object} map[string]string
+// @Router       /usuarios/{id} [get]
 func (h *UsuarioHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
@@ -73,6 +87,14 @@ func (h *UsuarioHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, usuario)
 }
 
+// Create godoc
+// @Summary      Cria um usuario (somente admin)
+// @Tags         usuarios
+// @Param        request body model.CreateUsuarioRequest true "Dados do usuario"
+// @Success      201 {object} model.UsuarioResponse
+// @Failure      400 {object} map[string]string
+// @Failure      409 {object} map[string]string
+// @Router       /usuarios [post]
 func (h *UsuarioHandler) Create(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 
@@ -107,6 +129,15 @@ func (h *UsuarioHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, usuario)
 }
 
+// Update godoc
+// @Summary      Atualiza um usuario (somente admin)
+// @Tags         usuarios
+// @Param        id path string true "ID do usuario (uuid)"
+// @Param        request body model.UpdateUsuarioRequest true "Campos a atualizar"
+// @Success      200 {object} model.UsuarioResponse
+// @Failure      400 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /usuarios/{id} [put]
 func (h *UsuarioHandler) Update(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
@@ -143,6 +174,14 @@ func (h *UsuarioHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, usuario)
 }
 
+// Delete godoc
+// @Summary      Desativa um usuario (somente admin)
+// @Tags         usuarios
+// @Param        id path string true "ID do usuario (uuid)"
+// @Success      200 {object} map[string]string
+// @Failure      400 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /usuarios/{id} [delete]
 func (h *UsuarioHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")

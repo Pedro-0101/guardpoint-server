@@ -1,10 +1,13 @@
-.PHONY: build run test lint clean dev db-up db-down migrate-up migrate-down docker-build docker-run
+.PHONY: build run test lint clean dev db-up db-down migrate-up migrate-down docker-build docker-run docs
 
 APP_NAME = server
 BUILD_DIR = bin
 
 build:
 	go build -o $(BUILD_DIR)/$(APP_NAME) ./cmd/server/
+
+docs:
+	go run github.com/swaggo/swag/cmd/swag@v1.16.6 init -g cmd/server/main.go -o docs
 
 run:
 	go run ./cmd/server/

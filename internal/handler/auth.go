@@ -24,6 +24,16 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 	}
 }
 
+// Login godoc
+// @Summary      Login por email e senha
+// @Tags         auth
+// @Security
+// @Param        request body model.LoginRequest true "Credenciais"
+// @Success      200 {object} model.LoginResponse
+// @Failure      400 {object} map[string]string
+// @Failure      401 {object} map[string]string
+// @Failure      403 {object} map[string]string
+// @Router       /auth/login [post]
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req model.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -54,6 +64,15 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// Register godoc
+// @Summary      Cria um novo usuario (somente admin)
+// @Tags         auth
+// @Param        request body model.RegisterRequest true "Dados do usuario"
+// @Success      201 {object} model.User
+// @Failure      400 {object} map[string]string
+// @Failure      401 {object} map[string]string
+// @Failure      409 {object} map[string]string
+// @Router       /auth/register [post]
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 	if empresaID == "" {
@@ -86,6 +105,15 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, user)
 }
 
+// Refresh godoc
+// @Summary      Renova o access token a partir do refresh token
+// @Tags         auth
+// @Security
+// @Param        request body model.RefreshRequest true "Refresh token"
+// @Success      200 {object} model.LoginResponse
+// @Failure      400 {object} map[string]string
+// @Failure      401 {object} map[string]string
+// @Router       /auth/refresh [post]
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	var req model.RefreshRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -108,6 +136,12 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// Logout godoc
+// @Summary      Encerra a sessao do dispositivo atual
+// @Tags         auth
+// @Success      200 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /auth/logout [post]
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 
@@ -125,6 +159,15 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "logout realizado com sucesso"})
 }
 
+// BiometricLogin godoc
+// @Summary      Login via dispositivo biometrico registrado
+// @Tags         auth
+// @Security
+// @Param        request body model.BiometricLoginRequest true "Credenciais do dispositivo"
+// @Success      200 {object} model.LoginResponse
+// @Failure      400 {object} map[string]string
+// @Failure      401 {object} map[string]string
+// @Router       /auth/biometric/login [post]
 func (h *AuthHandler) BiometricLogin(w http.ResponseWriter, r *http.Request) {
 	var req model.BiometricLoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -147,6 +190,14 @@ func (h *AuthHandler) BiometricLogin(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// BiometricRegister godoc
+// @Summary      Registra um dispositivo biometrico para o usuario autenticado
+// @Tags         auth
+// @Param        request body model.BiometricRegisterRequest true "Dados do dispositivo"
+// @Success      201 {object} model.BiometricRegisterResponse
+// @Failure      400 {object} map[string]string
+// @Failure      401 {object} map[string]string
+// @Router       /auth/biometric/register [post]
 func (h *AuthHandler) BiometricRegister(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserID(r.Context())
 	empresaID := GetEmpresaID(r.Context())

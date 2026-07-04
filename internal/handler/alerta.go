@@ -25,6 +25,17 @@ func NewAlertaHandler(alertaService *service.AlertaService) *AlertaHandler {
 	}
 }
 
+// List godoc
+// @Summary      Lista alertas com filtros e paginacao (admin/supervisor)
+// @Tags         alertas
+// @Param        status query string false "Status do alerta"
+// @Param        tipo query string false "Tipo do alerta"
+// @Param        turno_id query string false "ID do turno (uuid)"
+// @Param        limit query int false "Limite de itens (max 100)"
+// @Param        offset query int false "Offset da paginacao"
+// @Success      200 {object} map[string]interface{}
+// @Failure      500 {object} map[string]string
+// @Router       /alertas [get]
 func (h *AlertaHandler) List(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 
@@ -55,6 +66,14 @@ func (h *AlertaHandler) List(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Reconhecer godoc
+// @Summary      Reconhece um alerta aberto (admin/supervisor)
+// @Tags         alertas
+// @Param        id path string true "ID do alerta (uuid)"
+// @Success      200 {object} map[string]string
+// @Failure      404 {object} map[string]string
+// @Failure      409 {object} map[string]string
+// @Router       /alertas/{id}/reconhecer [put]
 func (h *AlertaHandler) Reconhecer(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 	alertaID := chi.URLParam(r, "id")
@@ -76,6 +95,14 @@ func (h *AlertaHandler) Reconhecer(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "reconhecido"})
 }
 
+// Encerrar godoc
+// @Summary      Encerra um alerta (admin/supervisor)
+// @Tags         alertas
+// @Param        id path string true "ID do alerta (uuid)"
+// @Success      200 {object} map[string]string
+// @Failure      404 {object} map[string]string
+// @Failure      409 {object} map[string]string
+// @Router       /alertas/{id}/encerrar [put]
 func (h *AlertaHandler) Encerrar(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 	alertaID := chi.URLParam(r, "id")
@@ -97,6 +124,12 @@ func (h *AlertaHandler) Encerrar(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"status": "encerrado"})
 }
 
+// Estatisticas godoc
+// @Summary      Estatisticas agregadas de alertas (admin/supervisor)
+// @Tags         alertas
+// @Success      200 {object} model.AlertStatistics
+// @Failure      500 {object} map[string]string
+// @Router       /alertas/estatisticas [get]
 func (h *AlertaHandler) Estatisticas(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 
@@ -110,6 +143,12 @@ func (h *AlertaHandler) Estatisticas(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, stats)
 }
 
+// GetEscalonamento godoc
+// @Summary      Lista a configuracao de escalonamento de alertas (somente admin)
+// @Tags         config
+// @Success      200 {array} model.ConfigEscalonamento
+// @Failure      500 {object} map[string]string
+// @Router       /config/escalonamento [get]
 func (h *AlertaHandler) GetEscalonamento(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 
@@ -127,6 +166,14 @@ func (h *AlertaHandler) GetEscalonamento(w http.ResponseWriter, r *http.Request)
 	writeJSON(w, http.StatusOK, configs)
 }
 
+// CreateEscalonamento godoc
+// @Summary      Cria um nivel de escalonamento de alertas (somente admin)
+// @Tags         config
+// @Param        request body model.CreateConfigEscalonamentoRequest true "Dados do nivel"
+// @Success      201 {object} model.ConfigEscalonamento
+// @Failure      400 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /config/escalonamento [post]
 func (h *AlertaHandler) CreateEscalonamento(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 
@@ -151,6 +198,15 @@ func (h *AlertaHandler) CreateEscalonamento(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, http.StatusCreated, config)
 }
 
+// UpdateEscalonamento godoc
+// @Summary      Atualiza um nivel de escalonamento de alertas (somente admin)
+// @Tags         config
+// @Param        id path string true "ID da configuracao (uuid)"
+// @Param        request body model.UpdateConfigEscalonamentoRequest true "Campos a atualizar"
+// @Success      200 {object} model.ConfigEscalonamento
+// @Failure      400 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /config/escalonamento/{id} [put]
 func (h *AlertaHandler) UpdateEscalonamento(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 	configID := chi.URLParam(r, "id")
@@ -176,6 +232,13 @@ func (h *AlertaHandler) UpdateEscalonamento(w http.ResponseWriter, r *http.Reque
 	writeJSON(w, http.StatusOK, config)
 }
 
+// DeleteEscalonamento godoc
+// @Summary      Remove um nivel de escalonamento de alertas (somente admin)
+// @Tags         config
+// @Param        id path string true "ID da configuracao (uuid)"
+// @Success      204 "sem conteudo"
+// @Failure      500 {object} map[string]string
+// @Router       /config/escalonamento/{id} [delete]
 func (h *AlertaHandler) DeleteEscalonamento(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 	configID := chi.URLParam(r, "id")
@@ -189,6 +252,14 @@ func (h *AlertaHandler) DeleteEscalonamento(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNoContent)
 }
 
+// PutEscalonamento godoc
+// @Summary      Substitui todos os niveis de escalonamento de alertas (somente admin)
+// @Tags         config
+// @Param        request body []model.CreateConfigEscalonamentoRequest true "Lista completa de niveis"
+// @Success      200 {array} model.ConfigEscalonamento
+// @Failure      400 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /config/escalonamento [put]
 func (h *AlertaHandler) PutEscalonamento(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 

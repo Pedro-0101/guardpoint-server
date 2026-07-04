@@ -26,6 +26,13 @@ func NewPostoHandler(postoService *service.PostoService) *PostoHandler {
 	}
 }
 
+// Create godoc
+// @Summary      Cria um posto
+// @Tags         postos
+// @Param        request body model.CreatePostoRequest true "Dados do posto"
+// @Success      201 {object} model.Posto
+// @Failure      400 {object} map[string]string
+// @Router       /postos [post]
 func (h *PostoHandler) Create(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 
@@ -68,6 +75,14 @@ func (h *PostoHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, posto)
 }
 
+// GetByID godoc
+// @Summary      Busca um posto pelo ID
+// @Tags         postos
+// @Param        id path string true "ID do posto (uuid)"
+// @Success      200 {object} model.Posto
+// @Failure      400 {object} map[string]string
+// @Failure      404 {object} map[string]string
+// @Router       /postos/{id} [get]
 func (h *PostoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
@@ -92,6 +107,13 @@ func (h *PostoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, posto)
 }
 
+// List godoc
+// @Summary      Lista os postos da empresa
+// @Tags         postos
+// @Param        ativos query string false "Filtra somente postos ativos (true/false)"
+// @Success      200 {array} model.Posto
+// @Failure      400 {object} map[string]string
+// @Router       /postos [get]
 func (h *PostoHandler) List(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 
@@ -117,6 +139,15 @@ func (h *PostoHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, postos)
 }
 
+// Update godoc
+// @Summary      Atualiza um posto
+// @Tags         postos
+// @Param        id path string true "ID do posto (uuid)"
+// @Param        request body model.UpdatePostoRequest true "Campos a atualizar"
+// @Success      200 {object} model.Posto
+// @Failure      400 {object} map[string]string
+// @Failure      404 {object} map[string]string
+// @Router       /postos/{id} [put]
 func (h *PostoHandler) Update(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
@@ -174,6 +205,14 @@ func (h *PostoHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, posto)
 }
 
+// Delete godoc
+// @Summary      Desativa um posto
+// @Tags         postos
+// @Param        id path string true "ID do posto (uuid)"
+// @Success      200 {object} map[string]string
+// @Failure      400 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /postos/{id} [delete]
 func (h *PostoHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")

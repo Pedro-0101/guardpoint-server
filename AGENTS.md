@@ -30,6 +30,20 @@ go install github.com/air-verse/air@latest
 
 ---
 
+## 2.1 Documentação da API (Swagger/OpenAPI)
+
+A documentação das rotas é gerada automaticamente a partir dos comentários `@Summary`/`@Router`/etc. nos handlers (`internal/handler/*.go`) e dos structs de DTO referenciados (`internal/model/*.go`). Sempre que um DTO ou uma rota mudar, rode:
+
+```bash
+make docs
+```
+
+Isso regenera `docs/docs.go`, `docs/swagger.json` e `docs/swagger.yaml` — esses arquivos devem ser commitados. O CI roda o mesmo comando e falha (`git diff --exit-code docs/`) se a documentação ficar desatualizada.
+
+Com o servidor rodando fora de produção (`ENV != production`), a Swagger UI fica disponível em `/swagger/index.html`.
+
+---
+
 ## 3. Estrutura de Projeto Go (Padrão de Mercado)
 
 ```

@@ -29,6 +29,16 @@ func NewTurnoHandler(turnoService *service.TurnoService, syncReconciler *worker.
 	}
 }
 
+// Iniciar godoc
+// @Summary      Inicia um turno no posto informado
+// @Tags         turnos
+// @Param        request body model.IniciarTurnoRequest true "Dados de inicio"
+// @Success      201 {object} model.Turno
+// @Failure      400 {object} map[string]string
+// @Failure      403 {object} map[string]string
+// @Failure      404 {object} map[string]string
+// @Failure      409 {object} map[string]string
+// @Router       /turnos/iniciar [post]
 func (h *TurnoHandler) Iniciar(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserID(r.Context())
 	empresaID := GetEmpresaID(r.Context())
@@ -74,6 +84,16 @@ func (h *TurnoHandler) Iniciar(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, turno)
 }
 
+// Checkin godoc
+// @Summary      Registra um check-in de turno
+// @Tags         turnos
+// @Param        request body model.CheckinRequest true "Dados do check-in"
+// @Success      200 {object} model.CheckinResponse
+// @Failure      400 {object} map[string]string
+// @Failure      403 {object} map[string]string
+// @Failure      404 {object} map[string]string
+// @Failure      409 {object} map[string]string
+// @Router       /turnos/checkin [post]
 func (h *TurnoHandler) Checkin(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserID(r.Context())
 	empresaID := GetEmpresaID(r.Context())
@@ -114,6 +134,16 @@ func (h *TurnoHandler) Checkin(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, resp)
 }
 
+// Finalizar godoc
+// @Summary      Finaliza um turno em andamento
+// @Tags         turnos
+// @Param        request body model.FinalizarTurnoRequest true "Dados de finalizacao"
+// @Success      200 {object} model.Turno
+// @Failure      400 {object} map[string]string
+// @Failure      403 {object} map[string]string
+// @Failure      404 {object} map[string]string
+// @Failure      409 {object} map[string]string
+// @Router       /turnos/finalizar [post]
 func (h *TurnoHandler) Finalizar(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserID(r.Context())
 	empresaID := GetEmpresaID(r.Context())
@@ -154,6 +184,12 @@ func (h *TurnoHandler) Finalizar(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, turno)
 }
 
+// Status godoc
+// @Summary      Status do turno ativo do usuario autenticado
+// @Tags         turnos
+// @Success      200 {object} model.TurnoStatusResponse
+// @Failure      404 {object} map[string]string
+// @Router       /turnos/status [get]
 func (h *TurnoHandler) Status(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserID(r.Context())
 	empresaID := GetEmpresaID(r.Context())
@@ -172,6 +208,12 @@ func (h *TurnoHandler) Status(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, status)
 }
 
+// Ativos godoc
+// @Summary      Lista turnos ativos da empresa
+// @Tags         turnos
+// @Success      200 {array} model.TurnoDetalhe
+// @Failure      500 {object} map[string]string
+// @Router       /turnos/ativos [get]
 func (h *TurnoHandler) Ativos(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 
@@ -189,6 +231,13 @@ func (h *TurnoHandler) Ativos(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, turnos)
 }
 
+// GetByID godoc
+// @Summary      Busca o detalhe de um turno pelo ID
+// @Tags         turnos
+// @Param        id path string true "ID do turno (uuid)"
+// @Success      200 {object} model.TurnoDetalhe
+// @Failure      404 {object} map[string]string
+// @Router       /turnos/{id} [get]
 func (h *TurnoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
@@ -202,6 +251,14 @@ func (h *TurnoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, detalhe)
 }
 
+// Revogar godoc
+// @Summary      Revoga a sessao do dispositivo de um turno, gerando PIN de resgate
+// @Tags         turnos
+// @Param        id path string true "ID do turno (uuid)"
+// @Success      200 {object} model.RevogarResponse
+// @Failure      404 {object} map[string]string
+// @Failure      409 {object} map[string]string
+// @Router       /turnos/{id}/revogar [post]
 func (h *TurnoHandler) Revogar(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
@@ -238,6 +295,15 @@ func writeSessaoError(w http.ResponseWriter, err error) bool {
 	return false
 }
 
+// Reassociar godoc
+// @Summary      Reassocia um turno revogado a um novo dispositivo via PIN
+// @Tags         turnos
+// @Param        request body model.ReassociarRequest true "PIN e dispositivo"
+// @Success      200 {object} model.Turno
+// @Failure      400 {object} map[string]string
+// @Failure      403 {object} map[string]string
+// @Failure      404 {object} map[string]string
+// @Router       /turnos/reassociar [post]
 func (h *TurnoHandler) Reassociar(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserID(r.Context())
 	empresaID := GetEmpresaID(r.Context())
@@ -279,6 +345,16 @@ func (h *TurnoHandler) Reassociar(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, turno)
 }
 
+// Sabotagem godoc
+// @Summary      Registra uma senha de coacao/sabotagem durante um turno
+// @Tags         turnos
+// @Param        request body model.SabotagemRequest true "Dados da sabotagem"
+// @Success      202 {object} model.SabotagemResponse
+// @Failure      400 {object} map[string]string
+// @Failure      403 {object} map[string]string
+// @Failure      404 {object} map[string]string
+// @Failure      409 {object} map[string]string
+// @Router       /turnos/sabotagem [post]
 func (h *TurnoHandler) Sabotagem(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserID(r.Context())
 	empresaID := GetEmpresaID(r.Context())
@@ -319,6 +395,14 @@ func (h *TurnoHandler) Sabotagem(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusAccepted, resp)
 }
 
+// Lote godoc
+// @Summary      Processa um lote de check-ins offline (ate 500 por requisicao)
+// @Tags         turnos
+// @Param        request body []model.CheckinRequest true "Lote de check-ins"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /checkins/lote [post]
 func (h *TurnoHandler) Lote(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserID(r.Context())
 	empresaID := GetEmpresaID(r.Context())
@@ -368,6 +452,19 @@ func (h *TurnoHandler) Lote(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Historico godoc
+// @Summary      Lista o historico de turnos com filtros e paginacao
+// @Tags         turnos
+// @Param        data_inicio query string false "Data inicial (YYYY-MM-DD)"
+// @Param        data_fim query string false "Data final (YYYY-MM-DD)"
+// @Param        usuario_id query string false "ID do usuario (uuid)"
+// @Param        posto_id query string false "ID do posto (uuid)"
+// @Param        status query string false "Status do turno"
+// @Param        limit query int false "Limite de itens (max 100)"
+// @Param        offset query int false "Offset da paginacao"
+// @Success      200 {object} map[string]interface{}
+// @Failure      500 {object} map[string]string
+// @Router       /turnos/historico [get]
 func (h *TurnoHandler) Historico(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 

@@ -26,6 +26,14 @@ func NewEscalaHandler(escalaService *service.EscalaService) *EscalaHandler {
 	}
 }
 
+// Create godoc
+// @Summary      Cria uma escala (admin/supervisor)
+// @Tags         escalas
+// @Param        request body model.CreateEscalaRequest true "Dados da escala"
+// @Success      201 {object} model.Escala
+// @Failure      400 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /escalas [post]
 func (h *EscalaHandler) Create(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 
@@ -56,6 +64,14 @@ func (h *EscalaHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, esc)
 }
 
+// GetByID godoc
+// @Summary      Busca uma escala pelo ID (admin/supervisor)
+// @Tags         escalas
+// @Param        id path string true "ID da escala (uuid)"
+// @Success      200 {object} model.Escala
+// @Failure      400 {object} map[string]string
+// @Failure      404 {object} map[string]string
+// @Router       /escalas/{id} [get]
 func (h *EscalaHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
@@ -80,6 +96,19 @@ func (h *EscalaHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, esc)
 }
 
+// List godoc
+// @Summary      Lista escalas com filtros e paginacao (admin/supervisor)
+// @Tags         escalas
+// @Param        usuario_id query string false "ID do usuario (uuid)"
+// @Param        posto_id query string false "ID do posto (uuid)"
+// @Param        ativos query string false "Filtra por ativo (true/false)"
+// @Param        data query string false "Data (YYYY-MM-DD)"
+// @Param        limit query int false "Limite de itens (max 100)"
+// @Param        offset query int false "Offset da paginacao"
+// @Success      200 {object} map[string]interface{}
+// @Failure      400 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /escalas [get]
 func (h *EscalaHandler) List(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 
@@ -126,6 +155,16 @@ func (h *EscalaHandler) List(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
+// Update godoc
+// @Summary      Atualiza uma escala (admin/supervisor)
+// @Tags         escalas
+// @Param        id path string true "ID da escala (uuid)"
+// @Param        request body model.UpdateEscalaRequest true "Campos a atualizar"
+// @Success      200 {object} model.Escala
+// @Failure      400 {object} map[string]string
+// @Failure      404 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /escalas/{id} [put]
 func (h *EscalaHandler) Update(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
@@ -166,6 +205,15 @@ func (h *EscalaHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, esc)
 }
 
+// Delete godoc
+// @Summary      Desativa uma escala (admin/supervisor)
+// @Tags         escalas
+// @Param        id path string true "ID da escala (uuid)"
+// @Success      200 {object} map[string]string
+// @Failure      400 {object} map[string]string
+// @Failure      404 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /escalas/{id} [delete]
 func (h *EscalaHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
