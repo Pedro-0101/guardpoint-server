@@ -41,9 +41,9 @@ func newEnv(t *testing.T) *env {
 
 	pool := testutil.SetupTestDB(t)
 	cfg := &config.Config{
-		Env:        "test",
-		JWTSecret:  testJWTSecret,
-		CORSOrigin: "*",
+		Env:         "test",
+		JWTSecret:   testJWTSecret,
+		CORSOrigins: []string{"*"},
 	}
 	a := app.New(cfg, pool)
 	srv := httptest.NewServer(a.Router)
@@ -134,7 +134,7 @@ func (e *env) reqJSON(method, path, token string, body any, wantStatus int, out 
 func (e *env) login(email, senha string) model.LoginResponse {
 	e.t.Helper()
 	var resp model.LoginResponse
-	e.reqJSON(http.MethodPost, "/api/auth/login", "", map[string]string{"email": email, "senha": senha}, http.StatusOK, &resp)
+	e.reqJSON(http.MethodPost, "/api/v1/auth/login", "", map[string]string{"email": email, "senha": senha}, http.StatusOK, &resp)
 	return resp
 }
 
@@ -175,7 +175,7 @@ func novoCenario(t *testing.T) *cenario {
 		deviceID:   "device-vigia-a-01",
 	}
 
-	e.reqJSON(http.MethodPost, "/api/postos", c.adminToken, map[string]any{
+	e.reqJSON(http.MethodPost, "/api/v1/postos", c.adminToken, map[string]any{
 		"nome": "Posto Central", "latitude": postoLat, "longitude": postoLon, "raio_m": 100,
 	}, http.StatusCreated, &c.posto)
 
@@ -188,7 +188,7 @@ func novoCenario(t *testing.T) *cenario {
 func (c *cenario) registrarBiometria(deviceID string) string {
 	c.e.t.Helper()
 	var resp model.BiometricRegisterResponse
-	c.e.reqJSON(http.MethodPost, "/api/auth/biometric/register", c.vigiaToken,
+	c.e.reqJSON(http.MethodPost, "/api/v1/auth/biometric/register", c.vigiaToken,
 		map[string]string{"device_id": deviceID}, http.StatusCreated, &resp)
 	if resp.DeviceSecret == "" {
 		c.e.t.Fatal("registro biometrico nao retornou device_secret")
@@ -200,7 +200,7 @@ func (c *cenario) registrarBiometria(deviceID string) string {
 func (c *cenario) criarEscala(usuarioID, postoID uuid.UUID, inicio time.Time, toleranciaMin int) model.Escala {
 	c.e.t.Helper()
 	var esc model.Escala
-	c.e.reqJSON(http.MethodPost, "/api/escalas", c.adminToken, map[string]any{
+	c.e.reqJSON(http.MethodPost, "/api/v1/escalas", c.adminToken, map[string]any{
 		"usuario_id":     usuarioID.String(),
 		"posto_id":       postoID.String(),
 		"data_inicio":    inicio.AddDate(0, 0, -1).Format("2006-01-02"),
@@ -216,7 +216,7 @@ func (c *cenario) criarEscala(usuarioID, postoID uuid.UUID, inicio time.Time, to
 func (c *cenario) iniciarTurno() model.Turno {
 	c.e.t.Helper()
 	var turno model.Turno
-	c.e.reqJSON(http.MethodPost, "/api/turnos/iniciar", c.vigiaToken, map[string]any{
+	c.e.reqJSON(http.MethodPost, "/api/v1/turnos/iniciar", c.vigiaToken, map[string]any{
 		"posto_id": c.posto.ID.String(), "device_id": c.deviceID, "intervalo_min": 30,
 	}, http.StatusCreated, &turno)
 	return turno
@@ -236,7 +236,7 @@ func (c *cenario) checkinBody(turnoID uuid.UUID, tipo string, ts time.Time) map[
 func (c *cenario) getTurno(turnoID uuid.UUID) model.TurnoDetalhe {
 	c.e.t.Helper()
 	var det model.TurnoDetalhe
-	c.e.reqJSON(http.MethodGet, "/api/turnos/"+turnoID.String(), c.adminToken, nil, http.StatusOK, &det)
+	c.e.reqJSON(http.MethodGet, "/api/v1/turnos/"+turnoID.String(), c.adminToken, nil, http.StatusOK, &det)
 	return det
 }
 
@@ -245,6 +245,6 @@ func (c *cenario) contarAlertas(tipo string) int {
 	var resp struct {
 		Total int `json:"total"`
 	}
-	c.e.reqJSON(http.MethodGet, "/api/alertas?tipo="+tipo, c.adminToken, nil, http.StatusOK, &resp)
+	c.e.reqJSON(http.MethodGet, "/api/v1/alertas?tipo="+tipo, c.adminToken, nil, http.StatusOK, &resp)
 	return resp.Total
 }

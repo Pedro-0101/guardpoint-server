@@ -12,14 +12,15 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	chimw "github.com/go-chi/chi/v5/middleware"
+	"github.com/go-chi/cors"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/prometheus/client_golang/prometheus/promhttp"
+	httpSwagger "github.com/swaggo/http-swagger"
 
 	"github.com/guardpoint/guardpoint-server/internal/auth"
 	"github.com/guardpoint/guardpoint-server/internal/config"
 	"github.com/guardpoint/guardpoint-server/internal/handler"
 	"github.com/guardpoint/guardpoint-server/internal/metrics"
-	"github.com/guardpoint/guardpoint-server/internal/middleware"
 	"github.com/guardpoint/guardpoint-server/internal/repository"
 	"github.com/guardpoint/guardpoint-server/internal/service"
 	"github.com/guardpoint/guardpoint-server/internal/worker"
@@ -84,10 +85,15 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 	r.Use(metrics.Middleware)
 	r.Use(chimw.Logger)
 	r.Use(chimw.Recoverer)
-	r.Use(middleware.CORS(cfg.CORSOrigin))
+	r.Use(cors.Handler(cors.Options{
+		AllowedOrigins: cfg.CORSOrigins,
+		AllowedMethods: []string{"GET", "POST", "PUT", "DELETE", "OPTIONS"},
+		AllowedHeaders: []string{"Content-Type", "Authorization"},
+		MaxAge:         86400,
+	}))
 	r.Use(chimw.Timeout(30 * time.Second))
 
-	r.Route("/api", func(r chi.Router) {
+	r.Route("/api/v1", func(r chi.Router) {
 		r.Route("/auth", func(r chi.Router) {
 			r.Post("/login", authHandler.Login)
 			r.Post("/refresh", authHandler.Refresh)
@@ -108,7 +114,10 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 		r.Group(func(r chi.Router) {
 			r.Use(handler.AuthMiddleware(jwtService))
 
-			r.Get("/dashboard/summary", dashboardHandler.Summary)
+			r.Group(func(r chi.Router) {
+				r.Use(handler.RequireRole("admin", "supervisor"))
+				r.Get("/dashboard/summary", dashboardHandler.Summary)
+			})
 
 			r.Route("/postos", func(r chi.Router) {
 				r.Get("/", postoHandler.List)
@@ -204,7 +213,12 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 		metricsHandler.ServeHTTP(w, r)
 	})
 
-	r.Get("/ws", ws.HandleWebSocket(hub, jwtService, cfg.CORSOrigin))
+	r.Get("/ws", ws.HandleWebSocket(hub, jwtService, cfg.CORSOrigins))
+
+	// Swagger UI disponivel apenas fora de producao para nao expor a doc da API publicamente.
+	if cfg.Env != "production" {
+		r.Get("/swagger/*", httpSwagger.WrapHandler)
+	}
 
 	return &App{
 		Router:          r,

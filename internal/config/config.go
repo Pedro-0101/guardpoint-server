@@ -13,7 +13,7 @@ type Config struct {
 	LogLevel     string
 	LogFormat    string
 	JWTSecret    string
-	CORSOrigin   string
+	CORSOrigins  []string
 	MetricsToken string
 }
 
@@ -29,7 +29,7 @@ func Load() (*Config, error) {
 		LogLevel:     getEnv("LOG_LEVEL", "info"),
 		LogFormat:    getEnv("LOG_FORMAT", "text"),
 		JWTSecret:    getEnv("JWT_SECRET", ""),
-		CORSOrigin:   getEnv("CORS_ORIGIN", "*"),
+		CORSOrigins:  splitCSV(getEnv("CORS_ORIGINS", getEnv("CORS_ORIGIN", "*"))),
 		MetricsToken: getEnv("METRICS_TOKEN", ""),
 	}
 
@@ -62,10 +62,26 @@ func validateProduction(cfg *Config) error {
 	if len(cfg.JWTSecret) < jwtSecretMinLen {
 		return fmt.Errorf("JWT_SECRET must have at least %d characters in production", jwtSecretMinLen)
 	}
-	if cfg.CORSOrigin == "*" || cfg.CORSOrigin == "" {
-		return fmt.Errorf("CORS_ORIGIN must list explicit origins in production (got %q)", cfg.CORSOrigin)
+	if len(cfg.CORSOrigins) == 0 {
+		return fmt.Errorf("CORS_ORIGINS must list explicit origins in production")
+	}
+	for _, o := range cfg.CORSOrigins {
+		if o == "*" {
+			return fmt.Errorf("CORS_ORIGINS must list explicit origins in production (got %q)", o)
+		}
 	}
 	return nil
+}
+
+// splitCSV separa uma lista separada por virgulas, descartando entradas vazias.
+func splitCSV(s string) []string {
+	var out []string
+	for _, part := range strings.Split(s, ",") {
+		if trimmed := strings.TrimSpace(part); trimmed != "" {
+			out = append(out, trimmed)
+		}
+	}
+	return out
 }
 
 func getEnv(key, fallback string) string {

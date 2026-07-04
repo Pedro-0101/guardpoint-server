@@ -3,14 +3,13 @@ package ws
 import (
 	"log/slog"
 	"net/http"
-	"strings"
 
 	"github.com/gorilla/websocket"
 
 	"github.com/guardpoint/guardpoint-server/internal/auth"
 )
 
-func HandleWebSocket(hub *Hub, jwtService *auth.JWTService, corsOrigin string) http.HandlerFunc {
+func HandleWebSocket(hub *Hub, jwtService *auth.JWTService, allowedOrigins []string) http.HandlerFunc {
 	upgrader := websocket.Upgrader{
 		ReadBufferSize:  1024,
 		WriteBufferSize: 1024,
@@ -18,15 +17,15 @@ func HandleWebSocket(hub *Hub, jwtService *auth.JWTService, corsOrigin string) h
 			origin := r.Header.Get("Origin")
 			// Origin ausente = cliente nao-browser (app Android); a checagem
 			// de origem protege apenas contra CSWSH em navegadores.
-			if origin == "" || corsOrigin == "*" || corsOrigin == "" {
+			if origin == "" || len(allowedOrigins) == 0 {
 				return true
 			}
-			for _, o := range strings.Split(corsOrigin, ",") {
-				if strings.TrimSpace(o) == origin {
+			for _, o := range allowedOrigins {
+				if o == "*" || o == origin {
 					return true
 				}
 			}
-			slog.Warn("ws origin rejected", "origin", origin, "allowed", corsOrigin)
+			slog.Warn("ws origin rejected", "origin", origin, "allowed", allowedOrigins)
 			return false
 		},
 	}

@@ -26,7 +26,7 @@ func TestAuthFluxos(t *testing.T) {
 	})
 
 	t.Run("senha errada retorna 401", func(t *testing.T) {
-		status, _ := e.request(http.MethodPost, "/api/auth/login", "", map[string]string{
+		status, _ := e.request(http.MethodPost, "/api/v1/auth/login", "", map[string]string{
 			"email": "admin@a.com", "senha": "senha-errada",
 		})
 		if status != http.StatusUnauthorized {
@@ -35,7 +35,7 @@ func TestAuthFluxos(t *testing.T) {
 	})
 
 	t.Run("usuario inativo retorna 403", func(t *testing.T) {
-		status, _ := e.request(http.MethodPost, "/api/auth/login", "", map[string]string{
+		status, _ := e.request(http.MethodPost, "/api/v1/auth/login", "", map[string]string{
 			"email": "inativo@a.com", "senha": "senha123",
 		})
 		if status != http.StatusForbidden {
@@ -46,7 +46,7 @@ func TestAuthFluxos(t *testing.T) {
 	t.Run("refresh emite novos tokens", func(t *testing.T) {
 		login := e.login("admin@a.com", "senha123")
 		var renovado model.LoginResponse
-		e.reqJSON(http.MethodPost, "/api/auth/refresh", "", map[string]string{
+		e.reqJSON(http.MethodPost, "/api/v1/auth/refresh", "", map[string]string{
 			"refresh_token": login.RefreshToken,
 		}, http.StatusOK, &renovado)
 		if renovado.AccessToken == "" {
@@ -56,7 +56,7 @@ func TestAuthFluxos(t *testing.T) {
 
 	t.Run("register com email duplicado retorna 409", func(t *testing.T) {
 		admin := e.login("admin@a.com", "senha123")
-		status, _ := e.request(http.MethodPost, "/api/auth/register", admin.AccessToken, map[string]string{
+		status, _ := e.request(http.MethodPost, "/api/v1/auth/register", admin.AccessToken, map[string]string{
 			"nome": "Duplicado", "email": "admin@a.com", "senha": "senha123", "role": "vigia",
 		})
 		if status != http.StatusConflict {
@@ -71,7 +71,7 @@ func TestBiometria(t *testing.T) {
 
 	t.Run("login biometrico com device_secret correto", func(t *testing.T) {
 		var resp model.LoginResponse
-		c.e.reqJSON(http.MethodPost, "/api/auth/biometric/login", "", map[string]string{
+		c.e.reqJSON(http.MethodPost, "/api/v1/auth/biometric/login", "", map[string]string{
 			"empresa_id": empresaID, "device_id": c.deviceID, "device_secret": c.deviceSecret,
 		}, http.StatusOK, &resp)
 		if resp.User.ID != c.vigia.ID {
@@ -80,7 +80,7 @@ func TestBiometria(t *testing.T) {
 	})
 
 	t.Run("device_secret errado retorna 401 (B1)", func(t *testing.T) {
-		status, _ := c.e.request(http.MethodPost, "/api/auth/biometric/login", "", map[string]string{
+		status, _ := c.e.request(http.MethodPost, "/api/v1/auth/biometric/login", "", map[string]string{
 			"empresa_id": empresaID, "device_id": c.deviceID, "device_secret": "segredo-forjado",
 		})
 		if status != http.StatusUnauthorized {
@@ -89,7 +89,7 @@ func TestBiometria(t *testing.T) {
 	})
 
 	t.Run("device_secret ausente falha na validacao", func(t *testing.T) {
-		status, _ := c.e.request(http.MethodPost, "/api/auth/biometric/login", "", map[string]string{
+		status, _ := c.e.request(http.MethodPost, "/api/v1/auth/biometric/login", "", map[string]string{
 			"empresa_id": empresaID, "device_id": c.deviceID,
 		})
 		if status != http.StatusUnprocessableEntity {
@@ -98,7 +98,7 @@ func TestBiometria(t *testing.T) {
 	})
 
 	t.Run("device desconhecido retorna 401", func(t *testing.T) {
-		status, _ := c.e.request(http.MethodPost, "/api/auth/biometric/login", "", map[string]string{
+		status, _ := c.e.request(http.MethodPost, "/api/v1/auth/biometric/login", "", map[string]string{
 			"empresa_id": empresaID, "device_id": "device-inexistente", "device_secret": "x",
 		})
 		if status != http.StatusUnauthorized {
@@ -120,7 +120,7 @@ func TestBiometria(t *testing.T) {
 		}
 
 		// o segredo antigo foi rotacionado
-		status, _ := c.e.request(http.MethodPost, "/api/auth/biometric/login", "", map[string]string{
+		status, _ := c.e.request(http.MethodPost, "/api/v1/auth/biometric/login", "", map[string]string{
 			"empresa_id": empresaID, "device_id": c.deviceID, "device_secret": c.deviceSecret,
 		})
 		if status != http.StatusUnauthorized {
@@ -142,15 +142,15 @@ func TestRBAC(t *testing.T) {
 		path   string
 		want   int
 	}{
-		{"vigia em /usuarios", c.vigiaToken, http.MethodGet, "/api/usuarios", http.StatusForbidden},
-		{"vigia em /config/escalonamento", c.vigiaToken, http.MethodGet, "/api/config/escalonamento", http.StatusForbidden},
-		{"vigia em /alertas", c.vigiaToken, http.MethodGet, "/api/alertas", http.StatusForbidden},
-		{"supervisor em /usuarios", supToken, http.MethodGet, "/api/usuarios", http.StatusForbidden},
-		{"supervisor em /config/escalonamento", supToken, http.MethodGet, "/api/config/escalonamento", http.StatusForbidden},
-		{"supervisor em /alertas", supToken, http.MethodGet, "/api/alertas", http.StatusOK},
-		{"supervisor em /escalas", supToken, http.MethodGet, "/api/escalas", http.StatusOK},
-		{"admin em /usuarios", c.adminToken, http.MethodGet, "/api/usuarios", http.StatusOK},
-		{"sem token", "", http.MethodGet, "/api/usuarios", http.StatusUnauthorized},
+		{"vigia em /usuarios", c.vigiaToken, http.MethodGet, "/api/v1/usuarios", http.StatusForbidden},
+		{"vigia em /config/escalonamento", c.vigiaToken, http.MethodGet, "/api/v1/config/escalonamento", http.StatusForbidden},
+		{"vigia em /alertas", c.vigiaToken, http.MethodGet, "/api/v1/alertas", http.StatusForbidden},
+		{"supervisor em /usuarios", supToken, http.MethodGet, "/api/v1/usuarios", http.StatusForbidden},
+		{"supervisor em /config/escalonamento", supToken, http.MethodGet, "/api/v1/config/escalonamento", http.StatusForbidden},
+		{"supervisor em /alertas", supToken, http.MethodGet, "/api/v1/alertas", http.StatusOK},
+		{"supervisor em /escalas", supToken, http.MethodGet, "/api/v1/escalas", http.StatusOK},
+		{"admin em /usuarios", c.adminToken, http.MethodGet, "/api/v1/usuarios", http.StatusOK},
+		{"sem token", "", http.MethodGet, "/api/v1/usuarios", http.StatusUnauthorized},
 	}
 
 	for _, tc := range casos {
@@ -168,7 +168,7 @@ func TestMultiTenancy(t *testing.T) {
 	turnoA := c.iniciarTurno()
 
 	// alerta na empresa A
-	c.e.reqJSON(http.MethodPost, "/api/turnos/sabotagem", c.vigiaToken, map[string]any{
+	c.e.reqJSON(http.MethodPost, "/api/v1/turnos/sabotagem", c.vigiaToken, map[string]any{
 		"turno_id": turnoA.ID.String(), "device_id": c.deviceID,
 		"latitude": postoLat, "longitude": postoLon,
 		"motivo": "teste multi-tenant", "timestamp": nowRFC3339(),
@@ -179,7 +179,7 @@ func TestMultiTenancy(t *testing.T) {
 	tokenB := c.e.login(adminB.Email, "senha123").AccessToken
 
 	t.Run("turno de A invisivel para B", func(t *testing.T) {
-		status, _ := c.e.request(http.MethodGet, "/api/turnos/"+turnoA.ID.String(), tokenB, nil)
+		status, _ := c.e.request(http.MethodGet, "/api/v1/turnos/"+turnoA.ID.String(), tokenB, nil)
 		if status != http.StatusNotFound {
 			t.Errorf("status = %d, esperado 404", status)
 		}
@@ -189,7 +189,7 @@ func TestMultiTenancy(t *testing.T) {
 		var resp struct {
 			Total int `json:"total"`
 		}
-		c.e.reqJSON(http.MethodGet, "/api/alertas", tokenB, nil, http.StatusOK, &resp)
+		c.e.reqJSON(http.MethodGet, "/api/v1/alertas", tokenB, nil, http.StatusOK, &resp)
 		if resp.Total != 0 {
 			t.Errorf("empresa B enxerga %d alertas da empresa A", resp.Total)
 		}
@@ -199,7 +199,7 @@ func TestMultiTenancy(t *testing.T) {
 		var resp struct {
 			Total int `json:"total"`
 		}
-		c.e.reqJSON(http.MethodGet, "/api/escalas", tokenB, nil, http.StatusOK, &resp)
+		c.e.reqJSON(http.MethodGet, "/api/v1/escalas", tokenB, nil, http.StatusOK, &resp)
 		if resp.Total != 0 {
 			t.Errorf("empresa B enxerga %d escalas da empresa A", resp.Total)
 		}
@@ -207,7 +207,7 @@ func TestMultiTenancy(t *testing.T) {
 
 	t.Run("turnos ativos de A invisiveis para B", func(t *testing.T) {
 		var turnos []model.TurnoDetalhe
-		c.e.reqJSON(http.MethodGet, "/api/turnos/ativos", tokenB, nil, http.StatusOK, &turnos)
+		c.e.reqJSON(http.MethodGet, "/api/v1/turnos/ativos", tokenB, nil, http.StatusOK, &turnos)
 		if len(turnos) != 0 {
 			t.Errorf("empresa B enxerga %d turnos ativos da empresa A", len(turnos))
 		}

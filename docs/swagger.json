@@ -1,0 +1,2959 @@
+{
+    "consumes": [
+        "application/json"
+    ],
+    "produces": [
+        "application/json"
+    ],
+    "swagger": "2.0",
+    "info": {
+        "description": "API do sistema GuardPoint (controle de rondas/postos).",
+        "title": "GuardPoint API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "basePath": "/api/v1",
+    "paths": {
+        "/alertas": {
+            "get": {
+                "tags": [
+                    "alertas"
+                ],
+                "summary": "Lista alertas com filtros e paginacao (admin/supervisor)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Status do alerta",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Tipo do alerta",
+                        "name": "tipo",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID do turno (uuid)",
+                        "name": "turno_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limite de itens (max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset da paginacao",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/alertas/estatisticas": {
+            "get": {
+                "tags": [
+                    "alertas"
+                ],
+                "summary": "Estatisticas agregadas de alertas (admin/supervisor)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.AlertStatistics"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/alertas/{id}/encerrar": {
+            "put": {
+                "tags": [
+                    "alertas"
+                ],
+                "summary": "Encerra um alerta (admin/supervisor)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do alerta (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/alertas/{id}/reconhecer": {
+            "put": {
+                "tags": [
+                    "alertas"
+                ],
+                "summary": "Reconhece um alerta aberto (admin/supervisor)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do alerta (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/biometric/login": {
+            "post": {
+                "security": [],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Login via dispositivo biometrico registrado",
+                "parameters": [
+                    {
+                        "description": "Credenciais do dispositivo",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.BiometricLoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.LoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/biometric/register": {
+            "post": {
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Registra um dispositivo biometrico para o usuario autenticado",
+                "parameters": [
+                    {
+                        "description": "Dados do dispositivo",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.BiometricRegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.BiometricRegisterResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "security": [],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Login por email e senha",
+                "parameters": [
+                    {
+                        "description": "Credenciais",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.LoginRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.LoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/logout": {
+            "post": {
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Encerra a sessao do dispositivo atual",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/refresh": {
+            "post": {
+                "security": [],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Renova o access token a partir do refresh token",
+                "parameters": [
+                    {
+                        "description": "Refresh token",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.RefreshRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.LoginResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/register": {
+            "post": {
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Cria um novo usuario (somente admin)",
+                "parameters": [
+                    {
+                        "description": "Dados do usuario",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.RegisterRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.User"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Unauthorized",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/checkins/lote": {
+            "post": {
+                "tags": [
+                    "turnos"
+                ],
+                "summary": "Processa um lote de check-ins offline (ate 500 por requisicao)",
+                "parameters": [
+                    {
+                        "description": "Lote de check-ins",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.CheckinRequest"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/config/escalonamento": {
+            "get": {
+                "tags": [
+                    "config"
+                ],
+                "summary": "Lista a configuracao de escalonamento de alertas (somente admin)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.ConfigEscalonamento"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "config"
+                ],
+                "summary": "Substitui todos os niveis de escalonamento de alertas (somente admin)",
+                "parameters": [
+                    {
+                        "description": "Lista completa de niveis",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.CreateConfigEscalonamentoRequest"
+                            }
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.ConfigEscalonamento"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "config"
+                ],
+                "summary": "Cria um nivel de escalonamento de alertas (somente admin)",
+                "parameters": [
+                    {
+                        "description": "Dados do nivel",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateConfigEscalonamentoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.ConfigEscalonamento"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/config/escalonamento/{id}": {
+            "put": {
+                "tags": [
+                    "config"
+                ],
+                "summary": "Atualiza um nivel de escalonamento de alertas (somente admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da configuracao (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Campos a atualizar",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateConfigEscalonamentoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.ConfigEscalonamento"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "config"
+                ],
+                "summary": "Remove um nivel de escalonamento de alertas (somente admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da configuracao (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "sem conteudo"
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/dashboard/summary": {
+            "get": {
+                "tags": [
+                    "dashboard"
+                ],
+                "summary": "Resumo do dashboard da empresa",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.DashboardSummary"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/escalas": {
+            "get": {
+                "tags": [
+                    "escalas"
+                ],
+                "summary": "Lista escalas com filtros e paginacao (admin/supervisor)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do usuario (uuid)",
+                        "name": "usuario_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID do posto (uuid)",
+                        "name": "posto_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filtra por ativo (true/false)",
+                        "name": "ativos",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Data (YYYY-MM-DD)",
+                        "name": "data",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limite de itens (max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset da paginacao",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "escalas"
+                ],
+                "summary": "Cria uma escala (admin/supervisor)",
+                "parameters": [
+                    {
+                        "description": "Dados da escala",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateEscalaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.Escala"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/escalas/{id}": {
+            "get": {
+                "tags": [
+                    "escalas"
+                ],
+                "summary": "Busca uma escala pelo ID (admin/supervisor)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da escala (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Escala"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "escalas"
+                ],
+                "summary": "Atualiza uma escala (admin/supervisor)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da escala (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Campos a atualizar",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateEscalaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Escala"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "escalas"
+                ],
+                "summary": "Desativa uma escala (admin/supervisor)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da escala (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/postos": {
+            "get": {
+                "tags": [
+                    "postos"
+                ],
+                "summary": "Lista os postos da empresa",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Filtra somente postos ativos (true/false)",
+                        "name": "ativos",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Posto"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "postos"
+                ],
+                "summary": "Cria um posto",
+                "parameters": [
+                    {
+                        "description": "Dados do posto",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreatePostoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.Posto"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/postos/{id}": {
+            "get": {
+                "tags": [
+                    "postos"
+                ],
+                "summary": "Busca um posto pelo ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do posto (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Posto"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "postos"
+                ],
+                "summary": "Atualiza um posto",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do posto (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Campos a atualizar",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdatePostoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Posto"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "postos"
+                ],
+                "summary": "Desativa um posto",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do posto (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/turnos/ativos": {
+            "get": {
+                "tags": [
+                    "turnos"
+                ],
+                "summary": "Lista turnos ativos da empresa",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.TurnoDetalhe"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/turnos/checkin": {
+            "post": {
+                "tags": [
+                    "turnos"
+                ],
+                "summary": "Registra um check-in de turno",
+                "parameters": [
+                    {
+                        "description": "Dados do check-in",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CheckinRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.CheckinResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/turnos/finalizar": {
+            "post": {
+                "tags": [
+                    "turnos"
+                ],
+                "summary": "Finaliza um turno em andamento",
+                "parameters": [
+                    {
+                        "description": "Dados de finalizacao",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.FinalizarTurnoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Turno"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/turnos/historico": {
+            "get": {
+                "tags": [
+                    "turnos"
+                ],
+                "summary": "Lista o historico de turnos com filtros e paginacao",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Data inicial (YYYY-MM-DD)",
+                        "name": "data_inicio",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Data final (YYYY-MM-DD)",
+                        "name": "data_fim",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID do usuario (uuid)",
+                        "name": "usuario_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID do posto (uuid)",
+                        "name": "posto_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Status do turno",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limite de itens (max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset da paginacao",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/turnos/iniciar": {
+            "post": {
+                "tags": [
+                    "turnos"
+                ],
+                "summary": "Inicia um turno no posto informado",
+                "parameters": [
+                    {
+                        "description": "Dados de inicio",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.IniciarTurnoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.Turno"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/turnos/reassociar": {
+            "post": {
+                "tags": [
+                    "turnos"
+                ],
+                "summary": "Reassocia um turno revogado a um novo dispositivo via PIN",
+                "parameters": [
+                    {
+                        "description": "PIN e dispositivo",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.ReassociarRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Turno"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/turnos/sabotagem": {
+            "post": {
+                "tags": [
+                    "turnos"
+                ],
+                "summary": "Registra uma senha de coacao/sabotagem durante um turno",
+                "parameters": [
+                    {
+                        "description": "Dados da sabotagem",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.SabotagemRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "202": {
+                        "description": "Accepted",
+                        "schema": {
+                            "$ref": "#/definitions/model.SabotagemResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Forbidden",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/turnos/status": {
+            "get": {
+                "tags": [
+                    "turnos"
+                ],
+                "summary": "Status do turno ativo do usuario autenticado",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.TurnoStatusResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/turnos/{id}": {
+            "get": {
+                "tags": [
+                    "turnos"
+                ],
+                "summary": "Busca o detalhe de um turno pelo ID",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do turno (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.TurnoDetalhe"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/turnos/{id}/revogar": {
+            "post": {
+                "tags": [
+                    "turnos"
+                ],
+                "summary": "Revoga a sessao do dispositivo de um turno, gerando PIN de resgate",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do turno (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.RevogarResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/usuarios": {
+            "get": {
+                "tags": [
+                    "usuarios"
+                ],
+                "summary": "Lista os usuarios da empresa (somente admin)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.UsuarioResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "usuarios"
+                ],
+                "summary": "Cria um usuario (somente admin)",
+                "parameters": [
+                    {
+                        "description": "Dados do usuario",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateUsuarioRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.UsuarioResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/usuarios/{id}": {
+            "get": {
+                "tags": [
+                    "usuarios"
+                ],
+                "summary": "Busca um usuario pelo ID (somente admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do usuario (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.UsuarioResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "usuarios"
+                ],
+                "summary": "Atualiza um usuario (somente admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do usuario (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Campos a atualizar",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateUsuarioRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.UsuarioResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "usuarios"
+                ],
+                "summary": "Desativa um usuario (somente admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do usuario (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "model.AlertStatistics": {
+            "type": "object",
+            "properties": {
+                "por_hora": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.AlertaPorHora"
+                    }
+                },
+                "por_tipo": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.AlertaPorTipo"
+                    }
+                },
+                "total_abertos": {
+                    "type": "integer"
+                },
+                "total_encerrados": {
+                    "type": "integer"
+                },
+                "total_reconhecidos": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.AlertaPorHora": {
+            "type": "object",
+            "properties": {
+                "hora": {
+                    "type": "string"
+                },
+                "quantidade": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.AlertaPorTipo": {
+            "type": "object",
+            "properties": {
+                "quantidade": {
+                    "type": "integer"
+                },
+                "tipo": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.AlertaRecente": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "mensagem": {
+                    "type": "string"
+                },
+                "nivel": {
+                    "type": "integer"
+                },
+                "tipo": {
+                    "type": "string"
+                },
+                "turno_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.BiometricLoginRequest": {
+            "type": "object",
+            "required": [
+                "device_id",
+                "device_secret",
+                "empresa_id"
+            ],
+            "properties": {
+                "device_id": {
+                    "type": "string"
+                },
+                "device_secret": {
+                    "type": "string"
+                },
+                "empresa_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.BiometricRegisterRequest": {
+            "type": "object",
+            "required": [
+                "device_id"
+            ],
+            "properties": {
+                "device_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.BiometricRegisterResponse": {
+            "type": "object",
+            "properties": {
+                "criado_em": {
+                    "type": "string"
+                },
+                "device_id": {
+                    "type": "string"
+                },
+                "device_secret": {
+                    "type": "string"
+                },
+                "empresa_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "usuario_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Checkin": {
+            "type": "object",
+            "properties": {
+                "cliente_checkin_id": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "empresa_id": {
+                    "type": "string"
+                },
+                "flag_geofence": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "latitude": {
+                    "type": "number"
+                },
+                "longitude": {
+                    "type": "number"
+                },
+                "origem_rede": {
+                    "type": "string"
+                },
+                "timestamp_criacao": {
+                    "type": "string"
+                },
+                "timestamp_recebimento": {
+                    "type": "string"
+                },
+                "tipo_senha": {
+                    "type": "string"
+                },
+                "turno_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.CheckinRequest": {
+            "type": "object",
+            "required": [
+                "device_id",
+                "latitude",
+                "longitude",
+                "timestamp",
+                "tipo_senha",
+                "turno_id"
+            ],
+            "properties": {
+                "cliente_checkin_id": {
+                    "type": "string"
+                },
+                "device_id": {
+                    "type": "string"
+                },
+                "latitude": {
+                    "type": "number"
+                },
+                "longitude": {
+                    "type": "number"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "tipo_senha": {
+                    "type": "string",
+                    "enum": [
+                        "padrao",
+                        "coacao",
+                        "finalizacao",
+                        "sabotagem"
+                    ]
+                },
+                "turno_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.CheckinResponse": {
+            "type": "object",
+            "properties": {
+                "atrasado": {
+                    "type": "boolean"
+                },
+                "checkin": {
+                    "$ref": "#/definitions/model.Checkin"
+                },
+                "posto_nome": {
+                    "type": "string"
+                },
+                "proximo_deadline": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.ConfigEscalonamento": {
+            "type": "object",
+            "properties": {
+                "atraso_minutos": {
+                    "type": "integer"
+                },
+                "cargo_alvo": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "empresa_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "nivel": {
+                    "type": "integer"
+                },
+                "whatsapp_para": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.CreateConfigEscalonamentoRequest": {
+            "type": "object",
+            "required": [
+                "atraso_minutos",
+                "nivel",
+                "whatsapp_para"
+            ],
+            "properties": {
+                "atraso_minutos": {
+                    "type": "integer",
+                    "maximum": 1440,
+                    "minimum": 1
+                },
+                "cargo_alvo": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "nivel": {
+                    "type": "integer",
+                    "maximum": 5,
+                    "minimum": 1
+                },
+                "whatsapp_para": {
+                    "type": "string",
+                    "maxLength": 20
+                }
+            }
+        },
+        "model.CreateEscalaRequest": {
+            "type": "object",
+            "required": [
+                "data_fim",
+                "data_inicio",
+                "dias_semana",
+                "hora_fim",
+                "hora_inicio",
+                "posto_id",
+                "usuario_id"
+            ],
+            "properties": {
+                "data_fim": {
+                    "type": "string"
+                },
+                "data_inicio": {
+                    "type": "string"
+                },
+                "dias_semana": {
+                    "type": "array",
+                    "maxItems": 7,
+                    "minItems": 1,
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "hora_fim": {
+                    "type": "string"
+                },
+                "hora_inicio": {
+                    "type": "string"
+                },
+                "posto_id": {
+                    "type": "string"
+                },
+                "tolerancia_min": {
+                    "type": "integer",
+                    "maximum": 120,
+                    "minimum": 0
+                },
+                "usuario_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.CreatePostoRequest": {
+            "type": "object",
+            "required": [
+                "latitude",
+                "longitude",
+                "nome"
+            ],
+            "properties": {
+                "latitude": {
+                    "type": "number"
+                },
+                "longitude": {
+                    "type": "number"
+                },
+                "nome": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 2
+                },
+                "raio_m": {
+                    "type": "integer",
+                    "maximum": 5000,
+                    "minimum": 10
+                }
+            }
+        },
+        "model.CreateUsuarioRequest": {
+            "type": "object",
+            "required": [
+                "cargo",
+                "email",
+                "nome",
+                "senha"
+            ],
+            "properties": {
+                "ativo": {
+                    "type": "boolean"
+                },
+                "cargo": {
+                    "type": "string",
+                    "enum": [
+                        "admin",
+                        "supervisor",
+                        "vigia"
+                    ]
+                },
+                "email": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "nome": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 2
+                },
+                "senha": {
+                    "type": "string",
+                    "maxLength": 72,
+                    "minLength": 6
+                }
+            }
+        },
+        "model.DashboardSummary": {
+            "type": "object",
+            "properties": {
+                "alertas_abertos": {
+                    "type": "integer"
+                },
+                "alertas_recentes": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.AlertaRecente"
+                    }
+                },
+                "checkins_ultima_hora": {
+                    "type": "integer"
+                },
+                "desvios_rota": {
+                    "type": "integer"
+                },
+                "turnos_ativos": {
+                    "type": "integer"
+                },
+                "turnos_por_posto": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.TurnoPorPosto"
+                    }
+                }
+            }
+        },
+        "model.Escala": {
+            "type": "object",
+            "properties": {
+                "ativo": {
+                    "type": "boolean"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "data_fim": {
+                    "type": "string"
+                },
+                "data_inicio": {
+                    "type": "string"
+                },
+                "dias_semana": {
+                    "type": "array",
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "empresa_id": {
+                    "type": "string"
+                },
+                "hora_fim": {
+                    "type": "string"
+                },
+                "hora_inicio": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "posto_id": {
+                    "type": "string"
+                },
+                "posto_nome": {
+                    "type": "string"
+                },
+                "tolerancia_min": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "usuario_id": {
+                    "type": "string"
+                },
+                "usuario_nome": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.FinalizarTurnoRequest": {
+            "type": "object",
+            "required": [
+                "device_id",
+                "latitude",
+                "longitude",
+                "timestamp",
+                "turno_id"
+            ],
+            "properties": {
+                "device_id": {
+                    "type": "string"
+                },
+                "latitude": {
+                    "type": "number"
+                },
+                "longitude": {
+                    "type": "number"
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "turno_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.IniciarTurnoRequest": {
+            "type": "object",
+            "required": [
+                "device_id",
+                "posto_id"
+            ],
+            "properties": {
+                "device_id": {
+                    "type": "string"
+                },
+                "intervalo_min": {
+                    "type": "integer",
+                    "maximum": 120,
+                    "minimum": 1
+                },
+                "posto_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.LoginRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "senha"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "senha": {
+                    "type": "string",
+                    "minLength": 6
+                }
+            }
+        },
+        "model.LoginResponse": {
+            "type": "object",
+            "properties": {
+                "access_token": {
+                    "type": "string"
+                },
+                "expires_in": {
+                    "type": "integer"
+                },
+                "refresh_token": {
+                    "type": "string"
+                },
+                "usuario": {
+                    "$ref": "#/definitions/model.User"
+                }
+            }
+        },
+        "model.Posto": {
+            "type": "object",
+            "properties": {
+                "ativo": {
+                    "type": "boolean"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "empresa_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "latitude": {
+                    "type": "number"
+                },
+                "longitude": {
+                    "type": "number"
+                },
+                "nome": {
+                    "type": "string"
+                },
+                "raio_m": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.ReassociarRequest": {
+            "type": "object",
+            "required": [
+                "device_id",
+                "pin"
+            ],
+            "properties": {
+                "device_id": {
+                    "type": "string"
+                },
+                "pin": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.RefreshRequest": {
+            "type": "object",
+            "required": [
+                "refresh_token"
+            ],
+            "properties": {
+                "refresh_token": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.RegisterRequest": {
+            "type": "object",
+            "required": [
+                "email",
+                "nome",
+                "role",
+                "senha"
+            ],
+            "properties": {
+                "email": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "nome": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 2
+                },
+                "role": {
+                    "type": "string",
+                    "enum": [
+                        "admin",
+                        "supervisor",
+                        "vigia"
+                    ]
+                },
+                "senha": {
+                    "type": "string",
+                    "maxLength": 72,
+                    "minLength": 6
+                },
+                "telefone": {
+                    "type": "string",
+                    "maxLength": 20
+                }
+            }
+        },
+        "model.RevogarResponse": {
+            "type": "object",
+            "properties": {
+                "pin_novo_dispositivo": {
+                    "type": "string"
+                },
+                "validade_minutos": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.SabotagemRequest": {
+            "type": "object",
+            "required": [
+                "device_id",
+                "latitude",
+                "longitude",
+                "motivo",
+                "timestamp",
+                "turno_id"
+            ],
+            "properties": {
+                "device_id": {
+                    "type": "string"
+                },
+                "latitude": {
+                    "type": "number"
+                },
+                "longitude": {
+                    "type": "number"
+                },
+                "motivo": {
+                    "type": "string",
+                    "maxLength": 500,
+                    "minLength": 3
+                },
+                "timestamp": {
+                    "type": "string"
+                },
+                "turno_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.SabotagemResponse": {
+            "type": "object",
+            "properties": {
+                "alerta_id": {
+                    "type": "string"
+                },
+                "mensagem": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.Turno": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "device_id": {
+                    "type": "string"
+                },
+                "empresa_id": {
+                    "type": "string"
+                },
+                "fim_previsto": {
+                    "type": "string"
+                },
+                "fim_real": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "inicio_previsto": {
+                    "type": "string"
+                },
+                "inicio_real": {
+                    "type": "string"
+                },
+                "intervalo_min": {
+                    "type": "integer"
+                },
+                "posto_id": {
+                    "type": "string"
+                },
+                "posto_nome": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "token_sessao": {
+                    "type": "string"
+                },
+                "usuario_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.TurnoDetalhe": {
+            "type": "object",
+            "properties": {
+                "checkins": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.Checkin"
+                    }
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "device_id": {
+                    "type": "string"
+                },
+                "empresa_id": {
+                    "type": "string"
+                },
+                "fim_previsto": {
+                    "type": "string"
+                },
+                "fim_real": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "inicio_previsto": {
+                    "type": "string"
+                },
+                "inicio_real": {
+                    "type": "string"
+                },
+                "intervalo_min": {
+                    "type": "integer"
+                },
+                "posto": {
+                    "$ref": "#/definitions/model.Posto"
+                },
+                "posto_id": {
+                    "type": "string"
+                },
+                "posto_nome": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "token_sessao": {
+                    "type": "string"
+                },
+                "usuario": {
+                    "$ref": "#/definitions/model.User"
+                },
+                "usuario_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.TurnoPorPosto": {
+            "type": "object",
+            "properties": {
+                "posto_id": {
+                    "type": "string"
+                },
+                "posto_nome": {
+                    "type": "string"
+                },
+                "quantidade": {
+                    "type": "integer"
+                }
+            }
+        },
+        "model.TurnoStatusResponse": {
+            "type": "object",
+            "properties": {
+                "checkins_hoje": {
+                    "type": "integer"
+                },
+                "proximo_deadline": {
+                    "type": "string"
+                },
+                "turno": {
+                    "$ref": "#/definitions/model.Turno"
+                },
+                "ultimo_checkin": {
+                    "$ref": "#/definitions/model.Checkin"
+                }
+            }
+        },
+        "model.UpdateConfigEscalonamentoRequest": {
+            "type": "object",
+            "required": [
+                "atraso_minutos",
+                "whatsapp_para"
+            ],
+            "properties": {
+                "atraso_minutos": {
+                    "type": "integer",
+                    "maximum": 1440,
+                    "minimum": 1
+                },
+                "cargo_alvo": {
+                    "type": "string",
+                    "maxLength": 50
+                },
+                "whatsapp_para": {
+                    "type": "string",
+                    "maxLength": 20
+                }
+            }
+        },
+        "model.UpdateEscalaRequest": {
+            "type": "object",
+            "properties": {
+                "ativo": {
+                    "type": "boolean"
+                },
+                "data_fim": {
+                    "type": "string"
+                },
+                "data_inicio": {
+                    "type": "string"
+                },
+                "dias_semana": {
+                    "type": "array",
+                    "maxItems": 7,
+                    "minItems": 1,
+                    "items": {
+                        "type": "integer"
+                    }
+                },
+                "hora_fim": {
+                    "type": "string"
+                },
+                "hora_inicio": {
+                    "type": "string"
+                },
+                "posto_id": {
+                    "type": "string"
+                },
+                "tolerancia_min": {
+                    "type": "integer",
+                    "maximum": 120,
+                    "minimum": 0
+                },
+                "usuario_id": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.UpdatePostoRequest": {
+            "type": "object",
+            "properties": {
+                "ativo": {
+                    "type": "boolean"
+                },
+                "latitude": {
+                    "type": "number"
+                },
+                "longitude": {
+                    "type": "number"
+                },
+                "nome": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 2
+                },
+                "raio_m": {
+                    "type": "integer",
+                    "maximum": 5000,
+                    "minimum": 10
+                }
+            }
+        },
+        "model.UpdateUsuarioRequest": {
+            "type": "object",
+            "properties": {
+                "ativo": {
+                    "type": "boolean"
+                },
+                "cargo": {
+                    "type": "string",
+                    "enum": [
+                        "admin",
+                        "supervisor",
+                        "vigia"
+                    ]
+                },
+                "email": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "nome": {
+                    "type": "string",
+                    "maxLength": 255,
+                    "minLength": 2
+                },
+                "senha": {
+                    "type": "string",
+                    "maxLength": 72,
+                    "minLength": 6
+                }
+            }
+        },
+        "model.User": {
+            "type": "object",
+            "properties": {
+                "ativo": {
+                    "type": "boolean"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "empresa_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "nome": {
+                    "type": "string"
+                },
+                "role": {
+                    "type": "string"
+                },
+                "telefone": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.UsuarioResponse": {
+            "type": "object",
+            "properties": {
+                "ativo": {
+                    "type": "boolean"
+                },
+                "cargo": {
+                    "type": "string"
+                },
+                "createdAt": {
+                    "type": "string"
+                },
+                "email": {
+                    "type": "string"
+                },
+                "empresaId": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "nome": {
+                    "type": "string"
+                },
+                "updatedAt": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "BearerAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    },
+    "security": [
+        {
+            "BearerAuth": []
+        }
+    ]
+}

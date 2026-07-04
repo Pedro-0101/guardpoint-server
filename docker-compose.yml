@@ -19,5 +19,40 @@ services:
       timeout: 5s
       retries: 5
 
+  migrate:
+    image: migrate/migrate:v4.18.1
+    container_name: guardpoint-migrate
+    volumes:
+      - ./migrations:/migrations:ro
+    command:
+      [
+        "-path=/migrations",
+        "-database=postgres://guardpoint:guardpoint@db:5432/guardpoint?sslmode=disable",
+        "up",
+      ]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  api:
+    build: .
+    container_name: guardpoint-api
+    restart: unless-stopped
+    environment:
+      ENV: development
+      PORT: "8080"
+      DATABASE_URL: postgres://guardpoint:guardpoint@db:5432/guardpoint?sslmode=disable
+      # Somente para desenvolvimento local; ENV=production recusa segredos fracos.
+      JWT_SECRET: dev-secret-local-nao-usar-em-producao-0123456789
+      CORS_ORIGINS: http://localhost:4200
+      LOG_LEVEL: debug
+    ports:
+      - "8080:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+      migrate:
+        condition: service_completed_successfully
+
 volumes:
   pgdata:

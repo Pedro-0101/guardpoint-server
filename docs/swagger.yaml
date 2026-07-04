@@ -1,0 +1,1961 @@
+basePath: /api/v1
+consumes:
+- application/json
+definitions:
+  model.AlertStatistics:
+    properties:
+      por_hora:
+        items:
+          $ref: '#/definitions/model.AlertaPorHora'
+        type: array
+      por_tipo:
+        items:
+          $ref: '#/definitions/model.AlertaPorTipo'
+        type: array
+      total_abertos:
+        type: integer
+      total_encerrados:
+        type: integer
+      total_reconhecidos:
+        type: integer
+    type: object
+  model.AlertaPorHora:
+    properties:
+      hora:
+        type: string
+      quantidade:
+        type: integer
+    type: object
+  model.AlertaPorTipo:
+    properties:
+      quantidade:
+        type: integer
+      tipo:
+        type: string
+    type: object
+  model.AlertaRecente:
+    properties:
+      created_at:
+        type: string
+      id:
+        type: string
+      mensagem:
+        type: string
+      nivel:
+        type: integer
+      tipo:
+        type: string
+      turno_id:
+        type: string
+    type: object
+  model.BiometricLoginRequest:
+    properties:
+      device_id:
+        type: string
+      device_secret:
+        type: string
+      empresa_id:
+        type: string
+    required:
+    - device_id
+    - device_secret
+    - empresa_id
+    type: object
+  model.BiometricRegisterRequest:
+    properties:
+      device_id:
+        type: string
+    required:
+    - device_id
+    type: object
+  model.BiometricRegisterResponse:
+    properties:
+      criado_em:
+        type: string
+      device_id:
+        type: string
+      device_secret:
+        type: string
+      empresa_id:
+        type: string
+      id:
+        type: string
+      usuario_id:
+        type: string
+    type: object
+  model.Checkin:
+    properties:
+      cliente_checkin_id:
+        type: string
+      created_at:
+        type: string
+      empresa_id:
+        type: string
+      flag_geofence:
+        type: string
+      id:
+        type: string
+      latitude:
+        type: number
+      longitude:
+        type: number
+      origem_rede:
+        type: string
+      timestamp_criacao:
+        type: string
+      timestamp_recebimento:
+        type: string
+      tipo_senha:
+        type: string
+      turno_id:
+        type: string
+    type: object
+  model.CheckinRequest:
+    properties:
+      cliente_checkin_id:
+        type: string
+      device_id:
+        type: string
+      latitude:
+        type: number
+      longitude:
+        type: number
+      timestamp:
+        type: string
+      tipo_senha:
+        enum:
+        - padrao
+        - coacao
+        - finalizacao
+        - sabotagem
+        type: string
+      turno_id:
+        type: string
+    required:
+    - device_id
+    - latitude
+    - longitude
+    - timestamp
+    - tipo_senha
+    - turno_id
+    type: object
+  model.CheckinResponse:
+    properties:
+      atrasado:
+        type: boolean
+      checkin:
+        $ref: '#/definitions/model.Checkin'
+      posto_nome:
+        type: string
+      proximo_deadline:
+        type: string
+      status:
+        type: string
+    type: object
+  model.ConfigEscalonamento:
+    properties:
+      atraso_minutos:
+        type: integer
+      cargo_alvo:
+        type: string
+      created_at:
+        type: string
+      empresa_id:
+        type: string
+      id:
+        type: string
+      nivel:
+        type: integer
+      whatsapp_para:
+        type: string
+    type: object
+  model.CreateConfigEscalonamentoRequest:
+    properties:
+      atraso_minutos:
+        maximum: 1440
+        minimum: 1
+        type: integer
+      cargo_alvo:
+        maxLength: 50
+        type: string
+      nivel:
+        maximum: 5
+        minimum: 1
+        type: integer
+      whatsapp_para:
+        maxLength: 20
+        type: string
+    required:
+    - atraso_minutos
+    - nivel
+    - whatsapp_para
+    type: object
+  model.CreateEscalaRequest:
+    properties:
+      data_fim:
+        type: string
+      data_inicio:
+        type: string
+      dias_semana:
+        items:
+          type: integer
+        maxItems: 7
+        minItems: 1
+        type: array
+      hora_fim:
+        type: string
+      hora_inicio:
+        type: string
+      posto_id:
+        type: string
+      tolerancia_min:
+        maximum: 120
+        minimum: 0
+        type: integer
+      usuario_id:
+        type: string
+    required:
+    - data_fim
+    - data_inicio
+    - dias_semana
+    - hora_fim
+    - hora_inicio
+    - posto_id
+    - usuario_id
+    type: object
+  model.CreatePostoRequest:
+    properties:
+      latitude:
+        type: number
+      longitude:
+        type: number
+      nome:
+        maxLength: 255
+        minLength: 2
+        type: string
+      raio_m:
+        maximum: 5000
+        minimum: 10
+        type: integer
+    required:
+    - latitude
+    - longitude
+    - nome
+    type: object
+  model.CreateUsuarioRequest:
+    properties:
+      ativo:
+        type: boolean
+      cargo:
+        enum:
+        - admin
+        - supervisor
+        - vigia
+        type: string
+      email:
+        maxLength: 255
+        type: string
+      nome:
+        maxLength: 255
+        minLength: 2
+        type: string
+      senha:
+        maxLength: 72
+        minLength: 6
+        type: string
+    required:
+    - cargo
+    - email
+    - nome
+    - senha
+    type: object
+  model.DashboardSummary:
+    properties:
+      alertas_abertos:
+        type: integer
+      alertas_recentes:
+        items:
+          $ref: '#/definitions/model.AlertaRecente'
+        type: array
+      checkins_ultima_hora:
+        type: integer
+      desvios_rota:
+        type: integer
+      turnos_ativos:
+        type: integer
+      turnos_por_posto:
+        items:
+          $ref: '#/definitions/model.TurnoPorPosto'
+        type: array
+    type: object
+  model.Escala:
+    properties:
+      ativo:
+        type: boolean
+      created_at:
+        type: string
+      data_fim:
+        type: string
+      data_inicio:
+        type: string
+      dias_semana:
+        items:
+          type: integer
+        type: array
+      empresa_id:
+        type: string
+      hora_fim:
+        type: string
+      hora_inicio:
+        type: string
+      id:
+        type: string
+      posto_id:
+        type: string
+      posto_nome:
+        type: string
+      tolerancia_min:
+        type: integer
+      updated_at:
+        type: string
+      usuario_id:
+        type: string
+      usuario_nome:
+        type: string
+    type: object
+  model.FinalizarTurnoRequest:
+    properties:
+      device_id:
+        type: string
+      latitude:
+        type: number
+      longitude:
+        type: number
+      timestamp:
+        type: string
+      turno_id:
+        type: string
+    required:
+    - device_id
+    - latitude
+    - longitude
+    - timestamp
+    - turno_id
+    type: object
+  model.IniciarTurnoRequest:
+    properties:
+      device_id:
+        type: string
+      intervalo_min:
+        maximum: 120
+        minimum: 1
+        type: integer
+      posto_id:
+        type: string
+    required:
+    - device_id
+    - posto_id
+    type: object
+  model.LoginRequest:
+    properties:
+      email:
+        type: string
+      senha:
+        minLength: 6
+        type: string
+    required:
+    - email
+    - senha
+    type: object
+  model.LoginResponse:
+    properties:
+      access_token:
+        type: string
+      expires_in:
+        type: integer
+      refresh_token:
+        type: string
+      usuario:
+        $ref: '#/definitions/model.User'
+    type: object
+  model.Posto:
+    properties:
+      ativo:
+        type: boolean
+      created_at:
+        type: string
+      empresa_id:
+        type: string
+      id:
+        type: string
+      latitude:
+        type: number
+      longitude:
+        type: number
+      nome:
+        type: string
+      raio_m:
+        type: integer
+    type: object
+  model.ReassociarRequest:
+    properties:
+      device_id:
+        type: string
+      pin:
+        type: string
+    required:
+    - device_id
+    - pin
+    type: object
+  model.RefreshRequest:
+    properties:
+      refresh_token:
+        type: string
+    required:
+    - refresh_token
+    type: object
+  model.RegisterRequest:
+    properties:
+      email:
+        maxLength: 255
+        type: string
+      nome:
+        maxLength: 255
+        minLength: 2
+        type: string
+      role:
+        enum:
+        - admin
+        - supervisor
+        - vigia
+        type: string
+      senha:
+        maxLength: 72
+        minLength: 6
+        type: string
+      telefone:
+        maxLength: 20
+        type: string
+    required:
+    - email
+    - nome
+    - role
+    - senha
+    type: object
+  model.RevogarResponse:
+    properties:
+      pin_novo_dispositivo:
+        type: string
+      validade_minutos:
+        type: integer
+    type: object
+  model.SabotagemRequest:
+    properties:
+      device_id:
+        type: string
+      latitude:
+        type: number
+      longitude:
+        type: number
+      motivo:
+        maxLength: 500
+        minLength: 3
+        type: string
+      timestamp:
+        type: string
+      turno_id:
+        type: string
+    required:
+    - device_id
+    - latitude
+    - longitude
+    - motivo
+    - timestamp
+    - turno_id
+    type: object
+  model.SabotagemResponse:
+    properties:
+      alerta_id:
+        type: string
+      mensagem:
+        type: string
+      status:
+        type: string
+    type: object
+  model.Turno:
+    properties:
+      created_at:
+        type: string
+      device_id:
+        type: string
+      empresa_id:
+        type: string
+      fim_previsto:
+        type: string
+      fim_real:
+        type: string
+      id:
+        type: string
+      inicio_previsto:
+        type: string
+      inicio_real:
+        type: string
+      intervalo_min:
+        type: integer
+      posto_id:
+        type: string
+      posto_nome:
+        type: string
+      status:
+        type: string
+      token_sessao:
+        type: string
+      usuario_id:
+        type: string
+    type: object
+  model.TurnoDetalhe:
+    properties:
+      checkins:
+        items:
+          $ref: '#/definitions/model.Checkin'
+        type: array
+      created_at:
+        type: string
+      device_id:
+        type: string
+      empresa_id:
+        type: string
+      fim_previsto:
+        type: string
+      fim_real:
+        type: string
+      id:
+        type: string
+      inicio_previsto:
+        type: string
+      inicio_real:
+        type: string
+      intervalo_min:
+        type: integer
+      posto:
+        $ref: '#/definitions/model.Posto'
+      posto_id:
+        type: string
+      posto_nome:
+        type: string
+      status:
+        type: string
+      token_sessao:
+        type: string
+      usuario:
+        $ref: '#/definitions/model.User'
+      usuario_id:
+        type: string
+    type: object
+  model.TurnoPorPosto:
+    properties:
+      posto_id:
+        type: string
+      posto_nome:
+        type: string
+      quantidade:
+        type: integer
+    type: object
+  model.TurnoStatusResponse:
+    properties:
+      checkins_hoje:
+        type: integer
+      proximo_deadline:
+        type: string
+      turno:
+        $ref: '#/definitions/model.Turno'
+      ultimo_checkin:
+        $ref: '#/definitions/model.Checkin'
+    type: object
+  model.UpdateConfigEscalonamentoRequest:
+    properties:
+      atraso_minutos:
+        maximum: 1440
+        minimum: 1
+        type: integer
+      cargo_alvo:
+        maxLength: 50
+        type: string
+      whatsapp_para:
+        maxLength: 20
+        type: string
+    required:
+    - atraso_minutos
+    - whatsapp_para
+    type: object
+  model.UpdateEscalaRequest:
+    properties:
+      ativo:
+        type: boolean
+      data_fim:
+        type: string
+      data_inicio:
+        type: string
+      dias_semana:
+        items:
+          type: integer
+        maxItems: 7
+        minItems: 1
+        type: array
+      hora_fim:
+        type: string
+      hora_inicio:
+        type: string
+      posto_id:
+        type: string
+      tolerancia_min:
+        maximum: 120
+        minimum: 0
+        type: integer
+      usuario_id:
+        type: string
+    type: object
+  model.UpdatePostoRequest:
+    properties:
+      ativo:
+        type: boolean
+      latitude:
+        type: number
+      longitude:
+        type: number
+      nome:
+        maxLength: 255
+        minLength: 2
+        type: string
+      raio_m:
+        maximum: 5000
+        minimum: 10
+        type: integer
+    type: object
+  model.UpdateUsuarioRequest:
+    properties:
+      ativo:
+        type: boolean
+      cargo:
+        enum:
+        - admin
+        - supervisor
+        - vigia
+        type: string
+      email:
+        maxLength: 255
+        type: string
+      nome:
+        maxLength: 255
+        minLength: 2
+        type: string
+      senha:
+        maxLength: 72
+        minLength: 6
+        type: string
+    type: object
+  model.User:
+    properties:
+      ativo:
+        type: boolean
+      created_at:
+        type: string
+      email:
+        type: string
+      empresa_id:
+        type: string
+      id:
+        type: string
+      nome:
+        type: string
+      role:
+        type: string
+      telefone:
+        type: string
+      updated_at:
+        type: string
+    type: object
+  model.UsuarioResponse:
+    properties:
+      ativo:
+        type: boolean
+      cargo:
+        type: string
+      createdAt:
+        type: string
+      email:
+        type: string
+      empresaId:
+        type: string
+      id:
+        type: string
+      nome:
+        type: string
+      updatedAt:
+        type: string
+    type: object
+info:
+  contact: {}
+  description: API do sistema GuardPoint (controle de rondas/postos).
+  title: GuardPoint API
+  version: "1.0"
+paths:
+  /alertas:
+    get:
+      parameters:
+      - description: Status do alerta
+        in: query
+        name: status
+        type: string
+      - description: Tipo do alerta
+        in: query
+        name: tipo
+        type: string
+      - description: ID do turno (uuid)
+        in: query
+        name: turno_id
+        type: string
+      - description: Limite de itens (max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset da paginacao
+        in: query
+        name: offset
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Lista alertas com filtros e paginacao (admin/supervisor)
+      tags:
+      - alertas
+  /alertas/{id}/encerrar:
+    put:
+      parameters:
+      - description: ID do alerta (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Encerra um alerta (admin/supervisor)
+      tags:
+      - alertas
+  /alertas/{id}/reconhecer:
+    put:
+      parameters:
+      - description: ID do alerta (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Reconhece um alerta aberto (admin/supervisor)
+      tags:
+      - alertas
+  /alertas/estatisticas:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.AlertStatistics'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Estatisticas agregadas de alertas (admin/supervisor)
+      tags:
+      - alertas
+  /auth/biometric/login:
+    post:
+      parameters:
+      - description: Credenciais do dispositivo
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.BiometricLoginRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security: []
+      summary: Login via dispositivo biometrico registrado
+      tags:
+      - auth
+  /auth/biometric/register:
+    post:
+      parameters:
+      - description: Dados do dispositivo
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.BiometricRegisterRequest'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.BiometricRegisterResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Registra um dispositivo biometrico para o usuario autenticado
+      tags:
+      - auth
+  /auth/login:
+    post:
+      parameters:
+      - description: Credenciais
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.LoginRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security: []
+      summary: Login por email e senha
+      tags:
+      - auth
+  /auth/logout:
+    post:
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Encerra a sessao do dispositivo atual
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      parameters:
+      - description: Refresh token
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.RefreshRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.LoginResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      security: []
+      summary: Renova o access token a partir do refresh token
+      tags:
+      - auth
+  /auth/register:
+    post:
+      parameters:
+      - description: Dados do usuario
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.RegisterRequest'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.User'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "401":
+          description: Unauthorized
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Cria um novo usuario (somente admin)
+      tags:
+      - auth
+  /checkins/lote:
+    post:
+      parameters:
+      - description: Lote de check-ins
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/model.CheckinRequest'
+          type: array
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Processa um lote de check-ins offline (ate 500 por requisicao)
+      tags:
+      - turnos
+  /config/escalonamento:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.ConfigEscalonamento'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Lista a configuracao de escalonamento de alertas (somente admin)
+      tags:
+      - config
+    post:
+      parameters:
+      - description: Dados do nivel
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateConfigEscalonamentoRequest'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.ConfigEscalonamento'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Cria um nivel de escalonamento de alertas (somente admin)
+      tags:
+      - config
+    put:
+      parameters:
+      - description: Lista completa de niveis
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/model.CreateConfigEscalonamentoRequest'
+          type: array
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.ConfigEscalonamento'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Substitui todos os niveis de escalonamento de alertas (somente admin)
+      tags:
+      - config
+  /config/escalonamento/{id}:
+    delete:
+      parameters:
+      - description: ID da configuracao (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: sem conteudo
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Remove um nivel de escalonamento de alertas (somente admin)
+      tags:
+      - config
+    put:
+      parameters:
+      - description: ID da configuracao (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Campos a atualizar
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateConfigEscalonamentoRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ConfigEscalonamento'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Atualiza um nivel de escalonamento de alertas (somente admin)
+      tags:
+      - config
+  /dashboard/summary:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.DashboardSummary'
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Resumo do dashboard da empresa
+      tags:
+      - dashboard
+  /escalas:
+    get:
+      parameters:
+      - description: ID do usuario (uuid)
+        in: query
+        name: usuario_id
+        type: string
+      - description: ID do posto (uuid)
+        in: query
+        name: posto_id
+        type: string
+      - description: Filtra por ativo (true/false)
+        in: query
+        name: ativos
+        type: string
+      - description: Data (YYYY-MM-DD)
+        in: query
+        name: data
+        type: string
+      - description: Limite de itens (max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset da paginacao
+        in: query
+        name: offset
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Lista escalas com filtros e paginacao (admin/supervisor)
+      tags:
+      - escalas
+    post:
+      parameters:
+      - description: Dados da escala
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateEscalaRequest'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Escala'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Cria uma escala (admin/supervisor)
+      tags:
+      - escalas
+  /escalas/{id}:
+    delete:
+      parameters:
+      - description: ID da escala (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Desativa uma escala (admin/supervisor)
+      tags:
+      - escalas
+    get:
+      parameters:
+      - description: ID da escala (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Escala'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Busca uma escala pelo ID (admin/supervisor)
+      tags:
+      - escalas
+    put:
+      parameters:
+      - description: ID da escala (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Campos a atualizar
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateEscalaRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Escala'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Atualiza uma escala (admin/supervisor)
+      tags:
+      - escalas
+  /postos:
+    get:
+      parameters:
+      - description: Filtra somente postos ativos (true/false)
+        in: query
+        name: ativos
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.Posto'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Lista os postos da empresa
+      tags:
+      - postos
+    post:
+      parameters:
+      - description: Dados do posto
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreatePostoRequest'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Posto'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Cria um posto
+      tags:
+      - postos
+  /postos/{id}:
+    delete:
+      parameters:
+      - description: ID do posto (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Desativa um posto
+      tags:
+      - postos
+    get:
+      parameters:
+      - description: ID do posto (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Posto'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Busca um posto pelo ID
+      tags:
+      - postos
+    put:
+      parameters:
+      - description: ID do posto (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Campos a atualizar
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdatePostoRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Posto'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Atualiza um posto
+      tags:
+      - postos
+  /turnos/{id}:
+    get:
+      parameters:
+      - description: ID do turno (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.TurnoDetalhe'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Busca o detalhe de um turno pelo ID
+      tags:
+      - turnos
+  /turnos/{id}/revogar:
+    post:
+      parameters:
+      - description: ID do turno (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.RevogarResponse'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Revoga a sessao do dispositivo de um turno, gerando PIN de resgate
+      tags:
+      - turnos
+  /turnos/ativos:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.TurnoDetalhe'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Lista turnos ativos da empresa
+      tags:
+      - turnos
+  /turnos/checkin:
+    post:
+      parameters:
+      - description: Dados do check-in
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CheckinRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CheckinResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Registra um check-in de turno
+      tags:
+      - turnos
+  /turnos/finalizar:
+    post:
+      parameters:
+      - description: Dados de finalizacao
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.FinalizarTurnoRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Turno'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Finaliza um turno em andamento
+      tags:
+      - turnos
+  /turnos/historico:
+    get:
+      parameters:
+      - description: Data inicial (YYYY-MM-DD)
+        in: query
+        name: data_inicio
+        type: string
+      - description: Data final (YYYY-MM-DD)
+        in: query
+        name: data_fim
+        type: string
+      - description: ID do usuario (uuid)
+        in: query
+        name: usuario_id
+        type: string
+      - description: ID do posto (uuid)
+        in: query
+        name: posto_id
+        type: string
+      - description: Status do turno
+        in: query
+        name: status
+        type: string
+      - description: Limite de itens (max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset da paginacao
+        in: query
+        name: offset
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Lista o historico de turnos com filtros e paginacao
+      tags:
+      - turnos
+  /turnos/iniciar:
+    post:
+      parameters:
+      - description: Dados de inicio
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.IniciarTurnoRequest'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Turno'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Inicia um turno no posto informado
+      tags:
+      - turnos
+  /turnos/reassociar:
+    post:
+      parameters:
+      - description: PIN e dispositivo
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.ReassociarRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Turno'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Reassocia um turno revogado a um novo dispositivo via PIN
+      tags:
+      - turnos
+  /turnos/sabotagem:
+    post:
+      parameters:
+      - description: Dados da sabotagem
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.SabotagemRequest'
+      responses:
+        "202":
+          description: Accepted
+          schema:
+            $ref: '#/definitions/model.SabotagemResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "403":
+          description: Forbidden
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Registra uma senha de coacao/sabotagem durante um turno
+      tags:
+      - turnos
+  /turnos/status:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.TurnoStatusResponse'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Status do turno ativo do usuario autenticado
+      tags:
+      - turnos
+  /usuarios:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.UsuarioResponse'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Lista os usuarios da empresa (somente admin)
+      tags:
+      - usuarios
+    post:
+      parameters:
+      - description: Dados do usuario
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateUsuarioRequest'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.UsuarioResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Cria um usuario (somente admin)
+      tags:
+      - usuarios
+  /usuarios/{id}:
+    delete:
+      parameters:
+      - description: ID do usuario (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Desativa um usuario (somente admin)
+      tags:
+      - usuarios
+    get:
+      parameters:
+      - description: ID do usuario (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.UsuarioResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Busca um usuario pelo ID (somente admin)
+      tags:
+      - usuarios
+    put:
+      parameters:
+      - description: ID do usuario (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Campos a atualizar
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateUsuarioRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.UsuarioResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Atualiza um usuario (somente admin)
+      tags:
+      - usuarios
+produces:
+- application/json
+security:
+- BearerAuth: []
+securityDefinitions:
+  BearerAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

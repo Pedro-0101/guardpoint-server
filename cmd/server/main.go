@@ -1,3 +1,18 @@
+// Package main inicia o servidor HTTP do GuardPoint.
+//
+// Accept/Produce/Security sao defaults globais do swagger; endpoints
+// publicos sobrescrevem com "@Security" (sem valor) nos seus handlers.
+//
+// @title           GuardPoint API
+// @version         1.0
+// @description     API do sistema GuardPoint (controle de rondas/postos).
+// @BasePath        /api/v1
+// @accept          json
+// @produce         json
+// @security        BearerAuth
+// @securityDefinitions.apikey BearerAuth
+// @in header
+// @name Authorization
 package main
 
 import (
@@ -9,6 +24,7 @@ import (
 	"syscall"
 	"time"
 
+	_ "github.com/guardpoint/guardpoint-server/docs"
 	"github.com/guardpoint/guardpoint-server/internal/app"
 	"github.com/guardpoint/guardpoint-server/internal/config"
 	"github.com/guardpoint/guardpoint-server/internal/db"

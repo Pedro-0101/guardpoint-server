@@ -16,11 +16,11 @@ import (
 
 const testSecret = "ws-test-secret-0123456789abcdef"
 
-func newWSServer(t *testing.T, corsOrigin string) (*httptest.Server, *Hub, *auth.JWTService) {
+func newWSServer(t *testing.T, allowedOrigins ...string) (*httptest.Server, *Hub, *auth.JWTService) {
 	t.Helper()
 	hub := NewHub()
 	jwtService := auth.NewJWTService(testSecret)
-	srv := httptest.NewServer(HandleWebSocket(hub, jwtService, corsOrigin))
+	srv := httptest.NewServer(HandleWebSocket(hub, jwtService, allowedOrigins))
 	t.Cleanup(srv.Close)
 	return srv, hub, jwtService
 }

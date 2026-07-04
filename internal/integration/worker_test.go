@@ -17,14 +17,14 @@ func TestTimeoutCheckerAtrasos(t *testing.T) {
 	c := novoCenario(t)
 	turno := c.iniciarTurno()
 
-	c.e.reqJSON(http.MethodPut, "/api/config/escalonamento", c.adminToken, []map[string]any{
+	c.e.reqJSON(http.MethodPut, "/api/v1/config/escalonamento", c.adminToken, []map[string]any{
 		{"nivel": 1, "atraso_minutos": 5, "whatsapp_para": "+5511999990001"},
 		{"nivel": 2, "atraso_minutos": 15, "whatsapp_para": "+5511999990002"},
 		{"nivel": 3, "atraso_minutos": 60, "whatsapp_para": "+5511999990003"},
 	}, http.StatusOK, nil)
 
 	// ultimo check-in ha 50 min; intervalo de 30 min => atraso de ~20 min
-	c.e.reqJSON(http.MethodPost, "/api/turnos/checkin", c.vigiaToken,
+	c.e.reqJSON(http.MethodPost, "/api/v1/turnos/checkin", c.vigiaToken,
 		c.checkinBody(turno.ID, "padrao", time.Now().Add(-50*time.Minute)), http.StatusOK, nil)
 
 	c.e.app.TimeoutChecker.CheckOnce(t.Context())
