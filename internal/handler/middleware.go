@@ -28,13 +28,13 @@ func AuthMiddleware(jwtService *auth.JWTService) func(http.Handler) http.Handler
 				return
 			}
 
+			tokenString := authHeader
 			parts := strings.SplitN(authHeader, " ", 2)
-			if len(parts) != 2 || !strings.EqualFold(parts[0], "Bearer") {
-				writeError(w, http.StatusUnauthorized, "formato de token invalido")
-				return
+			if len(parts) == 2 && strings.EqualFold(parts[0], "Bearer") {
+				tokenString = parts[1]
 			}
 
-			claims, err := jwtService.ValidateToken(parts[1])
+			claims, err := jwtService.ValidateToken(tokenString)
 			if err != nil {
 				if errors.Is(err, auth.ErrTokenExpired) {
 					writeError(w, http.StatusUnauthorized, "token expirado")
