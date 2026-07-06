@@ -288,6 +288,23 @@ definitions:
           $ref: '#/definitions/model.TurnoPorPosto'
         type: array
     type: object
+  model.Empresa:
+    properties:
+      alerta_sonoro:
+        type: boolean
+      ativa:
+        type: boolean
+      cnpj:
+        type: string
+      created_at:
+        type: string
+      id:
+        type: string
+      nome:
+        type: string
+      updated_at:
+        type: string
+    type: object
   model.Escala:
     properties:
       ativo:
@@ -587,6 +604,16 @@ definitions:
     required:
     - atraso_minutos
     - whatsapp_para
+    type: object
+  model.UpdateEmpresaRequest:
+    properties:
+      alerta_sonoro:
+        type: boolean
+      nome:
+        maxLength: 255
+        type: string
+    required:
+    - nome
     type: object
   model.UpdateEscalaRequest:
     properties:
@@ -1171,6 +1198,58 @@ paths:
       summary: Resumo do dashboard da empresa
       tags:
       - dashboard
+  /empresa:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Empresa'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Retorna os dados/configuracoes da empresa do usuario logado (somente
+        admin)
+      tags:
+      - empresa
+    put:
+      parameters:
+      - description: Campos a atualizar
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateEmpresaRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Empresa'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Atualiza nome e preferencias da empresa do usuario logado (somente
+        admin)
+      tags:
+      - empresa
   /escalas:
     get:
       parameters:

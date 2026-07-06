@@ -77,6 +77,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 	escalaService := service.NewEscalaService(escalaRepo)
 	escalaHandler := handler.NewEscalaHandler(escalaService)
 
+	empresaService := service.NewEmpresaService(empresaRepo)
+	empresaHandler := handler.NewEmpresaHandler(empresaService)
+
 	timeoutChecker := worker.NewTimeoutChecker(pool, alertaService, configEscalonamentoRepo, escalaRepo)
 	alertDispatcher := worker.NewAlertDispatcher(alertaService.AlertChannel())
 
@@ -175,6 +178,12 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 				r.Get("/{id}", escalaHandler.GetByID)
 				r.Put("/{id}", escalaHandler.Update)
 				r.Delete("/{id}", escalaHandler.Delete)
+			})
+
+			r.Route("/empresa", func(r chi.Router) {
+				r.Use(handler.RequireRole("admin"))
+				r.Get("/", empresaHandler.Get)
+				r.Put("/", empresaHandler.Update)
 			})
 		})
 	})

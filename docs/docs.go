@@ -745,6 +745,83 @@ const docTemplate = `{
                 }
             }
         },
+        "/empresa": {
+            "get": {
+                "tags": [
+                    "empresa"
+                ],
+                "summary": "Retorna os dados/configuracoes da empresa do usuario logado (somente admin)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Empresa"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "empresa"
+                ],
+                "summary": "Atualiza nome e preferencias da empresa do usuario logado (somente admin)",
+                "parameters": [
+                    {
+                        "description": "Campos a atualizar",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateEmpresaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Empresa"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/escalas": {
             "get": {
                 "tags": [
@@ -2354,6 +2431,32 @@ const docTemplate = `{
                 }
             }
         },
+        "model.Empresa": {
+            "type": "object",
+            "properties": {
+                "alerta_sonoro": {
+                    "type": "boolean"
+                },
+                "ativa": {
+                    "type": "boolean"
+                },
+                "cnpj": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "nome": {
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                }
+            }
+        },
         "model.Escala": {
             "type": "object",
             "properties": {
@@ -2793,6 +2896,21 @@ const docTemplate = `{
                 "whatsapp_para": {
                     "type": "string",
                     "maxLength": 20
+                }
+            }
+        },
+        "model.UpdateEmpresaRequest": {
+            "type": "object",
+            "required": [
+                "nome"
+            ],
+            "properties": {
+                "alerta_sonoro": {
+                    "type": "boolean"
+                },
+                "nome": {
+                    "type": "string",
+                    "maxLength": 255
                 }
             }
         },
