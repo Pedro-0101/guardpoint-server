@@ -218,6 +218,24 @@ func (r *AlertaRepository) CloseAlertasFalsoPositivo(ctx context.Context, turnoI
 	return ct.RowsAffected(), nil
 }
 
+// CloseAlertasResolvidoCheckin fecha alertas de atraso ('atraso_%') abertos ou
+// reconhecidos do turno quando um novo check-in chega, resetando o relogio do
+// deadman's switch. E idempotente: se nao houver alerta aberto, nao afeta linhas.
+func (r *AlertaRepository) CloseAlertasResolvidoCheckin(ctx context.Context, turnoID uuid.UUID) (int64, error) {
+	now := time.Now()
+	query := `
+		UPDATE alertas SET status = 'resolvido_checkin', resolvido_em = $1
+		WHERE turno_id = $2
+		  AND tipo LIKE 'atraso_%'
+		  AND status IN ('aberto', 'reconhecido')
+	`
+	ct, err := r.db.Exec(ctx, query, now, turnoID)
+	if err != nil {
+		return 0, fmt.Errorf("marcar alertas resolvido por checkin: %w", err)
+	}
+	return ct.RowsAffected(), nil
+}
+
 func (r *AlertaRepository) CountPorHora(ctx context.Context, empresaID uuid.UUID) ([]model.AlertaPorHora, error) {
 	rows, err := r.db.Query(ctx, `
 		SELECT TO_CHAR(created_at, 'HH24:00'), COUNT(*)
