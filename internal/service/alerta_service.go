@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/guardpoint/guardpoint-server/internal/model"
 	"github.com/guardpoint/guardpoint-server/internal/repository"
@@ -147,7 +148,10 @@ func (s *AlertaService) destinatariosPorTipoEmergencia(ctx context.Context, empr
 }
 
 // ResolverAlertasAtraso fecha os alertas de atraso abertos do turno quando um
-// check-in chega (online ou via lote offline), resetando o deadman's switch.
+// check-in online chega, resetando o deadman's switch. O caminho de lote
+// offline nao chama este metodo: a reconciliacao de atraso nesse caminho ja
+// e responsabilidade do SyncReconciler, que fecha com o status falso_positivo
+// apos avaliar os gaps reais entre check-ins.
 func (s *AlertaService) ResolverAlertasAtraso(ctx context.Context, turnoID uuid.UUID) error {
 	if _, err := s.alertaRepo.CloseAlertasResolvidoCheckin(ctx, turnoID); err != nil {
 		return fmt.Errorf("resolver alertas de atraso: %w", err)
@@ -437,7 +441,10 @@ func tipoEmergenciaValido(tipo string) bool {
 func (s *AlertaService) validarUsuariosDaEmpresa(ctx context.Context, empresaID uuid.UUID, usuarioIDs []uuid.UUID) error {
 	for _, usuarioID := range usuarioIDs {
 		if _, err := s.userRepo.FindByIDEmpresa(ctx, empresaID, usuarioID); err != nil {
-			return fmt.Errorf("%w: %s", ErrUsuarioNaoPertenceAEmpresa, usuarioID)
+			if errors.Is(err, pgx.ErrNoRows) {
+				return fmt.Errorf("%w: %s", ErrUsuarioNaoPertenceAEmpresa, usuarioID)
+			}
+			return fmt.Errorf("verificar usuario %s: %w", usuarioID, err)
 		}
 	}
 	return nil
