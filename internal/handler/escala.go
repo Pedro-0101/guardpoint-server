@@ -68,7 +68,7 @@ func (h *EscalaHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Summary      Cria escalas em lote (ate 7 dias) para um usuario/posto (admin/supervisor)
 // @Tags         escalas
 // @Param        request body model.CreateEscalaLoteRequest true "Dados do lote"
-// @Success      201 {array} model.Escala
+// @Success      201 {object} model.CreateEscalaLoteResponse
 // @Failure      400 {object} map[string]string
 // @Failure      500 {object} map[string]string
 // @Router       /escalas/lote [post]

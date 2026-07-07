@@ -225,6 +225,19 @@ definitions:
     - posto_id
     - usuario_id
     type: object
+  model.CreateEscalaLoteResponse:
+    properties:
+      dias:
+        items:
+          $ref: '#/definitions/model.DiaEscalaEntry'
+        type: array
+      posto_id:
+        type: string
+      tolerancia_min:
+        type: integer
+      usuario_id:
+        type: string
+    type: object
   model.CreateEscalaRequest:
     properties:
       dia_semana_fim:
@@ -248,8 +261,6 @@ definitions:
       usuario_id:
         type: string
     required:
-    - dia_semana_fim
-    - dia_semana_inicio
     - hora_fim
     - hora_inicio
     - posto_id
@@ -364,8 +375,6 @@ definitions:
       hora_inicio:
         type: string
     required:
-    - dia_semana_fim
-    - dia_semana_inicio
     - hora_fim
     - hora_inicio
     type: object
@@ -1632,9 +1641,7 @@ paths:
         "201":
           description: Created
           schema:
-            items:
-              $ref: '#/definitions/model.Escala'
-            type: array
+            $ref: '#/definitions/model.CreateEscalaLoteResponse'
         "400":
           description: Bad Request
           schema:

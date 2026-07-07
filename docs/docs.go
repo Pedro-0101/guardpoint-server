@@ -1033,10 +1033,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.Escala"
-                            }
+                            "$ref": "#/definitions/model.CreateEscalaLoteResponse"
                         }
                     },
                     "400": {
@@ -2667,11 +2664,29 @@ const docTemplate = `{
                 }
             }
         },
+        "model.CreateEscalaLoteResponse": {
+            "type": "object",
+            "properties": {
+                "dias": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/model.DiaEscalaEntry"
+                    }
+                },
+                "posto_id": {
+                    "type": "string"
+                },
+                "tolerancia_min": {
+                    "type": "integer"
+                },
+                "usuario_id": {
+                    "type": "string"
+                }
+            }
+        },
         "model.CreateEscalaRequest": {
             "type": "object",
             "required": [
-                "dia_semana_fim",
-                "dia_semana_inicio",
                 "hora_fim",
                 "hora_inicio",
                 "posto_id",
@@ -2841,8 +2856,6 @@ const docTemplate = `{
         "model.DiaEscalaEntry": {
             "type": "object",
             "required": [
-                "dia_semana_fim",
-                "dia_semana_inicio",
                 "hora_fim",
                 "hora_inicio"
             ],

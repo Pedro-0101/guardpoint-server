@@ -63,14 +63,14 @@ func (s *EscalaService) Create(ctx context.Context, empresaID uuid.UUID, req mod
 	return esc, nil
 }
 
-func (s *EscalaService) CreateLote(ctx context.Context, empresaID uuid.UUID, req model.CreateEscalaLoteRequest) ([]model.Escala, error) {
+func (s *EscalaService) CreateLote(ctx context.Context, empresaID uuid.UUID, req model.CreateEscalaLoteRequest) (model.CreateEscalaLoteResponse, error) {
 	usuarioID, err := uuid.Parse(req.UsuarioID)
 	if err != nil {
-		return nil, fmt.Errorf("usuario_id invalido: %w", err)
+		return model.CreateEscalaLoteResponse{}, fmt.Errorf("usuario_id invalido: %w", err)
 	}
 	postoID, err := uuid.Parse(req.PostoID)
 	if err != nil {
-		return nil, fmt.Errorf("posto_id invalido: %w", err)
+		return model.CreateEscalaLoteResponse{}, fmt.Errorf("posto_id invalido: %w", err)
 	}
 
 	toleranciaMin := req.ToleranciaMin
@@ -78,10 +78,16 @@ func (s *EscalaService) CreateLote(ctx context.Context, empresaID uuid.UUID, req
 		toleranciaMin = 15
 	}
 
-	result := make([]model.Escala, 0, len(req.Dias))
+	resp := model.CreateEscalaLoteResponse{
+		UsuarioID:     req.UsuarioID,
+		PostoID:       req.PostoID,
+		ToleranciaMin: toleranciaMin,
+		Dias:          req.Dias,
+	}
+
 	for _, dia := range req.Dias {
 		if err := validarHorasEscala(dia.HoraInicio, dia.HoraFim); err != nil {
-			return nil, fmt.Errorf("dia %d (inicio %s): %w", dia.DiaSemanaInicio, dia.HoraInicio, err)
+			return resp, fmt.Errorf("dia %d (inicio %s): %w", dia.DiaSemanaInicio, dia.HoraInicio, err)
 		}
 
 		esc := &model.Escala{
@@ -96,12 +102,11 @@ func (s *EscalaService) CreateLote(ctx context.Context, empresaID uuid.UUID, req
 		}
 
 		if err := s.escalaRepo.Create(ctx, esc); err != nil {
-			return nil, fmt.Errorf("criar escala dia %d: %w", dia.DiaSemanaInicio, err)
+			return resp, fmt.Errorf("criar escala dia %d: %w", dia.DiaSemanaInicio, err)
 		}
-		result = append(result, *esc)
 	}
 
-	return result, nil
+	return resp, nil
 }
 
 func (s *EscalaService) GetByID(ctx context.Context, empresaID, id uuid.UUID) (*model.Escala, error) {
@@ -228,6 +233,9 @@ func validarHorasEscala(horaInicio, horaFim string) error {
 func horaEmMinutos(hora string) (int, error) {
 	if len(hora) > 5 {
 		hora = hora[:5]
+	}
+	if hora == "24:00" {
+		return 0, nil
 	}
 	t, err := time.Parse("15:04", hora)
 	if err != nil {

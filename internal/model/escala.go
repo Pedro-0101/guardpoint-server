@@ -27,17 +27,17 @@ type Escala struct {
 type CreateEscalaRequest struct {
 	UsuarioID       string `json:"usuario_id" validate:"required,uuid"`
 	PostoID         string `json:"posto_id" validate:"required,uuid"`
-	DiaSemanaInicio int16  `json:"dia_semana_inicio" validate:"required,min=0,max=6"`
+	DiaSemanaInicio int16  `json:"dia_semana_inicio" validate:"min=0,max=6"`
 	HoraInicio      string `json:"hora_inicio" validate:"required"`
-	DiaSemanaFim    int16  `json:"dia_semana_fim" validate:"required,min=0,max=6"`
+	DiaSemanaFim    int16  `json:"dia_semana_fim" validate:"min=0,max=6"`
 	HoraFim         string `json:"hora_fim" validate:"required"`
 	ToleranciaMin   int    `json:"tolerancia_min" validate:"omitempty,min=0,max=120"`
 }
 
 type DiaEscalaEntry struct {
-	DiaSemanaInicio int16  `json:"dia_semana_inicio" validate:"required,min=0,max=6"`
+	DiaSemanaInicio int16  `json:"dia_semana_inicio" validate:"min=0,max=6"`
 	HoraInicio      string `json:"hora_inicio" validate:"required"`
-	DiaSemanaFim    int16  `json:"dia_semana_fim" validate:"required,min=0,max=6"`
+	DiaSemanaFim    int16  `json:"dia_semana_fim" validate:"min=0,max=6"`
 	HoraFim         string `json:"hora_fim" validate:"required"`
 }
 
@@ -46,6 +46,13 @@ type CreateEscalaLoteRequest struct {
 	PostoID       string           `json:"posto_id" validate:"required,uuid"`
 	ToleranciaMin int              `json:"tolerancia_min" validate:"omitempty,min=0,max=120"`
 	Dias          []DiaEscalaEntry `json:"dias" validate:"required,min=1,max=7,dive"`
+}
+
+type CreateEscalaLoteResponse struct {
+	UsuarioID     string           `json:"usuario_id"`
+	PostoID       string           `json:"posto_id"`
+	ToleranciaMin int              `json:"tolerancia_min"`
+	Dias          []DiaEscalaEntry `json:"dias"`
 }
 
 type UpdateEscalaRequest struct {
