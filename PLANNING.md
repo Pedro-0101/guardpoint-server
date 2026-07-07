@@ -166,9 +166,34 @@ CREATE TABLE config_escalonamento (
     empresa_id      UUID        NOT NULL REFERENCES empresas(id),
     nivel           INTEGER     NOT NULL, -- N1, N2, N3...
     atraso_minutos  INTEGER     NOT NULL, -- minutos de atraso para disparar
-    whatsapp_para   VARCHAR(20) NOT NULL, -- telefone de destino
-    cargo_alvo      VARCHAR(50),          -- 'supervisor', 'gerente'
     created_at      TIMESTAMPTZ DEFAULT now()
+);
+
+CREATE TABLE config_escalonamento_destinatarios (
+    id                      UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    config_escalonamento_id UUID NOT NULL REFERENCES config_escalonamento(id) ON DELETE CASCADE,
+    usuario_id              UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    created_at              TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(config_escalonamento_id, usuario_id)
+);
+
+-- Destinatarios de emergencia (coacao, sabotagem, no_show) seguem o mesmo
+-- padrao, mas independente dos niveis de escalonamento por atraso: cada
+-- empresa configura um conjunto de usuarios por tipo de emergencia.
+CREATE TABLE config_alerta_emergencia (
+    id          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    empresa_id  UUID NOT NULL REFERENCES empresas(id),
+    tipo        VARCHAR(20) NOT NULL CHECK (tipo IN ('coacao', 'sabotagem', 'no_show')),
+    created_at  TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(empresa_id, tipo)
+);
+
+CREATE TABLE config_alerta_emergencia_destinatarios (
+    id                          UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    config_alerta_emergencia_id UUID NOT NULL REFERENCES config_alerta_emergencia(id) ON DELETE CASCADE,
+    usuario_id                  UUID NOT NULL REFERENCES usuarios(id) ON DELETE CASCADE,
+    created_at                  TIMESTAMPTZ DEFAULT now(),
+    UNIQUE(config_alerta_emergencia_id, usuario_id)
 );
 ```
 
@@ -239,7 +264,12 @@ CREATE TABLE sessoes_dispositivo (
 | Método | Rota                                    | Descrição                        |
 | ------ | --------------------------------------- | -------------------------------- |
 | GET    | `/api/config/escalonamento`             | Níveis de escalonamento          |
-| PUT    | `/api/config/escalonamento`             | Atualizar níveis                 |
+| POST   | `/api/config/escalonamento`             | Criar nível de escalonamento     |
+| PUT    | `/api/config/escalonamento`             | Substituir todos os níveis       |
+| PUT    | `/api/config/escalonamento/{id}`        | Atualizar um nível               |
+| DELETE | `/api/config/escalonamento/{id}`        | Remover um nível                 |
+| GET    | `/api/config/alertas-emergencia`        | Destinatários por tipo de emergência |
+| PUT    | `/api/config/alertas-emergencia/{tipo}` | Definir destinatários de um tipo |
 | GET    | `/api/config/empresa`                   | Configurações gerais da empresa  |
 
 ### 5.8. WebSocket

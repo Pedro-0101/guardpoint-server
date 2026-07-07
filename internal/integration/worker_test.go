@@ -17,10 +17,14 @@ func TestTimeoutCheckerAtrasos(t *testing.T) {
 	c := novoCenario(t)
 	turno := c.iniciarTurno()
 
+	supervisor := c.e.criarUsuario(c.empresa.ID, "Supervisor N1", "sup.n1@a.com", "senha123", "supervisor", true)
+	gerente := c.e.criarUsuario(c.empresa.ID, "Gerente N2", "gerente.n2@a.com", "senha123", "supervisor", true)
+	diretor := c.e.criarUsuario(c.empresa.ID, "Diretor N3", "diretor.n3@a.com", "senha123", "admin", true)
+
 	c.e.reqJSON(http.MethodPut, "/api/v1/config/escalonamento", c.adminToken, []map[string]any{
-		{"nivel": 1, "atraso_minutos": 5, "whatsapp_para": "+5511999990001"},
-		{"nivel": 2, "atraso_minutos": 15, "whatsapp_para": "+5511999990002"},
-		{"nivel": 3, "atraso_minutos": 60, "whatsapp_para": "+5511999990003"},
+		{"nivel": 1, "atraso_minutos": 5, "usuario_ids": []string{supervisor.ID.String()}},
+		{"nivel": 2, "atraso_minutos": 15, "usuario_ids": []string{gerente.ID.String()}},
+		{"nivel": 3, "atraso_minutos": 60, "usuario_ids": []string{diretor.ID.String()}},
 	}, http.StatusOK, nil)
 
 	// ultimo check-in ha 50 min; intervalo de 30 min => atraso de ~20 min

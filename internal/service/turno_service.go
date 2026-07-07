@@ -732,10 +732,6 @@ func (s *TurnoService) ProcessarLote(ctx context.Context, userID, empresaID stri
 			}
 		}
 
-		if err := s.alertaService.ResolverAlertasAtraso(ctx, parsedTurnoID); err != nil {
-			slog.Error("resolver alertas de atraso apos checkin em lote", "error", err, "turno_id", parsedTurnoID.String())
-		}
-
 		if req.TipoSenha == "coacao" {
 			_ = s.turnoRepo.UpdateStatus(ctx, parsedTurnoID, parsedEmpresaID, "critico", nil)
 			_, _ = s.alertaService.CreateAlertaImediato(ctx, parsedEmpresaID, parsedTurnoID, "coacao", 1, "Senha de coacao detectada em lote offline")
