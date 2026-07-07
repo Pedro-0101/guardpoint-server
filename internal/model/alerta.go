@@ -19,13 +19,23 @@ type Alerta struct {
 }
 
 type ConfigEscalonamento struct {
-	ID            uuid.UUID `json:"id"`
-	EmpresaID     uuid.UUID `json:"empresa_id"`
-	Nivel         int       `json:"nivel"`
-	AtrasoMinutos int       `json:"atraso_minutos"`
-	WhatsappPara  string    `json:"whatsapp_para"`
-	CargoAlvo     *string   `json:"cargo_alvo,omitempty"`
-	CreatedAt     time.Time `json:"created_at"`
+	ID            uuid.UUID   `json:"id"`
+	EmpresaID     uuid.UUID   `json:"empresa_id"`
+	Nivel         int         `json:"nivel"`
+	AtrasoMinutos int         `json:"atraso_minutos"`
+	UsuarioIDs    []uuid.UUID `json:"usuario_ids"`
+	CreatedAt     time.Time   `json:"created_at"`
+}
+
+// ConfigAlertaEmergencia define quais usuarios recebem um tipo especifico de
+// alerta de emergencia (coacao, sabotagem, no_show), independente dos niveis
+// de escalonamento por atraso.
+type ConfigAlertaEmergencia struct {
+	ID         uuid.UUID   `json:"id"`
+	EmpresaID  uuid.UUID   `json:"empresa_id"`
+	Tipo       string      `json:"tipo"`
+	UsuarioIDs []uuid.UUID `json:"usuario_ids"`
+	CreatedAt  time.Time   `json:"created_at"`
 }
 
 type AlertaFilter struct {
@@ -55,19 +65,21 @@ type AlertaPorHora struct {
 }
 
 type CreateConfigEscalonamentoRequest struct {
-	Nivel         int    `json:"nivel" validate:"required,min=1,max=5"`
-	AtrasoMinutos int    `json:"atraso_minutos" validate:"required,min=1,max=1440"`
-	WhatsappPara  string `json:"whatsapp_para" validate:"required,max=20"`
-	CargoAlvo     string `json:"cargo_alvo,omitempty" validate:"omitempty,max=50"`
+	Nivel         int         `json:"nivel" validate:"required,min=1,max=5"`
+	AtrasoMinutos int         `json:"atraso_minutos" validate:"required,min=1,max=1440"`
+	UsuarioIDs    []uuid.UUID `json:"usuario_ids" validate:"required,min=1"`
 }
 
 type UpdateConfigEscalonamentoRequest struct {
-	AtrasoMinutos int    `json:"atraso_minutos" validate:"required,min=1,max=1440"`
-	WhatsappPara  string `json:"whatsapp_para" validate:"required,max=20"`
-	CargoAlvo     string `json:"cargo_alvo,omitempty" validate:"omitempty,max=50"`
+	AtrasoMinutos int         `json:"atraso_minutos" validate:"required,min=1,max=1440"`
+	UsuarioIDs    []uuid.UUID `json:"usuario_ids" validate:"required,min=1"`
+}
+
+type UpdateConfigAlertaEmergenciaRequest struct {
+	UsuarioIDs []uuid.UUID `json:"usuario_ids" validate:"required,min=1"`
 }
 
 type PendingAlert struct {
-	Alerta       *Alerta `json:"alerta"`
-	WhatsappPara string  `json:"whatsapp_para"`
+	Alerta     *Alerta     `json:"alerta"`
+	UsuarioIDs []uuid.UUID `json:"usuario_ids"`
 }
