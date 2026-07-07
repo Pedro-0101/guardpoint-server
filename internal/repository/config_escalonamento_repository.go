@@ -21,24 +21,35 @@ func NewConfigEscalonamentoRepository(db *pgxpool.Pool) *ConfigEscalonamentoRepo
 }
 
 func (r *ConfigEscalonamentoRepository) Create(ctx context.Context, c *model.ConfigEscalonamento) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("iniciar transacao: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
 	query := `
-		INSERT INTO config_escalonamento (empresa_id, nivel, atraso_minutos, whatsapp_para, cargo_alvo)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO config_escalonamento (empresa_id, nivel, atraso_minutos)
+		VALUES ($1, $2, $3)
 		RETURNING id, created_at
 	`
-	return r.db.QueryRow(ctx, query,
-		c.EmpresaID, c.Nivel, c.AtrasoMinutos, c.WhatsappPara, c.CargoAlvo,
-	).Scan(&c.ID, &c.CreatedAt)
+	if err := tx.QueryRow(ctx, query, c.EmpresaID, c.Nivel, c.AtrasoMinutos).Scan(&c.ID, &c.CreatedAt); err != nil {
+		return fmt.Errorf("criar config escalonamento: %w", err)
+	}
+
+	if err := inserirDestinatariosEscalonamento(ctx, tx, c.ID, c.UsuarioIDs); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (r *ConfigEscalonamentoRepository) FindByEmpresa(ctx context.Context, empresaID uuid.UUID) ([]model.ConfigEscalonamento, error) {
-	query := `
-		SELECT id, empresa_id, nivel, atraso_minutos, whatsapp_para, cargo_alvo, created_at
+	rows, err := r.db.Query(ctx, `
+		SELECT id, empresa_id, nivel, atraso_minutos, created_at
 		FROM config_escalonamento
 		WHERE empresa_id = $1
 		ORDER BY nivel ASC
-	`
-	rows, err := r.db.Query(ctx, query, empresaID)
+	`, empresaID)
 	if err != nil {
 		return nil, fmt.Errorf("listar config escalonamento: %w", err)
 	}
@@ -47,61 +58,138 @@ func (r *ConfigEscalonamentoRepository) FindByEmpresa(ctx context.Context, empre
 	var configs []model.ConfigEscalonamento
 	for rows.Next() {
 		var c model.ConfigEscalonamento
-		if err := rows.Scan(
-			&c.ID, &c.EmpresaID, &c.Nivel, &c.AtrasoMinutos,
-			&c.WhatsappPara, &c.CargoAlvo, &c.CreatedAt,
-		); err != nil {
+		if err := rows.Scan(&c.ID, &c.EmpresaID, &c.Nivel, &c.AtrasoMinutos, &c.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan config escalonamento: %w", err)
 		}
 		configs = append(configs, c)
 	}
-	return configs, rows.Err()
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	destinatarios, err := r.destinatariosPorEmpresa(ctx, empresaID)
+	if err != nil {
+		return nil, err
+	}
+	for i := range configs {
+		configs[i].UsuarioIDs = destinatarios[configs[i].ID]
+	}
+	return configs, nil
+}
+
+// destinatariosPorEmpresa busca, num unico round-trip, os usuario_id de todas
+// as configs de escalonamento da empresa, agrupados por config_escalonamento_id.
+// Evita N+1 sem depender de bind de array (`= ANY($1)` com slice de uuid.UUID).
+func (r *ConfigEscalonamentoRepository) destinatariosPorEmpresa(ctx context.Context, empresaID uuid.UUID) (map[uuid.UUID][]uuid.UUID, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT d.config_escalonamento_id, d.usuario_id
+		FROM config_escalonamento_destinatarios d
+		JOIN config_escalonamento c ON c.id = d.config_escalonamento_id
+		WHERE c.empresa_id = $1
+	`, empresaID)
+	if err != nil {
+		return nil, fmt.Errorf("listar destinatarios de escalonamento: %w", err)
+	}
+	defer rows.Close()
+
+	result := make(map[uuid.UUID][]uuid.UUID)
+	for rows.Next() {
+		var configID, usuarioID uuid.UUID
+		if err := rows.Scan(&configID, &usuarioID); err != nil {
+			return nil, fmt.Errorf("scan destinatario de escalonamento: %w", err)
+		}
+		result[configID] = append(result[configID], usuarioID)
+	}
+	return result, rows.Err()
 }
 
 func (r *ConfigEscalonamentoRepository) FindByEmpresaENivel(ctx context.Context, empresaID uuid.UUID, nivel int) (*model.ConfigEscalonamento, error) {
-	query := `
-		SELECT id, empresa_id, nivel, atraso_minutos, whatsapp_para, cargo_alvo, created_at
+	var c model.ConfigEscalonamento
+	err := r.db.QueryRow(ctx, `
+		SELECT id, empresa_id, nivel, atraso_minutos, created_at
 		FROM config_escalonamento
 		WHERE empresa_id = $1 AND nivel = $2
-	`
-	var c model.ConfigEscalonamento
-	err := r.db.QueryRow(ctx, query, empresaID, nivel).Scan(
-		&c.ID, &c.EmpresaID, &c.Nivel, &c.AtrasoMinutos,
-		&c.WhatsappPara, &c.CargoAlvo, &c.CreatedAt,
-	)
+	`, empresaID, nivel).Scan(&c.ID, &c.EmpresaID, &c.Nivel, &c.AtrasoMinutos, &c.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
 		}
 		return nil, fmt.Errorf("buscar config escalonamento: %w", err)
 	}
+
+	rows, err := r.db.Query(ctx, `SELECT usuario_id FROM config_escalonamento_destinatarios WHERE config_escalonamento_id = $1`, c.ID)
+	if err != nil {
+		return nil, fmt.Errorf("listar destinatarios: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var usuarioID uuid.UUID
+		if err := rows.Scan(&usuarioID); err != nil {
+			return nil, fmt.Errorf("scan destinatario: %w", err)
+		}
+		c.UsuarioIDs = append(c.UsuarioIDs, usuarioID)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
 	return &c, nil
 }
 
 func (r *ConfigEscalonamentoRepository) Update(ctx context.Context, id, empresaID uuid.UUID, c *model.ConfigEscalonamento) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("iniciar transacao: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
 	query := `
 		UPDATE config_escalonamento
-		SET atraso_minutos = $1, whatsapp_para = $2, cargo_alvo = $3
-		WHERE id = $4 AND empresa_id = $5
-		RETURNING id, empresa_id, nivel, atraso_minutos, whatsapp_para, cargo_alvo, created_at
+		SET atraso_minutos = $1
+		WHERE id = $2 AND empresa_id = $3
+		RETURNING id, empresa_id, nivel, atraso_minutos, created_at
 	`
-	return r.db.QueryRow(ctx, query,
-		c.AtrasoMinutos, c.WhatsappPara, c.CargoAlvo, id, empresaID,
-	).Scan(&c.ID, &c.EmpresaID, &c.Nivel, &c.AtrasoMinutos,
-		&c.WhatsappPara, &c.CargoAlvo, &c.CreatedAt)
+	if err := tx.QueryRow(ctx, query, c.AtrasoMinutos, id, empresaID).Scan(
+		&c.ID, &c.EmpresaID, &c.Nivel, &c.AtrasoMinutos, &c.CreatedAt,
+	); err != nil {
+		return fmt.Errorf("atualizar config escalonamento: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `DELETE FROM config_escalonamento_destinatarios WHERE config_escalonamento_id = $1`, c.ID); err != nil {
+		return fmt.Errorf("limpar destinatarios: %w", err)
+	}
+	if err := inserirDestinatariosEscalonamento(ctx, tx, c.ID, c.UsuarioIDs); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (r *ConfigEscalonamentoRepository) Upsert(ctx context.Context, c *model.ConfigEscalonamento) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("iniciar transacao: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
 	query := `
-		INSERT INTO config_escalonamento (empresa_id, nivel, atraso_minutos, whatsapp_para, cargo_alvo)
-		VALUES ($1, $2, $3, $4, $5)
+		INSERT INTO config_escalonamento (empresa_id, nivel, atraso_minutos)
+		VALUES ($1, $2, $3)
 		ON CONFLICT (empresa_id, nivel)
-		DO UPDATE SET atraso_minutos = $3, whatsapp_para = $4, cargo_alvo = $5
+		DO UPDATE SET atraso_minutos = $3
 		RETURNING id, created_at
 	`
-	return r.db.QueryRow(ctx, query,
-		c.EmpresaID, c.Nivel, c.AtrasoMinutos, c.WhatsappPara, c.CargoAlvo,
-	).Scan(&c.ID, &c.CreatedAt)
+	if err := tx.QueryRow(ctx, query, c.EmpresaID, c.Nivel, c.AtrasoMinutos).Scan(&c.ID, &c.CreatedAt); err != nil {
+		return fmt.Errorf("atualizar config escalonamento: %w", err)
+	}
+
+	if _, err := tx.Exec(ctx, `DELETE FROM config_escalonamento_destinatarios WHERE config_escalonamento_id = $1`, c.ID); err != nil {
+		return fmt.Errorf("limpar destinatarios: %w", err)
+	}
+	if err := inserirDestinatariosEscalonamento(ctx, tx, c.ID, c.UsuarioIDs); err != nil {
+		return err
+	}
+
+	return tx.Commit(ctx)
 }
 
 func (r *ConfigEscalonamentoRepository) Delete(ctx context.Context, id, empresaID uuid.UUID) error {
@@ -137,20 +225,35 @@ func (r *ConfigEscalonamentoRepository) ReplaceByEmpresa(ctx context.Context, em
 
 	for i := range configs {
 		configs[i].EmpresaID = empresaID
+		var configID uuid.UUID
 		query := `
-			INSERT INTO config_escalonamento (empresa_id, nivel, atraso_minutos, whatsapp_para, cargo_alvo)
-			VALUES ($1, $2, $3, $4, $5)
+			INSERT INTO config_escalonamento (empresa_id, nivel, atraso_minutos)
+			VALUES ($1, $2, $3)
+			RETURNING id
 		`
-		if _, err := tx.Exec(ctx, query,
+		if err := tx.QueryRow(ctx, query,
 			configs[i].EmpresaID, configs[i].Nivel, configs[i].AtrasoMinutos,
-			configs[i].WhatsappPara, configs[i].CargoAlvo,
-		); err != nil {
+		).Scan(&configID); err != nil {
 			return fmt.Errorf("inserir config nivel %d: %w", configs[i].Nivel, err)
+		}
+		configs[i].ID = configID
+
+		if err := inserirDestinatariosEscalonamento(ctx, tx, configID, configs[i].UsuarioIDs); err != nil {
+			return err
 		}
 	}
 
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commitar transacao: %w", err)
+	return tx.Commit(ctx)
+}
+
+func inserirDestinatariosEscalonamento(ctx context.Context, tx pgx.Tx, configID uuid.UUID, usuarioIDs []uuid.UUID) error {
+	for _, usuarioID := range usuarioIDs {
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO config_escalonamento_destinatarios (config_escalonamento_id, usuario_id)
+			VALUES ($1, $2)
+		`, configID, usuarioID); err != nil {
+			return fmt.Errorf("inserir destinatario de escalonamento: %w", err)
+		}
 	}
 	return nil
 }
