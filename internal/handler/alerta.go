@@ -190,6 +190,10 @@ func (h *AlertaHandler) CreateEscalonamento(w http.ResponseWriter, r *http.Reque
 
 	config, err := h.alertaService.CreateEscalonamento(r.Context(), empresaID, req)
 	if err != nil {
+		if errors.Is(err, service.ErrUsuarioNaoPertenceAEmpresa) {
+			writeError(w, http.StatusBadRequest, "usuario_id invalido para esta empresa")
+			return
+		}
 		slog.Error("create escalonamento failed", "error", err)
 		writeError(w, http.StatusInternalServerError, "erro ao criar configuracao")
 		return
@@ -224,6 +228,10 @@ func (h *AlertaHandler) UpdateEscalonamento(w http.ResponseWriter, r *http.Reque
 
 	config, err := h.alertaService.UpdateEscalonamento(r.Context(), empresaID, configID, req)
 	if err != nil {
+		if errors.Is(err, service.ErrUsuarioNaoPertenceAEmpresa) {
+			writeError(w, http.StatusBadRequest, "usuario_id invalido para esta empresa")
+			return
+		}
 		slog.Error("update escalonamento failed", "error", err)
 		writeError(w, http.StatusInternalServerError, "erro ao atualizar configuracao")
 		return
@@ -283,10 +291,75 @@ func (h *AlertaHandler) PutEscalonamento(w http.ResponseWriter, r *http.Request)
 
 	configs, err := h.alertaService.ReplaceEscalonamento(r.Context(), empresaID, reqs)
 	if err != nil {
+		if errors.Is(err, service.ErrUsuarioNaoPertenceAEmpresa) {
+			writeError(w, http.StatusBadRequest, "usuario_id invalido para esta empresa")
+			return
+		}
 		slog.Error("put escalonamento failed", "error", err)
 		writeError(w, http.StatusInternalServerError, "erro ao salvar configuracao")
 		return
 	}
 
 	writeJSON(w, http.StatusOK, configs)
+}
+
+// GetAlertasEmergencia godoc
+// @Summary      Lista os destinatarios configurados por tipo de alerta de emergencia (somente admin)
+// @Tags         config
+// @Success      200 {array} model.ConfigAlertaEmergencia
+// @Failure      500 {object} map[string]string
+// @Router       /config/alertas-emergencia [get]
+func (h *AlertaHandler) GetAlertasEmergencia(w http.ResponseWriter, r *http.Request) {
+	empresaID := GetEmpresaID(r.Context())
+
+	configs, err := h.alertaService.GetAlertasEmergencia(r.Context(), empresaID)
+	if err != nil {
+		slog.Error("get alertas emergencia failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "erro ao carregar configuracao")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, configs)
+}
+
+// PutAlertaEmergencia godoc
+// @Summary      Define os destinatarios de um tipo de alerta de emergencia (somente admin)
+// @Tags         config
+// @Param        tipo path string true "Tipo de emergencia (coacao, sabotagem, no_show)"
+// @Param        request body model.UpdateConfigAlertaEmergenciaRequest true "Lista de usuarios destinatarios"
+// @Success      200 {object} model.ConfigAlertaEmergencia
+// @Failure      400 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /config/alertas-emergencia/{tipo} [put]
+func (h *AlertaHandler) PutAlertaEmergencia(w http.ResponseWriter, r *http.Request) {
+	empresaID := GetEmpresaID(r.Context())
+	tipo := chi.URLParam(r, "tipo")
+
+	var req model.UpdateConfigAlertaEmergenciaRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "json invalido")
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		writeValidationError(w, err)
+		return
+	}
+
+	config, err := h.alertaService.UpdateAlertaEmergencia(r.Context(), empresaID, tipo, req)
+	if err != nil {
+		if errors.Is(err, service.ErrTipoEmergenciaInvalido) {
+			writeError(w, http.StatusBadRequest, "tipo de emergencia invalido")
+			return
+		}
+		if errors.Is(err, service.ErrUsuarioNaoPertenceAEmpresa) {
+			writeError(w, http.StatusBadRequest, "usuario_id invalido para esta empresa")
+			return
+		}
+		slog.Error("put alerta emergencia failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "erro ao salvar configuracao")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, config)
 }

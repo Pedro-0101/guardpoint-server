@@ -519,6 +519,86 @@ const docTemplate = `{
                 }
             }
         },
+        "/config/alertas-emergencia": {
+            "get": {
+                "tags": [
+                    "config"
+                ],
+                "summary": "Lista os destinatarios configurados por tipo de alerta de emergencia (somente admin)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.ConfigAlertaEmergencia"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/config/alertas-emergencia/{tipo}": {
+            "put": {
+                "tags": [
+                    "config"
+                ],
+                "summary": "Define os destinatarios de um tipo de alerta de emergencia (somente admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Tipo de emergencia (coacao, sabotagem, no_show)",
+                        "name": "tipo",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Lista de usuarios destinatarios",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateConfigAlertaEmergenciaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.ConfigAlertaEmergencia"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
         "/config/escalonamento": {
             "get": {
                 "tags": [
@@ -848,12 +928,6 @@ const docTemplate = `{
                         "in": "query"
                     },
                     {
-                        "type": "string",
-                        "description": "Data (YYYY-MM-DD)",
-                        "name": "data",
-                        "in": "query"
-                    },
-                    {
                         "type": "integer",
                         "description": "Limite de itens (max 100)",
                         "name": "limit",
@@ -898,7 +972,7 @@ const docTemplate = `{
                 "tags": [
                     "escalas"
                 ],
-                "summary": "Cria uma escala (admin/supervisor)",
+                "summary": "Cria uma escala semanal (admin/supervisor)",
                 "parameters": [
                     {
                         "description": "Dados da escala",
@@ -915,6 +989,54 @@ const docTemplate = `{
                         "description": "Created",
                         "schema": {
                             "$ref": "#/definitions/model.Escala"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/escalas/lote": {
+            "post": {
+                "tags": [
+                    "escalas"
+                ],
+                "summary": "Cria escalas em lote (ate 7 dias) para um usuario/posto (admin/supervisor)",
+                "parameters": [
+                    {
+                        "description": "Dados do lote",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateEscalaLoteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.Escala"
+                            }
                         }
                     },
                     "400": {
@@ -1290,6 +1412,205 @@ const docTemplate = `{
                     },
                     "500": {
                         "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/substituicoes": {
+            "get": {
+                "tags": [
+                    "substituicoes"
+                ],
+                "summary": "Lista substituicoes com filtros e paginacao (admin/supervisor)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do usuario substituto",
+                        "name": "usuario_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID do posto",
+                        "name": "posto_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Data (YYYY-MM-DD)",
+                        "name": "data",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Filtra por ativo (true/false)",
+                        "name": "ativos",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limite de itens (max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset da paginacao",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "substituicoes"
+                ],
+                "summary": "Cria uma substituicao de vigia (admin/supervisor)",
+                "parameters": [
+                    {
+                        "description": "Dados da substituicao",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateSubstituicaoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.Substituicao"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/substituicoes/{id}": {
+            "get": {
+                "tags": [
+                    "substituicoes"
+                ],
+                "summary": "Busca uma substituicao pelo ID (admin/supervisor)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da substituicao (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Substituicao"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "put": {
+                "tags": [
+                    "substituicoes"
+                ],
+                "summary": "Atualiza uma substituicao (admin/supervisor)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da substituicao (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Campos a atualizar",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateSubstituicaoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Substituicao"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "substituicoes"
+                ],
+                "summary": "Desativa uma substituicao (admin/supervisor)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da substituicao (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2241,14 +2562,34 @@ const docTemplate = `{
                 }
             }
         },
+        "model.ConfigAlertaEmergencia": {
+            "type": "object",
+            "properties": {
+                "created_at": {
+                    "type": "string"
+                },
+                "empresa_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "tipo": {
+                    "type": "string"
+                },
+                "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "model.ConfigEscalonamento": {
             "type": "object",
             "properties": {
                 "atraso_minutos": {
                     "type": "integer"
-                },
-                "cargo_alvo": {
-                    "type": "string"
                 },
                 "created_at": {
                     "type": "string"
@@ -2262,8 +2603,11 @@ const docTemplate = `{
                 "nivel": {
                     "type": "integer"
                 },
-                "whatsapp_para": {
-                    "type": "string"
+                "usuario_ids": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -2272,7 +2616,7 @@ const docTemplate = `{
             "required": [
                 "atraso_minutos",
                 "nivel",
-                "whatsapp_para"
+                "usuario_ids"
             ],
             "properties": {
                 "atraso_minutos": {
@@ -2280,46 +2624,69 @@ const docTemplate = `{
                     "maximum": 1440,
                     "minimum": 1
                 },
-                "cargo_alvo": {
-                    "type": "string",
-                    "maxLength": 50
-                },
                 "nivel": {
                     "type": "integer",
                     "maximum": 5,
                     "minimum": 1
                 },
-                "whatsapp_para": {
-                    "type": "string",
-                    "maxLength": 20
+                "usuario_ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "model.CreateEscalaLoteRequest": {
+            "type": "object",
+            "required": [
+                "dias",
+                "posto_id",
+                "usuario_id"
+            ],
+            "properties": {
+                "dias": {
+                    "type": "array",
+                    "maxItems": 7,
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/model.DiaEscalaEntry"
+                    }
+                },
+                "posto_id": {
+                    "type": "string"
+                },
+                "tolerancia_min": {
+                    "type": "integer",
+                    "maximum": 120,
+                    "minimum": 0
+                },
+                "usuario_id": {
+                    "type": "string"
                 }
             }
         },
         "model.CreateEscalaRequest": {
             "type": "object",
             "required": [
-                "data_fim",
-                "data_inicio",
-                "dias_semana",
+                "dia_semana_fim",
+                "dia_semana_inicio",
                 "hora_fim",
                 "hora_inicio",
                 "posto_id",
                 "usuario_id"
             ],
             "properties": {
-                "data_fim": {
-                    "type": "string"
+                "dia_semana_fim": {
+                    "type": "integer",
+                    "maximum": 6,
+                    "minimum": 0
                 },
-                "data_inicio": {
-                    "type": "string"
-                },
-                "dias_semana": {
-                    "type": "array",
-                    "maxItems": 7,
-                    "minItems": 1,
-                    "items": {
-                        "type": "integer"
-                    }
+                "dia_semana_inicio": {
+                    "type": "integer",
+                    "maximum": 6,
+                    "minimum": 0
                 },
                 "hora_fim": {
                     "type": "string"
@@ -2363,6 +2730,46 @@ const docTemplate = `{
                     "type": "integer",
                     "maximum": 5000,
                     "minimum": 10
+                }
+            }
+        },
+        "model.CreateSubstituicaoRequest": {
+            "type": "object",
+            "required": [
+                "data_fim",
+                "data_inicio",
+                "hora_fim",
+                "hora_inicio",
+                "posto_id",
+                "usuario_id"
+            ],
+            "properties": {
+                "data_fim": {
+                    "type": "string"
+                },
+                "data_inicio": {
+                    "type": "string"
+                },
+                "hora_fim": {
+                    "type": "string"
+                },
+                "hora_inicio": {
+                    "type": "string"
+                },
+                "motivo": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "posto_id": {
+                    "type": "string"
+                },
+                "tolerancia_min": {
+                    "type": "integer",
+                    "maximum": 120,
+                    "minimum": 0
+                },
+                "usuario_id": {
+                    "type": "string"
                 }
             }
         },
@@ -2431,6 +2838,33 @@ const docTemplate = `{
                 }
             }
         },
+        "model.DiaEscalaEntry": {
+            "type": "object",
+            "required": [
+                "dia_semana_fim",
+                "dia_semana_inicio",
+                "hora_fim",
+                "hora_inicio"
+            ],
+            "properties": {
+                "dia_semana_fim": {
+                    "type": "integer",
+                    "maximum": 6,
+                    "minimum": 0
+                },
+                "dia_semana_inicio": {
+                    "type": "integer",
+                    "maximum": 6,
+                    "minimum": 0
+                },
+                "hora_fim": {
+                    "type": "string"
+                },
+                "hora_inicio": {
+                    "type": "string"
+                }
+            }
+        },
         "model.Empresa": {
             "type": "object",
             "properties": {
@@ -2466,17 +2900,11 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
-                "data_fim": {
-                    "type": "string"
+                "dia_semana_fim": {
+                    "type": "integer"
                 },
-                "data_inicio": {
-                    "type": "string"
-                },
-                "dias_semana": {
-                    "type": "array",
-                    "items": {
-                        "type": "integer"
-                    }
+                "dia_semana_inicio": {
+                    "type": "integer"
                 },
                 "empresa_id": {
                     "type": "string"
@@ -2740,6 +3168,56 @@ const docTemplate = `{
                 }
             }
         },
+        "model.Substituicao": {
+            "type": "object",
+            "properties": {
+                "ativo": {
+                    "type": "boolean"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "data_fim": {
+                    "type": "string"
+                },
+                "data_inicio": {
+                    "type": "string"
+                },
+                "empresa_id": {
+                    "type": "string"
+                },
+                "hora_fim": {
+                    "type": "string"
+                },
+                "hora_inicio": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "motivo": {
+                    "type": "string"
+                },
+                "posto_id": {
+                    "type": "string"
+                },
+                "posto_nome": {
+                    "type": "string"
+                },
+                "tolerancia_min": {
+                    "type": "integer"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "usuario_id": {
+                    "type": "string"
+                },
+                "usuario_nome": {
+                    "type": "string"
+                }
+            }
+        },
         "model.Turno": {
             "type": "object",
             "properties": {
@@ -2877,11 +3355,26 @@ const docTemplate = `{
                 }
             }
         },
+        "model.UpdateConfigAlertaEmergenciaRequest": {
+            "type": "object",
+            "required": [
+                "usuario_ids"
+            ],
+            "properties": {
+                "usuario_ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "model.UpdateConfigEscalonamentoRequest": {
             "type": "object",
             "required": [
                 "atraso_minutos",
-                "whatsapp_para"
+                "usuario_ids"
             ],
             "properties": {
                 "atraso_minutos": {
@@ -2889,13 +3382,12 @@ const docTemplate = `{
                     "maximum": 1440,
                     "minimum": 1
                 },
-                "cargo_alvo": {
-                    "type": "string",
-                    "maxLength": 50
-                },
-                "whatsapp_para": {
-                    "type": "string",
-                    "maxLength": 20
+                "usuario_ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },
@@ -2920,19 +3412,15 @@ const docTemplate = `{
                 "ativo": {
                     "type": "boolean"
                 },
-                "data_fim": {
-                    "type": "string"
+                "dia_semana_fim": {
+                    "type": "integer",
+                    "maximum": 6,
+                    "minimum": 0
                 },
-                "data_inicio": {
-                    "type": "string"
-                },
-                "dias_semana": {
-                    "type": "array",
-                    "maxItems": 7,
-                    "minItems": 1,
-                    "items": {
-                        "type": "integer"
-                    }
+                "dia_semana_inicio": {
+                    "type": "integer",
+                    "maximum": 6,
+                    "minimum": 0
                 },
                 "hora_fim": {
                     "type": "string"
@@ -2974,6 +3462,41 @@ const docTemplate = `{
                     "type": "integer",
                     "maximum": 5000,
                     "minimum": 10
+                }
+            }
+        },
+        "model.UpdateSubstituicaoRequest": {
+            "type": "object",
+            "properties": {
+                "ativo": {
+                    "type": "boolean"
+                },
+                "data_fim": {
+                    "type": "string"
+                },
+                "data_inicio": {
+                    "type": "string"
+                },
+                "hora_fim": {
+                    "type": "string"
+                },
+                "hora_inicio": {
+                    "type": "string"
+                },
+                "motivo": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "posto_id": {
+                    "type": "string"
+                },
+                "tolerancia_min": {
+                    "type": "integer",
+                    "maximum": 120,
+                    "minimum": 0
+                },
+                "usuario_id": {
+                    "type": "string"
                 }
             }
         },

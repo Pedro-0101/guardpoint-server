@@ -1,0 +1,10 @@
+ALTER TABLE escalas DROP CONSTRAINT IF EXISTS ck_escalas_datas;
+ALTER TABLE escalas DROP CONSTRAINT IF EXISTS ck_escalas_horas;
+ALTER TABLE escalas DROP COLUMN data_inicio;
+ALTER TABLE escalas DROP COLUMN data_fim;
+ALTER TABLE escalas DROP COLUMN dias_semana;
+ALTER TABLE escalas ADD COLUMN dia_semana_inicio SMALLINT NOT NULL DEFAULT 0;
+ALTER TABLE escalas ADD COLUMN dia_semana_fim    SMALLINT NOT NULL DEFAULT 0;
+ALTER TABLE escalas ADD CONSTRAINT ck_escalas_horas CHECK (hora_fim <> hora_inicio);
+DROP INDEX IF EXISTS idx_escalas_datas;
+CREATE INDEX idx_escalas_dias ON escalas(dia_semana_inicio, dia_semana_fim);

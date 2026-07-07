@@ -88,13 +88,12 @@ func TestEscalaNoturna(t *testing.T) {
 
 	var esc model.Escala
 	c.e.reqJSON(http.MethodPost, "/api/v1/escalas", c.adminToken, map[string]any{
-		"usuario_id":  c.vigia.ID.String(),
-		"posto_id":    c.posto.ID.String(),
-		"data_inicio": time.Now().Format("2006-01-02"),
-		"data_fim":    time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
-		"hora_inicio": "22:00",
-		"hora_fim":    "06:00",
-		"dias_semana": []int{0, 1, 2, 3, 4, 5, 6},
+		"usuario_id":        c.vigia.ID.String(),
+		"posto_id":          c.posto.ID.String(),
+		"dia_semana_inicio": 0,
+		"hora_inicio":       "22:00",
+		"dia_semana_fim":    1,
+		"hora_fim":          "06:00",
 	}, http.StatusCreated, &esc)
 
 	if !strings.HasPrefix(esc.HoraFim, "06:00") {
@@ -103,13 +102,12 @@ func TestEscalaNoturna(t *testing.T) {
 
 	t.Run("hora_fim igual a hora_inicio e rejeitada", func(t *testing.T) {
 		status, _ := c.e.request(http.MethodPost, "/api/v1/escalas", c.adminToken, map[string]any{
-			"usuario_id":  c.vigia.ID.String(),
-			"posto_id":    c.posto.ID.String(),
-			"data_inicio": time.Now().Format("2006-01-02"),
-			"data_fim":    time.Now().AddDate(0, 1, 0).Format("2006-01-02"),
-			"hora_inicio": "08:00",
-			"hora_fim":    "08:00",
-			"dias_semana": []int{0, 1, 2, 3, 4, 5, 6},
+			"usuario_id":        c.vigia.ID.String(),
+			"posto_id":          c.posto.ID.String(),
+			"dia_semana_inicio": 1,
+			"hora_inicio":       "08:00",
+			"dia_semana_fim":    1,
+			"hora_fim":          "08:00",
 		})
 		if status == http.StatusCreated {
 			t.Error("escala com hora_fim == hora_inicio foi aceita")

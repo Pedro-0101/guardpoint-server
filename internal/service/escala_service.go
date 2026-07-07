@@ -35,18 +35,6 @@ func (s *EscalaService) Create(ctx context.Context, empresaID uuid.UUID, req mod
 	if err != nil {
 		return nil, fmt.Errorf("posto_id invalido: %w", err)
 	}
-	dataInicio, err := time.Parse("2006-01-02", req.DataInicio)
-	if err != nil {
-		return nil, fmt.Errorf("data_inicio invalida: %w", err)
-	}
-	dataFim, err := time.Parse("2006-01-02", req.DataFim)
-	if err != nil {
-		return nil, fmt.Errorf("data_fim invalida: %w", err)
-	}
-
-	if dataFim.Before(dataInicio) {
-		return nil, fmt.Errorf("data_fim deve ser posterior a data_inicio")
-	}
 
 	if err := validarHorasEscala(req.HoraInicio, req.HoraFim); err != nil {
 		return nil, err
@@ -57,21 +45,15 @@ func (s *EscalaService) Create(ctx context.Context, empresaID uuid.UUID, req mod
 		toleranciaMin = 15
 	}
 
-	diasSemana := req.DiasSemana
-	if len(diasSemana) == 0 {
-		diasSemana = []int16{0, 1, 2, 3, 4, 5, 6}
-	}
-
 	esc := &model.Escala{
-		EmpresaID:     empresaID,
-		UsuarioID:     usuarioID,
-		PostoID:       postoID,
-		DataInicio:    dataInicio,
-		DataFim:       dataFim,
-		HoraInicio:    req.HoraInicio,
-		HoraFim:       req.HoraFim,
-		DiasSemana:    diasSemana,
-		ToleranciaMin: toleranciaMin,
+		EmpresaID:       empresaID,
+		UsuarioID:       usuarioID,
+		PostoID:         postoID,
+		DiaSemanaInicio: req.DiaSemanaInicio,
+		HoraInicio:      req.HoraInicio,
+		DiaSemanaFim:    req.DiaSemanaFim,
+		HoraFim:         req.HoraFim,
+		ToleranciaMin:   toleranciaMin,
 	}
 
 	if err := s.escalaRepo.Create(ctx, esc); err != nil {
@@ -79,6 +61,47 @@ func (s *EscalaService) Create(ctx context.Context, empresaID uuid.UUID, req mod
 	}
 
 	return esc, nil
+}
+
+func (s *EscalaService) CreateLote(ctx context.Context, empresaID uuid.UUID, req model.CreateEscalaLoteRequest) ([]model.Escala, error) {
+	usuarioID, err := uuid.Parse(req.UsuarioID)
+	if err != nil {
+		return nil, fmt.Errorf("usuario_id invalido: %w", err)
+	}
+	postoID, err := uuid.Parse(req.PostoID)
+	if err != nil {
+		return nil, fmt.Errorf("posto_id invalido: %w", err)
+	}
+
+	toleranciaMin := req.ToleranciaMin
+	if toleranciaMin <= 0 {
+		toleranciaMin = 15
+	}
+
+	result := make([]model.Escala, 0, len(req.Dias))
+	for _, dia := range req.Dias {
+		if err := validarHorasEscala(dia.HoraInicio, dia.HoraFim); err != nil {
+			return nil, fmt.Errorf("dia %d (inicio %s): %w", dia.DiaSemanaInicio, dia.HoraInicio, err)
+		}
+
+		esc := &model.Escala{
+			EmpresaID:       empresaID,
+			UsuarioID:       usuarioID,
+			PostoID:         postoID,
+			DiaSemanaInicio: dia.DiaSemanaInicio,
+			HoraInicio:      dia.HoraInicio,
+			DiaSemanaFim:    dia.DiaSemanaFim,
+			HoraFim:         dia.HoraFim,
+			ToleranciaMin:   toleranciaMin,
+		}
+
+		if err := s.escalaRepo.Create(ctx, esc); err != nil {
+			return nil, fmt.Errorf("criar escala dia %d: %w", dia.DiaSemanaInicio, err)
+		}
+		result = append(result, *esc)
+	}
+
+	return result, nil
 }
 
 func (s *EscalaService) GetByID(ctx context.Context, empresaID, id uuid.UUID) (*model.Escala, error) {
@@ -109,28 +132,17 @@ func (s *EscalaService) Update(ctx context.Context, empresaID, id uuid.UUID, req
 		}
 		esc.PostoID = pid
 	}
-	if req.DataInicio != nil {
-		di, err := time.Parse("2006-01-02", *req.DataInicio)
-		if err != nil {
-			return nil, fmt.Errorf("data_inicio invalida: %w", err)
-		}
-		esc.DataInicio = di
-	}
-	if req.DataFim != nil {
-		df, err := time.Parse("2006-01-02", *req.DataFim)
-		if err != nil {
-			return nil, fmt.Errorf("data_fim invalida: %w", err)
-		}
-		esc.DataFim = df
+	if req.DiaSemanaInicio != nil {
+		esc.DiaSemanaInicio = *req.DiaSemanaInicio
 	}
 	if req.HoraInicio != nil {
 		esc.HoraInicio = *req.HoraInicio
 	}
+	if req.DiaSemanaFim != nil {
+		esc.DiaSemanaFim = *req.DiaSemanaFim
+	}
 	if req.HoraFim != nil {
 		esc.HoraFim = *req.HoraFim
-	}
-	if req.DiasSemana != nil {
-		esc.DiasSemana = req.DiasSemana
 	}
 	if req.ToleranciaMin != nil {
 		esc.ToleranciaMin = *req.ToleranciaMin
@@ -189,18 +201,10 @@ func VerificarToleranciaEscala(esc *model.Escala, now time.Time) (bool, string) 
 	return false, fmt.Sprintf("fora da tolerancia: %d minutos de diferenca (max: %d)", diferenca, esc.ToleranciaMin)
 }
 
-// EscalaCruzaMeiaNoite indica se a escala termina no dia seguinte ao inicio
-// (hora_fim <= hora_inicio).
+// EscalaCruzaMeiaNoite indica se a escala termina em um dia da semana diferente
+// do dia de inicio (turno noturno que vira o dia).
 func EscalaCruzaMeiaNoite(esc *model.Escala) bool {
-	inicio, err := horaEmMinutos(esc.HoraInicio)
-	if err != nil {
-		return false
-	}
-	fim, err := horaEmMinutos(esc.HoraFim)
-	if err != nil {
-		return false
-	}
-	return fim <= inicio
+	return esc.DiaSemanaFim != esc.DiaSemanaInicio
 }
 
 // validarHorasEscala aceita escalas noturnas (hora_fim < hora_inicio significa

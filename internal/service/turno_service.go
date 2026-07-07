@@ -5,6 +5,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"log/slog"
 	"math"
 	"math/big"
 	"time"
@@ -36,6 +37,7 @@ type TurnoService struct {
 	userRepo              *repository.UserRepository
 	sessaoDispositivoRepo *repository.SessaoDispositivoRepository
 	escalaRepo            *repository.EscalaRepository
+	substituicaoRepo      *repository.SubstituicaoRepository
 	alertaService         *AlertaService
 	hub                   *ws.Hub
 }
@@ -47,6 +49,7 @@ func NewTurnoService(
 	userRepo *repository.UserRepository,
 	sessaoDispositivoRepo *repository.SessaoDispositivoRepository,
 	escalaRepo *repository.EscalaRepository,
+	substituicaoRepo *repository.SubstituicaoRepository,
 	alertaService *AlertaService,
 	hub *ws.Hub,
 ) *TurnoService {
@@ -57,6 +60,7 @@ func NewTurnoService(
 		userRepo:              userRepo,
 		sessaoDispositivoRepo: sessaoDispositivoRepo,
 		escalaRepo:            escalaRepo,
+		substituicaoRepo:      substituicaoRepo,
 		alertaService:         alertaService,
 		hub:                   hub,
 	}
@@ -144,22 +148,40 @@ func (s *TurnoService) Iniciar(ctx context.Context, userID, empresaID string, re
 }
 
 // buscarEscalaParaInicio procura a escala ativa compativel com o inicio de turno
-// em `now`. Alem da data/dia-da-semana de hoje, tenta a escala de ontem quando
-// ela cruza a meia-noite: um vigia da escala 23:50->07:00 pode iniciar o turno
-// ja no dia seguinte, dentro da tolerancia.
+// em `now`. Primeiro verifica substituicoes pontuais (ex.: vigia cobrindo falta),
+// depois cai no fluxo normal de escalas semanais.
 func (s *TurnoService) buscarEscalaParaInicio(ctx context.Context, empresaID, usuarioID, postoID uuid.UUID, now time.Time) (*model.Escala, error) {
-	hoje, err := s.escalaRepo.FindAtivaByUsuarioPostoData(ctx, empresaID, usuarioID, postoID, now, int16(now.Weekday()))
+	sub, err := s.substituicaoRepo.FindAtivaByUsuarioPostoData(ctx, empresaID, usuarioID, postoID, now)
 	if err != nil {
-		return nil, fmt.Errorf("validar escala: %w", err)
+		return nil, fmt.Errorf("validar substituicao: %w", err)
 	}
-	if hoje != nil {
-		if ok, _ := VerificarToleranciaEscala(hoje, now); ok {
-			return hoje, nil
+	if sub != nil {
+		esc := &model.Escala{
+			HoraInicio:    sub.HoraInicio,
+			HoraFim:       sub.HoraFim,
+			ToleranciaMin: sub.ToleranciaMin,
+		}
+		if ok, _ := VerificarToleranciaEscala(esc, now); ok {
+			return esc, nil
 		}
 	}
 
-	ontem := now.AddDate(0, 0, -1)
-	escOntem, err := s.escalaRepo.FindAtivaByUsuarioPostoData(ctx, empresaID, usuarioID, postoID, ontem, int16(ontem.Weekday()))
+	hoje := int16(now.Weekday())
+	esc, err := s.escalaRepo.FindAtivaByUsuarioPostoDia(ctx, empresaID, usuarioID, postoID, hoje)
+	if err != nil {
+		return nil, fmt.Errorf("validar escala: %w", err)
+	}
+	if esc != nil {
+		if ok, _ := VerificarToleranciaEscala(esc, now); ok {
+			return esc, nil
+		}
+	}
+
+	ontem := int16(now.AddDate(0, 0, -1).Weekday())
+	if ontem == hoje {
+		return esc, nil
+	}
+	escOntem, err := s.escalaRepo.FindAtivaByUsuarioPostoDia(ctx, empresaID, usuarioID, postoID, ontem)
 	if err != nil {
 		return nil, fmt.Errorf("validar escala: %w", err)
 	}
@@ -167,13 +189,12 @@ func (s *TurnoService) buscarEscalaParaInicio(ctx context.Context, empresaID, us
 		if ok, _ := VerificarToleranciaEscala(escOntem, now); ok {
 			return escOntem, nil
 		}
-		if hoje == nil {
-			hoje = escOntem
+		if esc == nil {
+			esc = escOntem
 		}
 	}
 
-	// nil (sem escala) ou uma candidata fora da tolerancia; o chamador decide o erro
-	return hoje, nil
+	return esc, nil
 }
 
 func (s *TurnoService) Checkin(ctx context.Context, userID, empresaID string, req model.CheckinRequest) (*model.CheckinResponse, error) {
@@ -234,6 +255,10 @@ func (s *TurnoService) Checkin(ctx context.Context, userID, empresaID string, re
 
 	if err := s.checkinRepo.Create(ctx, checkin); err != nil {
 		return nil, fmt.Errorf("criar checkin: %w", err)
+	}
+
+	if err := s.alertaService.ResolverAlertasAtraso(ctx, parsedTurnoID); err != nil {
+		slog.Error("resolver alertas de atraso apos checkin", "error", err, "turno_id", parsedTurnoID.String())
 	}
 
 	atrasado := checkinAtrasado(anterior, turno.InicioReal, turno.IntervaloMin, timestampCriacao)
@@ -705,6 +730,10 @@ func (s *TurnoService) ProcessarLote(ctx context.Context, userID, empresaID stri
 			if err := s.checkinRepo.Create(ctx, checkin); err != nil {
 				continue
 			}
+		}
+
+		if err := s.alertaService.ResolverAlertasAtraso(ctx, parsedTurnoID); err != nil {
+			slog.Error("resolver alertas de atraso apos checkin em lote", "error", err, "turno_id", parsedTurnoID.String())
 		}
 
 		if req.TipoSenha == "coacao" {

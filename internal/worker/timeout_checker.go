@@ -14,10 +14,11 @@ import (
 )
 
 type TimeoutChecker struct {
-	db         *pgxpool.Pool
-	alertaSvc  *service.AlertaService
-	configRepo *repository.ConfigEscalonamentoRepository
-	escalaRepo *repository.EscalaRepository
+	db               *pgxpool.Pool
+	alertaSvc        *service.AlertaService
+	configRepo       *repository.ConfigEscalonamentoRepository
+	escalaRepo       *repository.EscalaRepository
+	substituicaoRepo *repository.SubstituicaoRepository
 }
 
 func NewTimeoutChecker(
@@ -25,12 +26,14 @@ func NewTimeoutChecker(
 	alertaSvc *service.AlertaService,
 	configRepo *repository.ConfigEscalonamentoRepository,
 	escalaRepo *repository.EscalaRepository,
+	substituicaoRepo *repository.SubstituicaoRepository,
 ) *TimeoutChecker {
 	return &TimeoutChecker{
-		db:         db,
-		alertaSvc:  alertaSvc,
-		configRepo: configRepo,
-		escalaRepo: escalaRepo,
+		db:               db,
+		alertaSvc:        alertaSvc,
+		configRepo:       configRepo,
+		escalaRepo:       escalaRepo,
+		substituicaoRepo: substituicaoRepo,
 	}
 }
 
@@ -162,47 +165,79 @@ func (w *TimeoutChecker) getUltimoCheckin(ctx context.Context, turnoID uuid.UUID
 
 func (w *TimeoutChecker) checkNoShow(ctx context.Context) {
 	now := time.Now()
+
 	escalas, err := w.escalaRepo.FindEscalasSemTurno(ctx, now)
 	if err != nil {
 		slog.Error("timeout checker: buscar escalas sem turno", "error", err)
 		return
 	}
 
+	substituicoes, err := w.substituicaoRepo.FindSubstituicoesSemTurno(ctx, now)
+	if err != nil {
+		slog.Error("timeout checker: buscar substituicoes sem turno", "error", err)
+		return
+	}
+
+	all := make([]noShowEntry, 0, len(escalas)+len(substituicoes))
 	for _, e := range escalas {
-		existe, err := w.alertaJaExiste(ctx, e.EmpresaID, e.UsuarioID, now)
+		all = append(all, noShowEntry{
+			empresaID:     e.EmpresaID,
+			usuarioID:     e.UsuarioID,
+			postoID:       e.PostoID,
+			horaInicio:    e.HoraInicio,
+			toleranciaMin: e.ToleranciaMin,
+		})
+	}
+	for _, s := range substituicoes {
+		all = append(all, noShowEntry{
+			empresaID:     s.EmpresaID,
+			usuarioID:     s.UsuarioID,
+			postoID:       s.PostoID,
+			horaInicio:    s.HoraInicio,
+			toleranciaMin: s.ToleranciaMin,
+		})
+	}
+
+	for _, e := range all {
+		existe, err := w.alertaJaExiste(ctx, e.empresaID, e.usuarioID, now)
 		if err != nil {
-			slog.Error("timeout checker: verificar alerta existente", "error", err, "escala_id", e.ID)
+			slog.Error("timeout checker: verificar alerta existente", "error", err, "usuario_id", e.usuarioID)
 			continue
 		}
 		if existe {
 			continue
 		}
 
-		tolerancia := e.ToleranciaMin
+		tolerancia := e.toleranciaMin
 		if tolerancia <= 0 {
 			tolerancia = 15
 		}
 
-		// O sufixo [ref:<usuario_id>] serve de chave de deduplicacao: alertaJaExiste
-		// procura o usuario_id na mensagem para nao gerar um no-show a cada ciclo (30s).
 		mensagem := fmt.Sprintf(
-			"No-show detectado: vigia nao iniciou turno ate %s (tolerancia de %d min). Escala: %s as %s. [ref:%s]",
-			now.Format("15:04"), tolerancia, e.DataInicio.Format("2006-01-02"), e.HoraInicio, e.UsuarioID.String(),
+			"No-show detectado: vigia nao iniciou turno ate %s (tolerancia de %d min). Escala as %s. [ref:%s]",
+			now.Format("15:04"), tolerancia, e.horaInicio, e.usuarioID.String(),
 		)
 
-		_, err = w.alertaSvc.CreateAlertaImediato(ctx, e.EmpresaID, uuid.Nil, "no_show", 2, mensagem)
+		_, err = w.alertaSvc.CreateAlertaImediato(ctx, e.empresaID, uuid.Nil, "no_show", 2, mensagem)
 		if err != nil {
-			slog.Error("timeout checker: criar alerta no-show", "error", err, "escala_id", e.ID)
+			slog.Error("timeout checker: criar alerta no-show", "error", err, "usuario_id", e.usuarioID)
 			continue
 		}
 
 		slog.Info("timeout checker: alerta no-show gerado",
-			"escala_id", e.ID.String(),
-			"usuario_id", e.UsuarioID.String(),
-			"posto_id", e.PostoID.String(),
-			"hora_inicio", e.HoraInicio,
+			"usuario_id", e.usuarioID.String(),
+			"posto_id", e.postoID.String(),
+			"hora_inicio", e.horaInicio,
 		)
 	}
+}
+
+type noShowEntry struct {
+	empresaID     uuid.UUID
+	usuarioID     uuid.UUID
+	postoID       uuid.UUID
+	horaInicio    string
+	toleranciaMin int
 }
 
 func (w *TimeoutChecker) alertaJaExiste(ctx context.Context, empresaID, usuarioID uuid.UUID, data time.Time) (bool, error) {

@@ -17,31 +17,41 @@ var (
 	ErrAlertaNaoEncontrado          = errors.New("alerta nao encontrado")
 	ErrAlertaTransicaoInvalida      = errors.New("transicao de status do alerta invalida")
 	ErrConfigEscalonamentoDuplicado = errors.New("nivel de escalonamento ja existe para esta empresa")
+	ErrUsuarioNaoPertenceAEmpresa   = errors.New("usuario nao pertence a empresa")
+	ErrTipoEmergenciaInvalido       = errors.New("tipo de alerta de emergencia invalido")
 )
 
+var tiposEmergencia = []string{"coacao", "sabotagem", "no_show"}
+
 type AlertaService struct {
-	alertaRepo   *repository.AlertaRepository
-	configRepo   *repository.ConfigEscalonamentoRepository
-	turnoRepo    *repository.TurnoRepository
-	checkinRepo  *repository.CheckinRepository
-	alertChannel chan *model.PendingAlert
-	hub          *ws.Hub
+	alertaRepo           *repository.AlertaRepository
+	configRepo           *repository.ConfigEscalonamentoRepository
+	configEmergenciaRepo *repository.ConfigAlertaEmergenciaRepository
+	turnoRepo            *repository.TurnoRepository
+	checkinRepo          *repository.CheckinRepository
+	userRepo             *repository.UserRepository
+	alertChannel         chan *model.PendingAlert
+	hub                  *ws.Hub
 }
 
 func NewAlertaService(
 	alertaRepo *repository.AlertaRepository,
 	configRepo *repository.ConfigEscalonamentoRepository,
+	configEmergenciaRepo *repository.ConfigAlertaEmergenciaRepository,
 	turnoRepo *repository.TurnoRepository,
 	checkinRepo *repository.CheckinRepository,
+	userRepo *repository.UserRepository,
 	hub *ws.Hub,
 ) *AlertaService {
 	return &AlertaService{
-		alertaRepo:   alertaRepo,
-		configRepo:   configRepo,
-		turnoRepo:    turnoRepo,
-		checkinRepo:  checkinRepo,
-		alertChannel: make(chan *model.PendingAlert, 100),
-		hub:          hub,
+		alertaRepo:           alertaRepo,
+		configRepo:           configRepo,
+		configEmergenciaRepo: configEmergenciaRepo,
+		turnoRepo:            turnoRepo,
+		checkinRepo:          checkinRepo,
+		userRepo:             userRepo,
+		alertChannel:         make(chan *model.PendingAlert, 100),
+		hub:                  hub,
 	}
 }
 
@@ -49,8 +59,8 @@ func (s *AlertaService) AlertChannel() <-chan *model.PendingAlert {
 	return s.alertChannel
 }
 
-// CreateAlerta cria um alerta de escalonamento com deduplicacao por
-// (turno, tipo) e despacha WhatsApp apenas para o nivel correspondente.
+// CreateAlerta cria um alerta de escalonamento por atraso, com deduplicacao
+// por (turno, tipo). Os destinatarios vem da configuracao do nivel informado.
 func (s *AlertaService) CreateAlerta(ctx context.Context, empresaID, turnoID uuid.UUID, tipo string, nivel int, mensagem string) (*model.Alerta, error) {
 	count, err := s.alertaRepo.CountByTurnoETipo(ctx, turnoID, tipo)
 	if err != nil {
@@ -60,18 +70,28 @@ func (s *AlertaService) CreateAlerta(ctx context.Context, empresaID, turnoID uui
 		return nil, nil
 	}
 
-	return s.criarAlerta(ctx, empresaID, turnoID, tipo, nivel, mensagem, false)
+	usuarioIDs, err := s.destinatariosPorNivel(ctx, empresaID, nivel)
+	if err != nil {
+		return nil, fmt.Errorf("resolver destinatarios: %w", err)
+	}
+
+	return s.criarAlerta(ctx, empresaID, turnoID, tipo, nivel, mensagem, usuarioIDs)
 }
 
 // CreateAlertaImediato cria um alerta de emergencia (coacao, sabotagem,
-// no-show) sem deduplicacao. Regra de produto: emergencias despacham WhatsApp
-// para TODOS os niveis de escalonamento configurados de uma vez, em vez de
-// seguir a escadinha por atraso.
+// no-show), sem deduplicacao. Os destinatarios vem da configuracao especifica
+// do tipo de emergencia (config_alerta_emergencia), independente dos niveis
+// de escalonamento por atraso.
 func (s *AlertaService) CreateAlertaImediato(ctx context.Context, empresaID, turnoID uuid.UUID, tipo string, nivel int, mensagem string) (*model.Alerta, error) {
-	return s.criarAlerta(ctx, empresaID, turnoID, tipo, nivel, mensagem, true)
+	usuarioIDs, err := s.destinatariosPorTipoEmergencia(ctx, empresaID, tipo)
+	if err != nil {
+		return nil, fmt.Errorf("resolver destinatarios: %w", err)
+	}
+
+	return s.criarAlerta(ctx, empresaID, turnoID, tipo, nivel, mensagem, usuarioIDs)
 }
 
-func (s *AlertaService) criarAlerta(ctx context.Context, empresaID, turnoID uuid.UUID, tipo string, nivel int, mensagem string, notificarTodosNiveis bool) (*model.Alerta, error) {
+func (s *AlertaService) criarAlerta(ctx context.Context, empresaID, turnoID uuid.UUID, tipo string, nivel int, mensagem string, usuarioIDs []uuid.UUID) (*model.Alerta, error) {
 	msg := &mensagem
 	if mensagem == "" {
 		msg = nil
@@ -94,24 +114,45 @@ func (s *AlertaService) criarAlerta(ctx context.Context, empresaID, turnoID uuid
 
 	s.hub.Broadcast(empresaID.String(), ws.NewAlertEvent(alerta.ID.String(), tipo, turnoStr, nivel))
 
-	configs, _ := s.configRepo.FindByEmpresa(ctx, empresaID)
-	for _, cfg := range configs {
-		if !notificarTodosNiveis && cfg.Nivel != nivel {
-			continue
-		}
+	if len(usuarioIDs) > 0 {
 		select {
-		case s.alertChannel <- &model.PendingAlert{
-			Alerta:       alerta,
-			WhatsappPara: cfg.WhatsappPara,
-		}:
+		case s.alertChannel <- &model.PendingAlert{Alerta: alerta, UsuarioIDs: usuarioIDs}:
 		default:
-		}
-		if !notificarTodosNiveis {
-			break
 		}
 	}
 
 	return alerta, nil
+}
+
+func (s *AlertaService) destinatariosPorNivel(ctx context.Context, empresaID uuid.UUID, nivel int) ([]uuid.UUID, error) {
+	cfg, err := s.configRepo.FindByEmpresaENivel(ctx, empresaID, nivel)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return nil, nil
+	}
+	return cfg.UsuarioIDs, nil
+}
+
+func (s *AlertaService) destinatariosPorTipoEmergencia(ctx context.Context, empresaID uuid.UUID, tipo string) ([]uuid.UUID, error) {
+	cfg, err := s.configEmergenciaRepo.FindByEmpresaETipo(ctx, empresaID, tipo)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return nil, nil
+	}
+	return cfg.UsuarioIDs, nil
+}
+
+// ResolverAlertasAtraso fecha os alertas de atraso abertos do turno quando um
+// check-in chega (online ou via lote offline), resetando o deadman's switch.
+func (s *AlertaService) ResolverAlertasAtraso(ctx context.Context, turnoID uuid.UUID) error {
+	if _, err := s.alertaRepo.CloseAlertasResolvidoCheckin(ctx, turnoID); err != nil {
+		return fmt.Errorf("resolver alertas de atraso: %w", err)
+	}
+	return nil
 }
 
 func (s *AlertaService) List(ctx context.Context, empresaID string, filter model.AlertaFilter) ([]model.Alerta, int, error) {
@@ -225,6 +266,10 @@ func (s *AlertaService) CreateEscalonamento(ctx context.Context, empresaID strin
 		return nil, fmt.Errorf("empresa_id invalido: %w", err)
 	}
 
+	if err := s.validarUsuariosDaEmpresa(ctx, parsedEmpresaID, req.UsuarioIDs); err != nil {
+		return nil, err
+	}
+
 	existing, err := s.configRepo.FindByEmpresaENivel(ctx, parsedEmpresaID, req.Nivel)
 	if err != nil {
 		return nil, fmt.Errorf("verificar nivel existente: %w", err)
@@ -234,8 +279,7 @@ func (s *AlertaService) CreateEscalonamento(ctx context.Context, empresaID strin
 			EmpresaID:     parsedEmpresaID,
 			Nivel:         req.Nivel,
 			AtrasoMinutos: req.AtrasoMinutos,
-			WhatsappPara:  req.WhatsappPara,
-			CargoAlvo:     strPtr(req.CargoAlvo),
+			UsuarioIDs:    req.UsuarioIDs,
 		}
 		if err := s.configRepo.Upsert(ctx, c); err != nil {
 			return nil, fmt.Errorf("atualizar config escalonamento: %w", err)
@@ -243,17 +287,11 @@ func (s *AlertaService) CreateEscalonamento(ctx context.Context, empresaID strin
 		return c, nil
 	}
 
-	var cargoAlvo *string
-	if req.CargoAlvo != "" {
-		cargoAlvo = &req.CargoAlvo
-	}
-
 	c := &model.ConfigEscalonamento{
 		EmpresaID:     parsedEmpresaID,
 		Nivel:         req.Nivel,
 		AtrasoMinutos: req.AtrasoMinutos,
-		WhatsappPara:  req.WhatsappPara,
-		CargoAlvo:     cargoAlvo,
+		UsuarioIDs:    req.UsuarioIDs,
 	}
 
 	if err := s.configRepo.Create(ctx, c); err != nil {
@@ -272,15 +310,13 @@ func (s *AlertaService) UpdateEscalonamento(ctx context.Context, empresaID, conf
 		return nil, fmt.Errorf("config_id invalido: %w", err)
 	}
 
-	var cargoAlvo *string
-	if req.CargoAlvo != "" {
-		cargoAlvo = &req.CargoAlvo
+	if err := s.validarUsuariosDaEmpresa(ctx, parsedEmpresaID, req.UsuarioIDs); err != nil {
+		return nil, err
 	}
 
 	c := &model.ConfigEscalonamento{
 		AtrasoMinutos: req.AtrasoMinutos,
-		WhatsappPara:  req.WhatsappPara,
-		CargoAlvo:     cargoAlvo,
+		UsuarioIDs:    req.UsuarioIDs,
 	}
 
 	if err := s.configRepo.Update(ctx, parsedConfigID, parsedEmpresaID, c); err != nil {
@@ -309,15 +345,13 @@ func (s *AlertaService) ReplaceEscalonamento(ctx context.Context, empresaID stri
 
 	configs := make([]model.ConfigEscalonamento, 0, len(reqs))
 	for _, req := range reqs {
-		var cargoAlvo *string
-		if req.CargoAlvo != "" {
-			cargoAlvo = &req.CargoAlvo
+		if err := s.validarUsuariosDaEmpresa(ctx, parsedEmpresaID, req.UsuarioIDs); err != nil {
+			return nil, err
 		}
 		configs = append(configs, model.ConfigEscalonamento{
 			Nivel:         req.Nivel,
 			AtrasoMinutos: req.AtrasoMinutos,
-			WhatsappPara:  req.WhatsappPara,
-			CargoAlvo:     cargoAlvo,
+			UsuarioIDs:    req.UsuarioIDs,
 		})
 	}
 
@@ -332,11 +366,81 @@ func (s *AlertaService) ReplaceEscalonamento(ctx context.Context, empresaID stri
 	return result, nil
 }
 
-func strPtr(s string) *string {
-	if s == "" {
-		return nil
+// GetAlertasEmergencia sempre retorna os 3 tipos fixos (coacao, sabotagem,
+// no_show), com lista de usuarios vazia para os que ainda nao tem configuracao
+// salva.
+func (s *AlertaService) GetAlertasEmergencia(ctx context.Context, empresaID string) ([]model.ConfigAlertaEmergencia, error) {
+	parsedEmpresaID, err := uuid.Parse(empresaID)
+	if err != nil {
+		return nil, fmt.Errorf("empresa_id invalido: %w", err)
 	}
-	return &s
+
+	existentes, err := s.configEmergenciaRepo.FindByEmpresa(ctx, parsedEmpresaID)
+	if err != nil {
+		return nil, fmt.Errorf("listar config alerta emergencia: %w", err)
+	}
+
+	porTipo := make(map[string]model.ConfigAlertaEmergencia, len(existentes))
+	for _, c := range existentes {
+		porTipo[c.Tipo] = c
+	}
+
+	resultado := make([]model.ConfigAlertaEmergencia, 0, len(tiposEmergencia))
+	for _, tipo := range tiposEmergencia {
+		if c, ok := porTipo[tipo]; ok {
+			resultado = append(resultado, c)
+			continue
+		}
+		resultado = append(resultado, model.ConfigAlertaEmergencia{
+			EmpresaID:  parsedEmpresaID,
+			Tipo:       tipo,
+			UsuarioIDs: []uuid.UUID{},
+		})
+	}
+	return resultado, nil
+}
+
+func (s *AlertaService) UpdateAlertaEmergencia(ctx context.Context, empresaID, tipo string, req model.UpdateConfigAlertaEmergenciaRequest) (*model.ConfigAlertaEmergencia, error) {
+	if !tipoEmergenciaValido(tipo) {
+		return nil, ErrTipoEmergenciaInvalido
+	}
+
+	parsedEmpresaID, err := uuid.Parse(empresaID)
+	if err != nil {
+		return nil, fmt.Errorf("empresa_id invalido: %w", err)
+	}
+
+	if err := s.validarUsuariosDaEmpresa(ctx, parsedEmpresaID, req.UsuarioIDs); err != nil {
+		return nil, err
+	}
+
+	c := &model.ConfigAlertaEmergencia{
+		EmpresaID:  parsedEmpresaID,
+		Tipo:       tipo,
+		UsuarioIDs: req.UsuarioIDs,
+	}
+	if err := s.configEmergenciaRepo.Upsert(ctx, c); err != nil {
+		return nil, fmt.Errorf("atualizar config alerta emergencia: %w", err)
+	}
+	return c, nil
+}
+
+func tipoEmergenciaValido(tipo string) bool {
+	for _, t := range tiposEmergencia {
+		if t == tipo {
+			return true
+		}
+	}
+	return false
+}
+
+func (s *AlertaService) validarUsuariosDaEmpresa(ctx context.Context, empresaID uuid.UUID, usuarioIDs []uuid.UUID) error {
+	for _, usuarioID := range usuarioIDs {
+		if _, err := s.userRepo.FindByIDEmpresa(ctx, empresaID, usuarioID); err != nil {
+			return fmt.Errorf("%w: %s", ErrUsuarioNaoPertenceAEmpresa, usuarioID)
+		}
+	}
+	return nil
 }
 
 // nullableTurno converte um turnoID em ponteiro nulo quando for o UUID zero

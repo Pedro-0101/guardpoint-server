@@ -152,12 +152,25 @@ definitions:
       status:
         type: string
     type: object
+  model.ConfigAlertaEmergencia:
+    properties:
+      created_at:
+        type: string
+      empresa_id:
+        type: string
+      id:
+        type: string
+      tipo:
+        type: string
+      usuario_ids:
+        items:
+          type: string
+        type: array
+    type: object
   model.ConfigEscalonamento:
     properties:
       atraso_minutos:
         type: integer
-      cargo_alvo:
-        type: string
       created_at:
         type: string
       empresa_id:
@@ -166,8 +179,10 @@ definitions:
         type: string
       nivel:
         type: integer
-      whatsapp_para:
-        type: string
+      usuario_ids:
+        items:
+          type: string
+        type: array
     type: object
   model.CreateConfigEscalonamentoRequest:
     properties:
@@ -175,33 +190,51 @@ definitions:
         maximum: 1440
         minimum: 1
         type: integer
-      cargo_alvo:
-        maxLength: 50
-        type: string
       nivel:
         maximum: 5
         minimum: 1
         type: integer
-      whatsapp_para:
-        maxLength: 20
-        type: string
+      usuario_ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
     required:
     - atraso_minutos
     - nivel
-    - whatsapp_para
+    - usuario_ids
     type: object
-  model.CreateEscalaRequest:
+  model.CreateEscalaLoteRequest:
     properties:
-      data_fim:
-        type: string
-      data_inicio:
-        type: string
-      dias_semana:
+      dias:
         items:
-          type: integer
+          $ref: '#/definitions/model.DiaEscalaEntry'
         maxItems: 7
         minItems: 1
         type: array
+      posto_id:
+        type: string
+      tolerancia_min:
+        maximum: 120
+        minimum: 0
+        type: integer
+      usuario_id:
+        type: string
+    required:
+    - dias
+    - posto_id
+    - usuario_id
+    type: object
+  model.CreateEscalaRequest:
+    properties:
+      dia_semana_fim:
+        maximum: 6
+        minimum: 0
+        type: integer
+      dia_semana_inicio:
+        maximum: 6
+        minimum: 0
+        type: integer
       hora_fim:
         type: string
       hora_inicio:
@@ -215,9 +248,8 @@ definitions:
       usuario_id:
         type: string
     required:
-    - data_fim
-    - data_inicio
-    - dias_semana
+    - dia_semana_fim
+    - dia_semana_inicio
     - hora_fim
     - hora_inicio
     - posto_id
@@ -241,6 +273,35 @@ definitions:
     - latitude
     - longitude
     - nome
+    type: object
+  model.CreateSubstituicaoRequest:
+    properties:
+      data_fim:
+        type: string
+      data_inicio:
+        type: string
+      hora_fim:
+        type: string
+      hora_inicio:
+        type: string
+      motivo:
+        maxLength: 255
+        type: string
+      posto_id:
+        type: string
+      tolerancia_min:
+        maximum: 120
+        minimum: 0
+        type: integer
+      usuario_id:
+        type: string
+    required:
+    - data_fim
+    - data_inicio
+    - hora_fim
+    - hora_inicio
+    - posto_id
+    - usuario_id
     type: object
   model.CreateUsuarioRequest:
     properties:
@@ -288,6 +349,26 @@ definitions:
           $ref: '#/definitions/model.TurnoPorPosto'
         type: array
     type: object
+  model.DiaEscalaEntry:
+    properties:
+      dia_semana_fim:
+        maximum: 6
+        minimum: 0
+        type: integer
+      dia_semana_inicio:
+        maximum: 6
+        minimum: 0
+        type: integer
+      hora_fim:
+        type: string
+      hora_inicio:
+        type: string
+    required:
+    - dia_semana_fim
+    - dia_semana_inicio
+    - hora_fim
+    - hora_inicio
+    type: object
   model.Empresa:
     properties:
       alerta_sonoro:
@@ -311,14 +392,10 @@ definitions:
         type: boolean
       created_at:
         type: string
-      data_fim:
-        type: string
-      data_inicio:
-        type: string
-      dias_semana:
-        items:
-          type: integer
-        type: array
+      dia_semana_fim:
+        type: integer
+      dia_semana_inicio:
+        type: integer
       empresa_id:
         type: string
       hora_fim:
@@ -499,6 +576,39 @@ definitions:
       status:
         type: string
     type: object
+  model.Substituicao:
+    properties:
+      ativo:
+        type: boolean
+      created_at:
+        type: string
+      data_fim:
+        type: string
+      data_inicio:
+        type: string
+      empresa_id:
+        type: string
+      hora_fim:
+        type: string
+      hora_inicio:
+        type: string
+      id:
+        type: string
+      motivo:
+        type: string
+      posto_id:
+        type: string
+      posto_nome:
+        type: string
+      tolerancia_min:
+        type: integer
+      updated_at:
+        type: string
+      usuario_id:
+        type: string
+      usuario_nome:
+        type: string
+    type: object
   model.Turno:
     properties:
       created_at:
@@ -589,21 +699,30 @@ definitions:
       ultimo_checkin:
         $ref: '#/definitions/model.Checkin'
     type: object
+  model.UpdateConfigAlertaEmergenciaRequest:
+    properties:
+      usuario_ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - usuario_ids
+    type: object
   model.UpdateConfigEscalonamentoRequest:
     properties:
       atraso_minutos:
         maximum: 1440
         minimum: 1
         type: integer
-      cargo_alvo:
-        maxLength: 50
-        type: string
-      whatsapp_para:
-        maxLength: 20
-        type: string
+      usuario_ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
     required:
     - atraso_minutos
-    - whatsapp_para
+    - usuario_ids
     type: object
   model.UpdateEmpresaRequest:
     properties:
@@ -619,16 +738,14 @@ definitions:
     properties:
       ativo:
         type: boolean
-      data_fim:
-        type: string
-      data_inicio:
-        type: string
-      dias_semana:
-        items:
-          type: integer
-        maxItems: 7
-        minItems: 1
-        type: array
+      dia_semana_fim:
+        maximum: 6
+        minimum: 0
+        type: integer
+      dia_semana_inicio:
+        maximum: 6
+        minimum: 0
+        type: integer
       hora_fim:
         type: string
       hora_inicio:
@@ -658,6 +775,30 @@ definitions:
         maximum: 5000
         minimum: 10
         type: integer
+    type: object
+  model.UpdateSubstituicaoRequest:
+    properties:
+      ativo:
+        type: boolean
+      data_fim:
+        type: string
+      data_inicio:
+        type: string
+      hora_fim:
+        type: string
+      hora_inicio:
+        type: string
+      motivo:
+        maxLength: 255
+        type: string
+      posto_id:
+        type: string
+      tolerancia_min:
+        maximum: 120
+        minimum: 0
+        type: integer
+      usuario_id:
+        type: string
     type: object
   model.UpdateUsuarioRequest:
     properties:
@@ -1051,6 +1192,60 @@ paths:
       summary: Processa um lote de check-ins offline (ate 500 por requisicao)
       tags:
       - turnos
+  /config/alertas-emergencia:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.ConfigAlertaEmergencia'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Lista os destinatarios configurados por tipo de alerta de emergencia
+        (somente admin)
+      tags:
+      - config
+  /config/alertas-emergencia/{tipo}:
+    put:
+      parameters:
+      - description: Tipo de emergencia (coacao, sabotagem, no_show)
+        in: path
+        name: tipo
+        required: true
+        type: string
+      - description: Lista de usuarios destinatarios
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateConfigAlertaEmergenciaRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ConfigAlertaEmergencia'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Define os destinatarios de um tipo de alerta de emergencia (somente
+        admin)
+      tags:
+      - config
   /config/escalonamento:
     get:
       responses:
@@ -1265,10 +1460,6 @@ paths:
         in: query
         name: ativos
         type: string
-      - description: Data (YYYY-MM-DD)
-        in: query
-        name: data
-        type: string
       - description: Limite de itens (max 100)
         in: query
         name: limit
@@ -1323,7 +1514,7 @@ paths:
             additionalProperties:
               type: string
             type: object
-      summary: Cria uma escala (admin/supervisor)
+      summary: Cria uma escala semanal (admin/supervisor)
       tags:
       - escalas
   /escalas/{id}:
@@ -1426,6 +1617,37 @@ paths:
               type: string
             type: object
       summary: Atualiza uma escala (admin/supervisor)
+      tags:
+      - escalas
+  /escalas/lote:
+    post:
+      parameters:
+      - description: Dados do lote
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateEscalaLoteRequest'
+      responses:
+        "201":
+          description: Created
+          schema:
+            items:
+              $ref: '#/definitions/model.Escala'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Cria escalas em lote (ate 7 dias) para um usuario/posto (admin/supervisor)
       tags:
       - escalas
   /postos:
@@ -1563,6 +1785,136 @@ paths:
       summary: Atualiza um posto
       tags:
       - postos
+  /substituicoes:
+    get:
+      parameters:
+      - description: ID do usuario substituto
+        in: query
+        name: usuario_id
+        type: string
+      - description: ID do posto
+        in: query
+        name: posto_id
+        type: string
+      - description: Data (YYYY-MM-DD)
+        in: query
+        name: data
+        type: string
+      - description: Filtra por ativo (true/false)
+        in: query
+        name: ativos
+        type: string
+      - description: Limite de itens (max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset da paginacao
+        in: query
+        name: offset
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+      summary: Lista substituicoes com filtros e paginacao (admin/supervisor)
+      tags:
+      - substituicoes
+    post:
+      parameters:
+      - description: Dados da substituicao
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateSubstituicaoRequest'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.Substituicao'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Cria uma substituicao de vigia (admin/supervisor)
+      tags:
+      - substituicoes
+  /substituicoes/{id}:
+    delete:
+      parameters:
+      - description: ID da substituicao (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Desativa uma substituicao (admin/supervisor)
+      tags:
+      - substituicoes
+    get:
+      parameters:
+      - description: ID da substituicao (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Substituicao'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Busca uma substituicao pelo ID (admin/supervisor)
+      tags:
+      - substituicoes
+    put:
+      parameters:
+      - description: ID da substituicao (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Campos a atualizar
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateSubstituicaoRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Substituicao'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Atualiza uma substituicao (admin/supervisor)
+      tags:
+      - substituicoes
   /turnos/{id}:
     get:
       parameters:

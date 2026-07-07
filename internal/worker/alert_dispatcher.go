@@ -32,10 +32,10 @@ func (w *AlertDispatcher) Run(ctx context.Context) {
 }
 
 func (w *AlertDispatcher) dispatch(_ context.Context, alert *model.PendingAlert) {
-	slog.Info("alert dispatcher: stub whatsapp webhook",
+	slog.Info("alert dispatcher: stub notificacao",
 		"alerta_id", alert.Alerta.ID.String(),
 		"tipo", alert.Alerta.Tipo,
 		"nivel", alert.Alerta.Nivel,
-		"whatsapp_para", alert.WhatsappPara,
+		"usuario_ids", alert.UsuarioIDs,
 	)
 }

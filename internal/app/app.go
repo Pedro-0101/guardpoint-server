@@ -52,7 +52,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 	checkinRepo := repository.NewCheckinRepository(pool)
 	alertaRepo := repository.NewAlertaRepository(pool)
 	configEscalonamentoRepo := repository.NewConfigEscalonamentoRepository(pool)
+	configAlertaEmergenciaRepo := repository.NewConfigAlertaEmergenciaRepository(pool)
 	escalaRepo := repository.NewEscalaRepository(pool)
+	substituicaoRepo := repository.NewSubstituicaoRepository(pool)
 
 	authService := service.NewAuthService(jwtService, userRepo, empresaRepo, sessaoDispositivoRepo)
 	authHandler := handler.NewAuthHandler(authService)
@@ -60,9 +62,9 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 	postoService := service.NewPostoService(postoRepo)
 	postoHandler := handler.NewPostoHandler(postoService)
 
-	alertaService := service.NewAlertaService(alertaRepo, configEscalonamentoRepo, turnoRepo, checkinRepo, hub)
+	alertaService := service.NewAlertaService(alertaRepo, configEscalonamentoRepo, configAlertaEmergenciaRepo, turnoRepo, checkinRepo, userRepo, hub)
 
-	turnoService := service.NewTurnoService(turnoRepo, checkinRepo, postoRepo, userRepo, sessaoDispositivoRepo, escalaRepo, alertaService, hub)
+	turnoService := service.NewTurnoService(turnoRepo, checkinRepo, postoRepo, userRepo, sessaoDispositivoRepo, escalaRepo, substituicaoRepo, alertaService, hub)
 	syncReconciler := worker.NewSyncReconciler(alertaRepo, checkinRepo, turnoRepo, hub)
 	turnoHandler := handler.NewTurnoHandler(turnoService, syncReconciler)
 
@@ -80,7 +82,10 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 	empresaService := service.NewEmpresaService(empresaRepo)
 	empresaHandler := handler.NewEmpresaHandler(empresaService)
 
-	timeoutChecker := worker.NewTimeoutChecker(pool, alertaService, configEscalonamentoRepo, escalaRepo)
+	substituicaoService := service.NewSubstituicaoService(substituicaoRepo)
+	substituicaoHandler := handler.NewSubstituicaoHandler(substituicaoService)
+
+	timeoutChecker := worker.NewTimeoutChecker(pool, alertaService, configEscalonamentoRepo, escalaRepo, substituicaoRepo)
 	alertDispatcher := worker.NewAlertDispatcher(alertaService.AlertChannel())
 
 	r := chi.NewRouter()
@@ -124,10 +129,14 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 
 			r.Route("/postos", func(r chi.Router) {
 				r.Get("/", postoHandler.List)
-				r.Post("/", postoHandler.Create)
 				r.Get("/{id}", postoHandler.GetByID)
-				r.Put("/{id}", postoHandler.Update)
-				r.Delete("/{id}", postoHandler.Delete)
+
+				r.Group(func(r chi.Router) {
+					r.Use(handler.RequireRole("admin"))
+					r.Post("/", postoHandler.Create)
+					r.Put("/{id}", postoHandler.Update)
+					r.Delete("/{id}", postoHandler.Delete)
+				})
 			})
 
 			r.Route("/turnos", func(r chi.Router) {
@@ -169,15 +178,27 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 				r.Post("/escalonamento", alertaHandler.CreateEscalonamento)
 				r.Put("/escalonamento/{id}", alertaHandler.UpdateEscalonamento)
 				r.Delete("/escalonamento/{id}", alertaHandler.DeleteEscalonamento)
+				r.Get("/alertas-emergencia", alertaHandler.GetAlertasEmergencia)
+				r.Put("/alertas-emergencia/{tipo}", alertaHandler.PutAlertaEmergencia)
 			})
 
 			r.Route("/escalas", func(r chi.Router) {
 				r.Use(handler.RequireRole("admin", "supervisor"))
 				r.Get("/", escalaHandler.List)
 				r.Post("/", escalaHandler.Create)
+				r.Post("/lote", escalaHandler.CreateLote)
 				r.Get("/{id}", escalaHandler.GetByID)
 				r.Put("/{id}", escalaHandler.Update)
 				r.Delete("/{id}", escalaHandler.Delete)
+			})
+
+			r.Route("/substituicoes", func(r chi.Router) {
+				r.Use(handler.RequireRole("admin", "supervisor"))
+				r.Get("/", substituicaoHandler.List)
+				r.Post("/", substituicaoHandler.Create)
+				r.Get("/{id}", substituicaoHandler.GetByID)
+				r.Put("/{id}", substituicaoHandler.Update)
+				r.Delete("/{id}", substituicaoHandler.Delete)
 			})
 
 			r.Route("/empresa", func(r chi.Router) {

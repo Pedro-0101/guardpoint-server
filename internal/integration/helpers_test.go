@@ -196,19 +196,19 @@ func (c *cenario) registrarBiometria(deviceID string) string {
 	return resp.DeviceSecret
 }
 
-// criarEscala cria uma escala diaria com inicio na hora de `inicio` e fim 8h depois.
+// criarEscala cria uma escala semanal com inicio no diaDaSemana e na hora de `inicio` e fim 8h depois.
 func (c *cenario) criarEscala(usuarioID, postoID uuid.UUID, inicio time.Time, toleranciaMin int) model.Escala {
 	c.e.t.Helper()
+	diaSemana := int16(inicio.Weekday())
 	var esc model.Escala
 	c.e.reqJSON(http.MethodPost, "/api/v1/escalas", c.adminToken, map[string]any{
-		"usuario_id":     usuarioID.String(),
-		"posto_id":       postoID.String(),
-		"data_inicio":    inicio.AddDate(0, 0, -1).Format("2006-01-02"),
-		"data_fim":       inicio.AddDate(0, 0, 1).Format("2006-01-02"),
-		"hora_inicio":    inicio.Format("15:04"),
-		"hora_fim":       inicio.Add(8 * time.Hour).Format("15:04"),
-		"dias_semana":    []int{0, 1, 2, 3, 4, 5, 6},
-		"tolerancia_min": toleranciaMin,
+		"usuario_id":        usuarioID.String(),
+		"posto_id":          postoID.String(),
+		"dia_semana_inicio": diaSemana,
+		"hora_inicio":       inicio.Format("15:04"),
+		"dia_semana_fim":    diaSemana,
+		"hora_fim":          inicio.Add(8 * time.Hour).Format("15:04"),
+		"tolerancia_min":    toleranciaMin,
 	}, http.StatusCreated, &esc)
 	return esc
 }

@@ -16,9 +16,21 @@ func TestVerificarToleranciaEscala(t *testing.T) {
 
 	escala := func(horaInicio, horaFim string, tolMin int) *model.Escala {
 		return &model.Escala{
-			HoraInicio:    horaInicio,
-			HoraFim:       horaFim,
-			ToleranciaMin: tolMin,
+			DiaSemanaInicio: 0,
+			HoraInicio:      horaInicio,
+			DiaSemanaFim:    0,
+			HoraFim:         horaFim,
+			ToleranciaMin:   tolMin,
+		}
+	}
+
+	escalaNoturna := func(diaInicio, diaFim int16, horaInicio, horaFim string, tolMin int) *model.Escala {
+		return &model.Escala{
+			DiaSemanaInicio: diaInicio,
+			HoraInicio:      horaInicio,
+			DiaSemanaFim:    diaFim,
+			HoraFim:         horaFim,
+			ToleranciaMin:   tolMin,
 		}
 	}
 
@@ -35,7 +47,7 @@ func TestVerificarToleranciaEscala(t *testing.T) {
 		{"diurna: 16 min atrasado", escala("08:00", "17:00", 15), dia(8, 16), false},
 		{"diurna: horas depois", escala("08:00", "17:00", 15), dia(13, 0), false},
 
-		// Escala noturna 22:00 -> 06:00.
+		// Escala noturna 22:00 -> 06:00 (mesmo dia de semana, fim < inicio).
 		{"noturna: no horario exato", escala("22:00", "06:00", 15), dia(22, 0), true},
 		{"noturna: 10 min atrasado", escala("22:00", "06:00", 15), dia(22, 10), true},
 		{"noturna: 20 min atrasado", escala("22:00", "06:00", 15), dia(22, 20), false},
@@ -51,6 +63,11 @@ func TestVerificarToleranciaEscala(t *testing.T) {
 
 		// hora_inicio no formato HH:MM:SS (como retornado pelo Postgres).
 		{"hora com segundos", escala("22:00:00", "06:00:00", 15), dia(22, 5), true},
+
+		// Escala noturna com dia_semana_fim != dia_semana_inicio (ex: dom 22:00 -> seg 06:00).
+		{"noturna dom->seg: no horario exato dom", escalaNoturna(0, 1, "22:00", "06:00", 15), dia(22, 0), true},
+		{"noturna dom->seg: 5 min atrasado dom", escalaNoturna(0, 1, "22:00", "06:00", 15), dia(22, 5), true},
+		{"noturna dom->seg: 20 min atrasado dom", escalaNoturna(0, 1, "22:00", "06:00", 15), dia(22, 20), false},
 	}
 
 	for _, tt := range tests {
@@ -73,5 +90,27 @@ func TestVerificarToleranciaEscalaInvalida(t *testing.T) {
 	esc := &model.Escala{HoraInicio: "invalida", HoraFim: "06:00", ToleranciaMin: 15}
 	if ok, _ := VerificarToleranciaEscala(esc, now); ok {
 		t.Error("hora_inicio invalida deveria ser rejeitada")
+	}
+}
+
+func TestEscalaCruzaMeiaNoite(t *testing.T) {
+	tests := []struct {
+		name string
+		in   int16
+		fim  int16
+		want bool
+	}{
+		{"mesmo dia (diurna)", 1, 1, false},
+		{"dia seguinte (noturna dom->seg)", 0, 1, true},
+		{"dia seguinte (noturna sex->sab)", 5, 6, true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			esc := &model.Escala{DiaSemanaInicio: tt.in, DiaSemanaFim: tt.fim}
+			if got := EscalaCruzaMeiaNoite(esc); got != tt.want {
+				t.Errorf("EscalaCruzaMeiaNoite() = %v, esperado %v", got, tt.want)
+			}
+		})
 	}
 }

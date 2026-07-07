@@ -23,21 +23,21 @@ func NewEscalaRepository(db *pgxpool.Pool) *EscalaRepository {
 
 func (r *EscalaRepository) Create(ctx context.Context, e *model.Escala) error {
 	query := `
-		INSERT INTO escalas (empresa_id, usuario_id, posto_id, data_inicio, data_fim, hora_inicio, hora_fim, dias_semana, tolerancia_min)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO escalas (empresa_id, usuario_id, posto_id, dia_semana_inicio, dia_semana_fim, hora_inicio, hora_fim, tolerancia_min)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 		RETURNING id, ativo, created_at, updated_at
 	`
 	return r.db.QueryRow(ctx, query,
-		e.EmpresaID, e.UsuarioID, e.PostoID, e.DataInicio, e.DataFim,
-		e.HoraInicio, e.HoraFim, e.DiasSemana, e.ToleranciaMin,
+		e.EmpresaID, e.UsuarioID, e.PostoID,
+		e.DiaSemanaInicio, e.DiaSemanaFim, e.HoraInicio, e.HoraFim, e.ToleranciaMin,
 	).Scan(&e.ID, &e.Ativo, &e.CreatedAt, &e.UpdatedAt)
 }
 
 func (r *EscalaRepository) FindByID(ctx context.Context, empresaID, id uuid.UUID) (*model.Escala, error) {
 	query := `
 		SELECT e.id, e.empresa_id, e.usuario_id, e.posto_id,
-		       e.data_inicio, e.data_fim, e.hora_inicio::text, e.hora_fim::text,
-		       e.dias_semana, e.tolerancia_min, e.ativo, e.created_at, e.updated_at,
+		       e.dia_semana_inicio, e.dia_semana_fim, e.hora_inicio::text, e.hora_fim::text,
+		       e.tolerancia_min, e.ativo, e.created_at, e.updated_at,
 		       u.nome AS usuario_nome, p.nome AS posto_nome
 		FROM escalas e
 		LEFT JOIN usuarios u ON u.id = e.usuario_id
@@ -47,8 +47,8 @@ func (r *EscalaRepository) FindByID(ctx context.Context, empresaID, id uuid.UUID
 	var esc model.Escala
 	err := r.db.QueryRow(ctx, query, id, empresaID).Scan(
 		&esc.ID, &esc.EmpresaID, &esc.UsuarioID, &esc.PostoID,
-		&esc.DataInicio, &esc.DataFim, &esc.HoraInicio, &esc.HoraFim,
-		&esc.DiasSemana, &esc.ToleranciaMin, &esc.Ativo, &esc.CreatedAt, &esc.UpdatedAt,
+		&esc.DiaSemanaInicio, &esc.DiaSemanaFim, &esc.HoraInicio, &esc.HoraFim,
+		&esc.ToleranciaMin, &esc.Ativo, &esc.CreatedAt, &esc.UpdatedAt,
 		&esc.UsuarioNome, &esc.PostoNome,
 	)
 	if err != nil {
@@ -77,11 +77,6 @@ func (r *EscalaRepository) List(ctx context.Context, empresaID uuid.UUID, filter
 		args = append(args, *filter.Ativo)
 		argIdx++
 	}
-	if filter.Data != "" {
-		where += fmt.Sprintf(" AND e.data_inicio <= $%d::date AND e.data_fim >= $%d::date", argIdx, argIdx+1)
-		args = append(args, filter.Data, filter.Data)
-		argIdx += 2
-	}
 
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM escalas e %s", where)
@@ -98,8 +93,8 @@ func (r *EscalaRepository) List(ctx context.Context, empresaID uuid.UUID, filter
 
 	dataQuery := fmt.Sprintf(`
 		SELECT e.id, e.empresa_id, e.usuario_id, e.posto_id,
-		       e.data_inicio, e.data_fim, e.hora_inicio::text, e.hora_fim::text,
-		       e.dias_semana, e.tolerancia_min, e.ativo, e.created_at, e.updated_at,
+		       e.dia_semana_inicio, e.dia_semana_fim, e.hora_inicio::text, e.hora_fim::text,
+		       e.tolerancia_min, e.ativo, e.created_at, e.updated_at,
 		       u.nome AS usuario_nome, p.nome AS posto_nome
 		FROM escalas e
 		LEFT JOIN usuarios u ON u.id = e.usuario_id
@@ -121,8 +116,8 @@ func (r *EscalaRepository) List(ctx context.Context, empresaID uuid.UUID, filter
 		var esc model.Escala
 		if err := rows.Scan(
 			&esc.ID, &esc.EmpresaID, &esc.UsuarioID, &esc.PostoID,
-			&esc.DataInicio, &esc.DataFim, &esc.HoraInicio, &esc.HoraFim,
-			&esc.DiasSemana, &esc.ToleranciaMin, &esc.Ativo, &esc.CreatedAt, &esc.UpdatedAt,
+			&esc.DiaSemanaInicio, &esc.DiaSemanaFim, &esc.HoraInicio, &esc.HoraFim,
+			&esc.ToleranciaMin, &esc.Ativo, &esc.CreatedAt, &esc.UpdatedAt,
 			&esc.UsuarioNome, &esc.PostoNome,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan escala: %w", err)
@@ -135,46 +130,48 @@ func (r *EscalaRepository) List(ctx context.Context, empresaID uuid.UUID, filter
 func (r *EscalaRepository) Update(ctx context.Context, empresaID, id uuid.UUID, e *model.Escala) error {
 	query := `
 		UPDATE escalas
-		SET usuario_id = $1, posto_id = $2, data_inicio = $3, data_fim = $4,
-		    hora_inicio = $5, hora_fim = $6, dias_semana = $7, tolerancia_min = $8,
-		    ativo = $9, updated_at = now()
-		WHERE id = $10 AND empresa_id = $11
-		RETURNING id, empresa_id, usuario_id, posto_id, data_inicio, data_fim,
-		          hora_inicio::text, hora_fim::text, dias_semana, tolerancia_min, ativo, created_at, updated_at
+		SET usuario_id = $1, posto_id = $2,
+		    dia_semana_inicio = $3, dia_semana_fim = $4,
+		    hora_inicio = $5, hora_fim = $6, tolerancia_min = $7,
+		    ativo = $8, updated_at = now()
+		WHERE id = $9 AND empresa_id = $10
+		RETURNING id, empresa_id, usuario_id, posto_id,
+		          dia_semana_inicio, dia_semana_fim,
+		          hora_inicio::text, hora_fim::text, tolerancia_min, ativo, created_at, updated_at
 	`
 	return r.db.QueryRow(ctx, query,
-		e.UsuarioID, e.PostoID, e.DataInicio, e.DataFim,
-		e.HoraInicio, e.HoraFim, e.DiasSemana, e.ToleranciaMin,
+		e.UsuarioID, e.PostoID,
+		e.DiaSemanaInicio, e.DiaSemanaFim,
+		e.HoraInicio, e.HoraFim, e.ToleranciaMin,
 		e.Ativo, id, empresaID,
 	).Scan(
 		&e.ID, &e.EmpresaID, &e.UsuarioID, &e.PostoID,
-		&e.DataInicio, &e.DataFim, &e.HoraInicio, &e.HoraFim,
-		&e.DiasSemana, &e.ToleranciaMin, &e.Ativo, &e.CreatedAt, &e.UpdatedAt,
+		&e.DiaSemanaInicio, &e.DiaSemanaFim,
+		&e.HoraInicio, &e.HoraFim,
+		&e.ToleranciaMin, &e.Ativo, &e.CreatedAt, &e.UpdatedAt,
 	)
 }
 
-func (r *EscalaRepository) FindAtivaByUsuarioPostoData(ctx context.Context, empresaID, usuarioID, postoID uuid.UUID, data time.Time, diaSemana int16) (*model.Escala, error) {
+func (r *EscalaRepository) FindAtivaByUsuarioPostoDia(ctx context.Context, empresaID, usuarioID, postoID uuid.UUID, diaSemana int16) (*model.Escala, error) {
 	query := `
 		SELECT id, empresa_id, usuario_id, posto_id,
-		       data_inicio, data_fim, hora_inicio::text, hora_fim::text,
-		       dias_semana, tolerancia_min, ativo, created_at, updated_at
+		       dia_semana_inicio, dia_semana_fim, hora_inicio::text, hora_fim::text,
+		       tolerancia_min, ativo, created_at, updated_at
 		FROM escalas
 		WHERE empresa_id = $1
 		  AND usuario_id = $2
 		  AND posto_id = $3
 		  AND ativo = true
-		  AND data_inicio <= $4::date
-		  AND data_fim >= $4::date
-		  AND $5 = ANY(dias_semana)
+		  AND dia_semana_inicio = $4
 		LIMIT 1
 	`
 	var esc model.Escala
 	err := r.db.QueryRow(ctx, query,
-		empresaID, usuarioID, postoID, data, diaSemana,
+		empresaID, usuarioID, postoID, diaSemana,
 	).Scan(
 		&esc.ID, &esc.EmpresaID, &esc.UsuarioID, &esc.PostoID,
-		&esc.DataInicio, &esc.DataFim, &esc.HoraInicio, &esc.HoraFim,
-		&esc.DiasSemana, &esc.ToleranciaMin, &esc.Ativo, &esc.CreatedAt, &esc.UpdatedAt,
+		&esc.DiaSemanaInicio, &esc.DiaSemanaFim, &esc.HoraInicio, &esc.HoraFim,
+		&esc.ToleranciaMin, &esc.Ativo, &esc.CreatedAt, &esc.UpdatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -186,30 +183,24 @@ func (r *EscalaRepository) FindAtivaByUsuarioPostoData(ctx context.Context, empr
 }
 
 // FindEscalasSemTurno busca escalas cuja tolerancia de inicio ja estourou sem
-// que exista turno ativo (no-show). A aritmetica usa timestamps completos
-// (data + hora + tolerancia) para nao quebrar quando hora_inicio + tolerancia
-// cruza a meia-noite, e considera tambem a escala noturna iniciada ontem
-// enquanto o turno dela ainda estaria em andamento.
+// que exista turno ativo (no-show).
 func (r *EscalaRepository) FindEscalasSemTurno(ctx context.Context, horaCorte time.Time) ([]EscalaSemTurno, error) {
 	ontem := horaCorte.AddDate(0, 0, -1)
 	query := `
-		SELECT e.id, e.empresa_id, e.usuario_id, e.posto_id, e.data_inicio,
-		       e.hora_inicio::text, e.tolerancia_min
+		SELECT e.id, e.empresa_id, e.usuario_id, e.posto_id, e.hora_inicio::text, e.tolerancia_min
 		FROM escalas e
 		WHERE e.ativo = true
 		  AND (
 		      (
-		          e.data_inicio <= $1::date AND e.data_fim >= $1::date
-		          AND $2 = ANY(e.dias_semana)
-		          AND ($1::date + e.hora_inicio + (e.tolerancia_min || ' minutes')::interval) <= ($1::date + $3::time)
-		          AND (e.hora_fim <= e.hora_inicio OR $3::time < e.hora_fim)
+		          e.dia_semana_inicio = $1
+		          AND ($2::date + e.hora_inicio + (e.tolerancia_min || ' minutes')::interval) <= ($2::date + $3::time)
+		          AND (e.dia_semana_fim != e.dia_semana_inicio OR $3::time < e.hora_fim)
 		      )
 		      OR
 		      (
-		          e.hora_fim <= e.hora_inicio
-		          AND e.data_inicio <= $4::date AND e.data_fim >= $4::date
-		          AND $5 = ANY(e.dias_semana)
-		          AND ($4::date + e.hora_inicio + (e.tolerancia_min || ' minutes')::interval) <= ($1::date + $3::time)
+		          e.dia_semana_inicio = $4
+		          AND e.dia_semana_fim != e.dia_semana_inicio
+		          AND ($5::date + e.hora_inicio + (e.tolerancia_min || ' minutes')::interval) <= ($2::date + $3::time)
 		          AND $3::time < e.hora_fim
 		      )
 		  )
@@ -222,8 +213,8 @@ func (r *EscalaRepository) FindEscalasSemTurno(ctx context.Context, horaCorte ti
 		  )
 	`
 	rows, err := r.db.Query(ctx, query,
-		horaCorte.Format("2006-01-02"), int16(horaCorte.Weekday()), horaCorte.Format("15:04:05"),
-		ontem.Format("2006-01-02"), int16(ontem.Weekday()),
+		int16(horaCorte.Weekday()), horaCorte.Format("2006-01-02"), horaCorte.Format("15:04:05"),
+		int16(ontem.Weekday()), ontem.Format("2006-01-02"),
 	)
 	if err != nil {
 		return nil, fmt.Errorf("buscar escalas sem turno: %w", err)
@@ -233,7 +224,7 @@ func (r *EscalaRepository) FindEscalasSemTurno(ctx context.Context, horaCorte ti
 	var result []EscalaSemTurno
 	for rows.Next() {
 		var e EscalaSemTurno
-		if err := rows.Scan(&e.ID, &e.EmpresaID, &e.UsuarioID, &e.PostoID, &e.DataInicio, &e.HoraInicio, &e.ToleranciaMin); err != nil {
+		if err := rows.Scan(&e.ID, &e.EmpresaID, &e.UsuarioID, &e.PostoID, &e.HoraInicio, &e.ToleranciaMin); err != nil {
 			return nil, fmt.Errorf("scan escala sem turno: %w", err)
 		}
 		result = append(result, e)
@@ -248,7 +239,6 @@ type EscalaSemTurno struct {
 	EmpresaID     uuid.UUID
 	UsuarioID     uuid.UUID
 	PostoID       uuid.UUID
-	DataInicio    time.Time
 	HoraInicio    string
 	ToleranciaMin int
 }

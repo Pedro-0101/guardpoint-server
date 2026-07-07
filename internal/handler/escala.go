@@ -27,7 +27,7 @@ func NewEscalaHandler(escalaService *service.EscalaService) *EscalaHandler {
 }
 
 // Create godoc
-// @Summary      Cria uma escala (admin/supervisor)
+// @Summary      Cria uma escala semanal (admin/supervisor)
 // @Tags         escalas
 // @Param        request body model.CreateEscalaRequest true "Dados da escala"
 // @Success      201 {object} model.Escala
@@ -62,6 +62,44 @@ func (h *EscalaHandler) Create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusCreated, esc)
+}
+
+// CreateLote godoc
+// @Summary      Cria escalas em lote (ate 7 dias) para um usuario/posto (admin/supervisor)
+// @Tags         escalas
+// @Param        request body model.CreateEscalaLoteRequest true "Dados do lote"
+// @Success      201 {array} model.Escala
+// @Failure      400 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /escalas/lote [post]
+func (h *EscalaHandler) CreateLote(w http.ResponseWriter, r *http.Request) {
+	empresaID := GetEmpresaID(r.Context())
+
+	parsedEmpresaID, err := uuid.Parse(empresaID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "empresa_id invalido")
+		return
+	}
+
+	var req model.CreateEscalaLoteRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "json invalido")
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		writeValidationError(w, err)
+		return
+	}
+
+	escalas, err := h.escalaService.CreateLote(r.Context(), parsedEmpresaID, req)
+	if err != nil {
+		slog.Error("create escalas lote failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "erro ao criar escalas em lote")
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, escalas)
 }
 
 // GetByID godoc
@@ -102,7 +140,6 @@ func (h *EscalaHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 // @Param        usuario_id query string false "ID do usuario (uuid)"
 // @Param        posto_id query string false "ID do posto (uuid)"
 // @Param        ativos query string false "Filtra por ativo (true/false)"
-// @Param        data query string false "Data (YYYY-MM-DD)"
 // @Param        limit query int false "Limite de itens (max 100)"
 // @Param        offset query int false "Offset da paginacao"
 // @Success      200 {object} map[string]interface{}
@@ -133,7 +170,6 @@ func (h *EscalaHandler) List(w http.ResponseWriter, r *http.Request) {
 		UsuarioID: r.URL.Query().Get("usuario_id"),
 		PostoID:   r.URL.Query().Get("posto_id"),
 		Ativo:     apenasAtivos,
-		Data:      r.URL.Query().Get("data"),
 		Limit:     limit,
 		Offset:    offset,
 	}

@@ -89,20 +89,20 @@ func TestFindEscalasSemTurnoNoturna(t *testing.T) {
 		t.Fatalf("criar posto: %v", err)
 	}
 
-	criarEscalaSQL := func(horaInicio, horaFim string, dias []int16, tol int) uuid.UUID {
+	criarEscalaSQL := func(diaInicio, diaFim int16, horaInicio, horaFim string, tol int) uuid.UUID {
 		var id uuid.UUID
 		if err := e.pool.QueryRow(ctx, `
-			INSERT INTO escalas (empresa_id, usuario_id, posto_id, data_inicio, data_fim, hora_inicio, hora_fim, dias_semana, tolerancia_min)
-			VALUES ($1, $2, $3, '2026-07-01', '2026-07-31', $4, $5, $6, $7) RETURNING id`,
-			empresa.ID, vigia.ID, postoID, horaInicio, horaFim, dias, tol).Scan(&id); err != nil {
+			INSERT INTO escalas (empresa_id, usuario_id, posto_id, dia_semana_inicio, dia_semana_fim, hora_inicio, hora_fim, tolerancia_min)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+			empresa.ID, vigia.ID, postoID, diaInicio, diaFim, horaInicio, horaFim, tol).Scan(&id); err != nil {
 			t.Fatalf("criar escala %s-%s: %v", horaInicio, horaFim, err)
 		}
 		return id
 	}
 
 	// 2026-07-10 e uma sexta (5); 2026-07-09, quinta (4).
-	noturnaQuinta := criarEscalaSQL("23:50", "06:00", []int16{4}, 30)
-	diurnaSexta := criarEscalaSQL("08:00", "17:00", []int16{5}, 15)
+	noturnaQuinta := criarEscalaSQL(4, 5, "23:50", "06:00", 30)
+	diurnaSexta := criarEscalaSQL(5, 5, "08:00", "17:00", 15)
 
 	repo := repository.NewEscalaRepository(e.pool)
 
