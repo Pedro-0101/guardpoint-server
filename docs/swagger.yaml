@@ -1565,6 +1565,34 @@ paths:
       summary: Cria escalas em lote (ate 7 dias) para um usuario/posto (admin/supervisor)
       tags:
       - escalas
+    put:
+      parameters:
+      - description: Dados do lote
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateEscalaLoteRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.CreateEscalaLoteResponse'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Substitui todas as escalas de um usuario+posto (admin/supervisor)
+      tags:
+      - escalas
   /postos:
     get:
       parameters:

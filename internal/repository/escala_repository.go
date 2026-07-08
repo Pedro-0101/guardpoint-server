@@ -21,6 +21,32 @@ func NewEscalaRepository(db *pgxpool.Pool) *EscalaRepository {
 	return &EscalaRepository{db: db}
 }
 
+func (r *EscalaRepository) BeginTx(ctx context.Context) (pgx.Tx, error) {
+	return r.db.Begin(ctx)
+}
+
+func (r *EscalaRepository) CreateWithTx(ctx context.Context, tx pgx.Tx, e *model.Escala) error {
+	query := `
+		INSERT INTO escalas (empresa_id, usuario_id, posto_id, dia_semana_inicio, dia_semana_fim, hora_inicio, hora_fim, tolerancia_min)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+		RETURNING id, ativo, created_at, updated_at
+	`
+	return tx.QueryRow(ctx, query,
+		e.EmpresaID, e.UsuarioID, e.PostoID,
+		e.DiaSemanaInicio, e.DiaSemanaFim, e.HoraInicio, e.HoraFim, e.ToleranciaMin,
+	).Scan(&e.ID, &e.Ativo, &e.CreatedAt, &e.UpdatedAt)
+}
+
+func (r *EscalaRepository) DeleteAtivasPorUsuarioPosto(ctx context.Context, tx pgx.Tx, empresaID, usuarioID, postoID uuid.UUID) error {
+	query := `
+		UPDATE escalas
+		SET ativo = false, updated_at = now()
+		WHERE empresa_id = $1 AND usuario_id = $2 AND posto_id = $3 AND ativo = true
+	`
+	_, err := tx.Exec(ctx, query, empresaID, usuarioID, postoID)
+	return err
+}
+
 func (r *EscalaRepository) Create(ctx context.Context, e *model.Escala) error {
 	query := `
 		INSERT INTO escalas (empresa_id, usuario_id, posto_id, dia_semana_inicio, dia_semana_fim, hora_inicio, hora_fim, tolerancia_min)

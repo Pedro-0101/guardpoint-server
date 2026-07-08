@@ -192,6 +192,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 				r.Get("/", escalaHandler.List)
 				r.Post("/", escalaHandler.Create)
 				r.Post("/lote", escalaHandler.CreateLote)
+				r.Put("/lote", escalaHandler.ReplaceLote)
 				r.Get("/{id}", escalaHandler.GetByID)
 				r.Put("/{id}", escalaHandler.Update)
 				r.Delete("/{id}", escalaHandler.Delete)

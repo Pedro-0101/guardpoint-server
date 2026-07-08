@@ -109,6 +109,68 @@ func (s *EscalaService) CreateLote(ctx context.Context, empresaID uuid.UUID, req
 	return resp, nil
 }
 
+func (s *EscalaService) ReplaceLote(ctx context.Context, empresaID uuid.UUID, req model.CreateEscalaLoteRequest) (model.CreateEscalaLoteResponse, error) {
+	usuarioID, err := uuid.Parse(req.UsuarioID)
+	if err != nil {
+		return model.CreateEscalaLoteResponse{}, fmt.Errorf("usuario_id invalido: %w", err)
+	}
+	postoID, err := uuid.Parse(req.PostoID)
+	if err != nil {
+		return model.CreateEscalaLoteResponse{}, fmt.Errorf("posto_id invalido: %w", err)
+	}
+
+	toleranciaMin := req.ToleranciaMin
+	if toleranciaMin <= 0 {
+		toleranciaMin = 15
+	}
+
+	for _, dia := range req.Dias {
+		if err := validarHorasEscala(dia.HoraInicio, dia.HoraFim); err != nil {
+			return model.CreateEscalaLoteResponse{}, fmt.Errorf("dia %d (inicio %s): %w", dia.DiaSemanaInicio, dia.HoraInicio, err)
+		}
+	}
+
+	tx, err := s.escalaRepo.BeginTx(ctx)
+	if err != nil {
+		return model.CreateEscalaLoteResponse{}, fmt.Errorf("iniciar transacao: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	if err := s.escalaRepo.DeleteAtivasPorUsuarioPosto(ctx, tx, empresaID, usuarioID, postoID); err != nil {
+		return model.CreateEscalaLoteResponse{}, fmt.Errorf("desativar escalas existentes: %w", err)
+	}
+
+	resp := model.CreateEscalaLoteResponse{
+		UsuarioID:     req.UsuarioID,
+		PostoID:       req.PostoID,
+		ToleranciaMin: toleranciaMin,
+		Dias:          req.Dias,
+	}
+
+	for _, dia := range req.Dias {
+		esc := &model.Escala{
+			EmpresaID:       empresaID,
+			UsuarioID:       usuarioID,
+			PostoID:         postoID,
+			DiaSemanaInicio: dia.DiaSemanaInicio,
+			HoraInicio:      dia.HoraInicio,
+			DiaSemanaFim:    dia.DiaSemanaFim,
+			HoraFim:         dia.HoraFim,
+			ToleranciaMin:   toleranciaMin,
+		}
+
+		if err := s.escalaRepo.CreateWithTx(ctx, tx, esc); err != nil {
+			return model.CreateEscalaLoteResponse{}, fmt.Errorf("criar escala dia %d: %w", dia.DiaSemanaInicio, err)
+		}
+	}
+
+	if err := tx.Commit(ctx); err != nil {
+		return model.CreateEscalaLoteResponse{}, fmt.Errorf("commitar transacao: %w", err)
+	}
+
+	return resp, nil
+}
+
 func (s *EscalaService) GetByID(ctx context.Context, empresaID, id uuid.UUID) (*model.Escala, error) {
 	return s.escalaRepo.FindByID(ctx, empresaID, id)
 }

@@ -102,6 +102,44 @@ func (h *EscalaHandler) CreateLote(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, escalas)
 }
 
+// ReplaceLote godoc
+// @Summary      Substitui todas as escalas de um usuario+posto (admin/supervisor)
+// @Tags         escalas
+// @Param        request body model.CreateEscalaLoteRequest true "Dados do lote"
+// @Success      200 {object} model.CreateEscalaLoteResponse
+// @Failure      400 {object} map[string]string
+// @Failure      500 {object} map[string]string
+// @Router       /escalas/lote [put]
+func (h *EscalaHandler) ReplaceLote(w http.ResponseWriter, r *http.Request) {
+	empresaID := GetEmpresaID(r.Context())
+
+	parsedEmpresaID, err := uuid.Parse(empresaID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "empresa_id invalido")
+		return
+	}
+
+	var req model.CreateEscalaLoteRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "json invalido")
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		writeValidationError(w, err)
+		return
+	}
+
+	escalas, err := h.escalaService.ReplaceLote(r.Context(), parsedEmpresaID, req)
+	if err != nil {
+		slog.Error("replace escalas lote failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "erro ao substituir escalas")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, escalas)
+}
+
 // GetByID godoc
 // @Summary      Busca uma escala pelo ID (admin/supervisor)
 // @Tags         escalas

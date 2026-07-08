@@ -805,6 +805,49 @@
             }
         },
         "/escalas/lote": {
+            "put": {
+                "tags": [
+                    "escalas"
+                ],
+                "summary": "Substitui todas as escalas de um usuario+posto (admin/supervisor)",
+                "parameters": [
+                    {
+                        "description": "Dados do lote",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateEscalaLoteRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateEscalaLoteResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
             "post": {
                 "tags": [
                     "escalas"
