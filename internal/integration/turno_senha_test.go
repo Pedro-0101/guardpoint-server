@@ -79,22 +79,26 @@ func TestFinalizarTurnoComSenhaEmergencia(t *testing.T) {
 	}
 }
 
-// PIN customizado com nivel_escalonamento_id = nil (dinamico) deve notificar
-// o nivel MAXIMO de escalonamento da empresa, nao o nivel padrao (1).
-func TestAlertaSenhaCustomizadaNivelDinamicoUsaNivelMaximo(t *testing.T) {
+// PIN customizado com nivel_escalonamento_id especifico deve notificar
+// exatamente os destinatarios daquele nivel, nao outro nivel qualquer.
+func TestAlertaSenhaCustomizadaNotificaNivelCorreto(t *testing.T) {
 	c := novoCenario(t)
 	turno := c.iniciarTurno()
 
-	nivel1User := c.e.criarUsuario(c.empresa.ID, "N1 Dinamico", "n1.dinamico@a.com", "senha123", "supervisor", true)
-	nivelMaxUser := c.e.criarUsuario(c.empresa.ID, "NMax Dinamico", "nmax.dinamico@a.com", "senha123", "admin", true)
+	nivel1User := c.e.criarUsuario(c.empresa.ID, "N1 Especifico", "n1.espec@a.com", "senha123", "supervisor", true)
+	c.e.criarUsuario(c.empresa.ID, "N2 Especifico", "n2.espec@a.com", "senha123", "admin", true)
+
+	// Cria nivel 2 com o admin como destinatario
+	nivelID2 := c.criarNivel(2, 10)
+
+	// Atualiza nivel 1 com destinatario nivel1User
 	c.e.reqJSON(http.MethodPut, "/api/v1/config/escalonamento", c.adminToken, []map[string]any{
 		{"nivel": 1, "atraso_minutos": 5, "usuario_ids": []string{nivel1User.ID.String()}},
-		{"nivel": 2, "atraso_minutos": 15, "usuario_ids": []string{nivelMaxUser.ID.String()}},
 	}, http.StatusOK, nil)
 
-	// PIN customizada SEM nivel_escalonamento_id (nil = dinamico)
-	desc := "Alerta silencioso"
-	senhaCustom := c.criarSenhaVigia(c.vigia.ID, "customizada", "9991", &desc, nil)
+	// PIN customizada vinculada ao nivel 2
+	desc := "Alerta nivel 2"
+	senhaCustom := c.criarSenhaVigia(c.vigia.ID, "customizada", "9991", &desc, toUUIDPtr(nivelID2.String()))
 
 	c.e.reqJSON(http.MethodPost, "/api/v1/turnos/checkin", c.vigiaToken,
 		c.checkinBody(turno.ID, senhaCustom.Codigo, time.Now()), http.StatusOK, nil)
@@ -104,9 +108,9 @@ func TestAlertaSenhaCustomizadaNivelDinamicoUsaNivelMaximo(t *testing.T) {
 		if pending.Alerta.Tipo != "senha_customizada" {
 			t.Fatalf("tipo do alerta = %s, esperado senha_customizada", pending.Alerta.Tipo)
 		}
-		// Deve notificar o nivel maximo (2), nao o nivel 1
-		if len(pending.UsuarioIDs) != 1 || pending.UsuarioIDs[0] != nivelMaxUser.ID {
-			t.Fatalf("usuario_ids = %v, esperado [%s] (nivel maximo dinamico)", pending.UsuarioIDs, nivelMaxUser.ID)
+		// Deve notificar o admin (destinatario do nivel 2), nao o nivel1User
+		if len(pending.UsuarioIDs) != 1 || pending.UsuarioIDs[0] != c.admin.ID {
+			t.Fatalf("usuario_ids = %v, esperado [%s] (destinatarios do nivel 2)", pending.UsuarioIDs, c.admin.ID)
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("nenhum PendingAlert recebido no canal em 2s")

@@ -102,21 +102,15 @@ func (s *AlertaService) CreateAlertaImediato(ctx context.Context, empresaID, tur
 }
 
 // CreateAlertaPorSenha cria um alerta imediato (sem dedupe, mesmo padrao de
-// CreateAlertaImediato) cujos destinatarios vem do nivel de escalonamento vinculado
-// ao PIN: para senhas do tipo "emergencia" usa o nivel de emergencia padrao
-// (sistema=true, nivel=2, atraso=0); para senhas customizada usa o nivel especifico
-// (senha.NivelEscalonamentoID) ou o nivel maximo dinamico da empresa, sempre
-// resolvido em runtime no momento do disparo.
+// CreateAlertaImediato) cujos destinatarios vem do nivel de escalonamento
+// vinculado a senha. Senhas do tipo "emergencia" e "customizada" sempre possuem
+// nivel_escalonamento_id preenchido (obrigatorio desde a criacao); ja o tipo
+// "ok" nao dispara alerta (senha.NivelEscalonamentoID = nil e retorna imediatamente).
 func (s *AlertaService) CreateAlertaPorSenha(ctx context.Context, empresaID, turnoID uuid.UUID, tipo string, senha *model.SenhaVigia, mensagem string) (*model.Alerta, error) {
-	var cfg *model.ConfigEscalonamento
-	var err error
-	if senha.Tipo == "emergencia" {
-		cfg, err = s.configRepo.FindEmergenciaPadrao(ctx, empresaID)
-	} else if senha.NivelEscalonamentoID != nil {
-		cfg, err = s.configRepo.FindByID(ctx, *senha.NivelEscalonamentoID, empresaID)
-	} else {
-		cfg, err = s.configRepo.FindMaiorNivel(ctx, empresaID)
+	if senha.NivelEscalonamentoID == nil {
+		return nil, fmt.Errorf("senha tipo %q sem nivel de escalonamento", senha.Tipo)
 	}
+	cfg, err := s.configRepo.FindByID(ctx, *senha.NivelEscalonamentoID, empresaID)
 	if err != nil {
 		return nil, fmt.Errorf("resolver nivel da senha: %w", err)
 	}

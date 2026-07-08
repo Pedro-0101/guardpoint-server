@@ -3002,6 +3002,7 @@ const docTemplate = `{
                     "maxLength": 255
                 },
                 "nivel_escalonamento_id": {
+                    "description": "obrigatorio para emergencia/customizada (validado no service)",
                     "type": "string"
                 },
                 "tipo": {
@@ -3486,7 +3487,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "nivel_escalonamento_id": {
-                    "description": "nil = nivel maximo dinamico",
+                    "description": "NULL apenas para tipo \"ok\"; obrigatorio para emergencia/customizada",
                     "type": "string"
                 },
                 "tipo": {
@@ -3813,11 +3814,8 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 255
                 },
-                "nivel_dinamico": {
-                    "description": "true = forca nivel_escalonamento_id = NULL",
-                    "type": "boolean"
-                },
                 "nivel_escalonamento_id": {
+                    "description": "somente customizada pode alterar",
                     "type": "string"
                 }
             }

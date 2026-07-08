@@ -241,6 +241,15 @@ func (h *SenhaVigiaHandler) writeSenhaError(w http.ResponseWriter, err error) bo
 	case errors.Is(err, service.ErrNivelEscalonamentoNaoEncontrado):
 		writeError(w, http.StatusBadRequest, "nivel de escalonamento nao encontrado")
 		return true
+	case errors.Is(err, service.ErrNivelObrigatorioParaTipo):
+		writeError(w, http.StatusBadRequest, "nivel de escalonamento obrigatorio para este tipo de senha")
+		return true
+	case errors.Is(err, service.ErrNivelEscalonamentoJaVinculado):
+		writeError(w, http.StatusConflict, "nivel de escalonamento ja vinculado a outra senha deste vigia")
+		return true
+	case errors.Is(err, service.ErrNivelEmergenciaInvalido):
+		writeError(w, http.StatusBadRequest, "senha de emergencia deve usar o nivel de escalonamento padrao")
+		return true
 	}
 	return false
 }

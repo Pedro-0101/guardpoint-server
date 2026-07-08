@@ -61,6 +61,24 @@ func (e *env) criarEmpresa(nome, cnpj string) *model.Empresa {
 	return emp
 }
 
+// buscarNivelEmergenciaPadrao retorna o ID do nivel de escalonamento padrao de
+// emergencia (sistema=true, nivel=1) da empresa, criado automaticamente pelas
+// migrations.
+func (e *env) buscarNivelEmergenciaPadrao(empresaID uuid.UUID) uuid.UUID {
+	e.t.Helper()
+	var id uuid.UUID
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	err := e.pool.QueryRow(ctx,
+		`SELECT id FROM config_escalonamento WHERE empresa_id = $1 AND sistema = true`,
+		empresaID,
+	).Scan(&id)
+	if err != nil {
+		e.t.Fatalf("buscar nivel de emergencia padrao: %v", err)
+	}
+	return id
+}
+
 func (e *env) criarUsuario(empresaID uuid.UUID, nome, email, senha, role string, ativo bool) *model.User {
 	e.t.Helper()
 	hash, err := bcrypt.GenerateFromPassword([]byte(senha), bcrypt.MinCost)
@@ -183,10 +201,12 @@ func novoCenario(t *testing.T) *cenario {
 		deviceID:   "device-vigia-a-01",
 	}
 
+	emergenciaNivelID := e.buscarNivelEmergenciaPadrao(empresa.ID)
+
 	// PINs obrigatorios do vigia de teste, cadastrados antes de qualquer
 	// iniciarTurno/checkinBody usar seus codigos.
 	c.criarSenhaVigia(c.vigia.ID, "ok", SenhaOK, nil, nil)
-	c.criarSenhaVigia(c.vigia.ID, "emergencia", SenhaEmergencia, nil, nil)
+	c.criarSenhaVigia(c.vigia.ID, "emergencia", SenhaEmergencia, nil, &emergenciaNivelID)
 
 	e.reqJSON(http.MethodPost, "/api/v1/postos", c.adminToken, map[string]any{
 		"nome": "Posto Central", "latitude": postoLat, "longitude": postoLon, "raio_m": 100,
@@ -200,8 +220,7 @@ func novoCenario(t *testing.T) *cenario {
 
 // criarSenhaVigia cadastra um PIN para o vigia via POST /usuarios/{id}/senhas
 // (rota admin-only). descricao so e obrigatoria para tipo "customizada";
-// nivelID so pode ser setado para "customizada" (nil = nivel maximo dinamico,
-// resolvido em runtime no momento do disparo do alerta).
+// nivelID e obrigatorio para "emergencia" e "customizada", nil para "ok".
 func (c *cenario) criarSenhaVigia(usuarioID uuid.UUID, tipo, codigo string, descricao *string, nivelID *uuid.UUID) model.SenhaVigia {
 	c.e.t.Helper()
 	body := map[string]any{
@@ -303,4 +322,14 @@ func (c *cenario) contarAlertas(tipo string) int {
 	}
 	c.e.reqJSON(http.MethodGet, "/api/v1/alertas?tipo="+tipo, c.adminToken, nil, http.StatusOK, &resp)
 	return resp.Total
+}
+
+// criarNivel cria um nivel de escalonamento via API e retorna seu ID.
+func (c *cenario) criarNivel(nivel int, atrasoMin int) uuid.UUID {
+	c.e.t.Helper()
+	var resp map[string]any
+	c.e.reqJSON(http.MethodPost, "/api/v1/config/escalonamento", c.adminToken, map[string]any{
+		"nivel": nivel, "atraso_minutos": atrasoMin, "usuario_ids": []string{c.admin.ID.String()},
+	}, http.StatusCreated, &resp)
+	return uuid.MustParse(resp["id"].(string))
 }

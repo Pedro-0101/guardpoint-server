@@ -57,12 +57,14 @@ func TestSenhaVigiaCRUD(t *testing.T) {
 	})
 
 	t.Run("Create cadastra nova senha customizada", func(t *testing.T) {
+		nivelID := c.criarNivel(2, 10)
 		desc := "pin de teste"
 		var senha map[string]any
 		c.e.reqJSON(http.MethodPost, "/api/v1/usuarios/"+c.vigia.ID.String()+"/senhas", c.adminToken, map[string]any{
-			"tipo":      "customizada",
-			"codigo":    "5555",
-			"descricao": desc,
+			"tipo":                   "customizada",
+			"codigo":                 "5555",
+			"descricao":              desc,
+			"nivel_escalonamento_id": nivelID.String(),
 		}, http.StatusCreated, &senha)
 
 		if senha["tipo"] != "customizada" {
@@ -74,9 +76,11 @@ func TestSenhaVigiaCRUD(t *testing.T) {
 	})
 
 	t.Run("Create codigo duplicado retorna 400", func(t *testing.T) {
+		nivelID := c.criarNivel(2, 10)
 		status, _ := c.e.request(http.MethodPost, "/api/v1/usuarios/"+c.vigia.ID.String()+"/senhas", c.adminToken, map[string]any{
-			"tipo":   "ok",
-			"codigo": SenhaOK, // ja cadastrada em novoCenario
+			"tipo":                   "ok",
+			"codigo":                 SenhaOK,
+			"nivel_escalonamento_id": nivelID.String(),
 		})
 		if status != http.StatusBadRequest {
 			t.Errorf("status = %d, esperado 400", status)
@@ -94,9 +98,11 @@ func TestSenhaVigiaCRUD(t *testing.T) {
 	})
 
 	t.Run("Create tipo emergencia ja existente retorna 400", func(t *testing.T) {
+		nivelEmergenciaID := c.e.buscarNivelEmergenciaPadrao(c.empresa.ID)
 		status, _ := c.e.request(http.MethodPost, "/api/v1/usuarios/"+c.vigia.ID.String()+"/senhas", c.adminToken, map[string]any{
-			"tipo":   "emergencia",
-			"codigo": "1111",
+			"tipo":                   "emergencia",
+			"codigo":                 "1111",
+			"nivel_escalonamento_id": nivelEmergenciaID.String(),
 		})
 		if status != http.StatusBadRequest {
 			t.Errorf("status = %d, esperado 400", status)
@@ -104,25 +110,44 @@ func TestSenhaVigiaCRUD(t *testing.T) {
 	})
 
 	t.Run("Create customizada sem descricao retorna 422", func(t *testing.T) {
+		nivelID := c.criarNivel(2, 10)
 		status, _ := c.e.request(http.MethodPost, "/api/v1/usuarios/"+c.vigia.ID.String()+"/senhas", c.adminToken, map[string]any{
-			"tipo":   "customizada",
-			"codigo": "6666",
+			"tipo":                   "customizada",
+			"codigo":                 "6666",
+			"nivel_escalonamento_id": nivelID.String(),
 		})
 		if status != http.StatusUnprocessableEntity {
 			t.Errorf("status = %d, esperado 422", status)
 		}
 	})
 
-	t.Run("Create ok com nivel de escalonamento retorna 400", func(t *testing.T) {
-		var nivel map[string]any
-		c.e.reqJSON(http.MethodPost, "/api/v1/config/escalonamento", c.adminToken, map[string]any{
-			"nivel": 1, "atraso_minutos": 5, "usuario_ids": []string{c.admin.ID.String()},
-		}, http.StatusCreated, &nivel)
-
+	t.Run("Create customizada sem nivel_escalonamento_id retorna 400", func(t *testing.T) {
 		status, _ := c.e.request(http.MethodPost, "/api/v1/usuarios/"+c.vigia.ID.String()+"/senhas", c.adminToken, map[string]any{
-			"tipo":                    "ok",
-			"codigo":                  "1111",
-			"nivel_escalonamento_id": nivel["id"],
+			"tipo": "customizada", "codigo": "6666", "descricao": "sem nivel",
+		})
+		if status != http.StatusBadRequest {
+			t.Errorf("status = %d, esperado 400", status)
+		}
+	})
+
+	t.Run("Create emergencia com nivel que nao e o padrao retorna 400", func(t *testing.T) {
+		nivelNaoEmergencia := c.criarNivel(2, 10)
+		status, _ := c.e.request(http.MethodPost, "/api/v1/usuarios/"+c.vigia.ID.String()+"/senhas", c.adminToken, map[string]any{
+			"tipo":                   "emergencia",
+			"codigo":                 "1111",
+			"nivel_escalonamento_id": nivelNaoEmergencia.String(),
+		})
+		if status != http.StatusBadRequest {
+			t.Errorf("status = %d, esperado 400 (emergencia so aceita nivel padrao)", status)
+		}
+	})
+
+	t.Run("Create ok com nivel de escalonamento retorna 400", func(t *testing.T) {
+		nivelID := c.criarNivel(2, 10)
+		status, _ := c.e.request(http.MethodPost, "/api/v1/usuarios/"+c.vigia.ID.String()+"/senhas", c.adminToken, map[string]any{
+			"tipo":                   "ok",
+			"codigo":                 "1111",
+			"nivel_escalonamento_id": nivelID.String(),
 		})
 		if status != http.StatusBadRequest {
 			t.Errorf("status = %d, esperado 400 (ok nao aceita nivel)", status)
@@ -132,9 +157,9 @@ func TestSenhaVigiaCRUD(t *testing.T) {
 	t.Run("Create com nivel_escalonamento_id inexistente retorna 400", func(t *testing.T) {
 		fakeID := uuid.New()
 		status, _ := c.e.request(http.MethodPost, "/api/v1/usuarios/"+c.vigia.ID.String()+"/senhas", c.adminToken, map[string]any{
-			"tipo":                    "customizada",
-			"codigo":                  "7777",
-			"descricao":               "teste nivel invalido",
+			"tipo":                   "customizada",
+			"codigo":                 "7777",
+			"descricao":              "teste nivel invalido",
 			"nivel_escalonamento_id": fakeID.String(),
 		})
 		if status != http.StatusBadRequest {
@@ -142,9 +167,27 @@ func TestSenhaVigiaCRUD(t *testing.T) {
 		}
 	})
 
+	t.Run("Create customizada com nivel ja vinculado retorna 409", func(t *testing.T) {
+		nivelID := c.criarNivel(2, 10)
+		desc1 := "pin 1"
+		c.criarSenhaVigia(c.vigia.ID, "customizada", "8100", &desc1, toUUIDPtr(nivelID.String()))
+
+		desc2 := "pin 2"
+		status, _ := c.e.request(http.MethodPost, "/api/v1/usuarios/"+c.vigia.ID.String()+"/senhas", c.adminToken, map[string]any{
+			"tipo":                   "customizada",
+			"codigo":                 "8101",
+			"descricao":              desc2,
+			"nivel_escalonamento_id": nivelID.String(),
+		})
+		if status != http.StatusConflict {
+			t.Errorf("status = %d, esperado 409", status)
+		}
+	})
+
 	t.Run("Update altera codigo de senha", func(t *testing.T) {
+		nivelID := c.criarNivel(2, 10)
 		desc := "pin para update"
-		senha := c.criarSenhaVigia(c.vigia.ID, "customizada", "8888", &desc, nil)
+		senha := c.criarSenhaVigia(c.vigia.ID, "customizada", "8888", &desc, toUUIDPtr(nivelID.String()))
 
 		var atualizada map[string]any
 		novoCodigo := "3333"
@@ -158,13 +201,15 @@ func TestSenhaVigiaCRUD(t *testing.T) {
 	})
 
 	t.Run("Update codigo duplicado retorna 400", func(t *testing.T) {
-		desc := "pin 1"
-		senha1 := c.criarSenhaVigia(c.vigia.ID, "customizada", "2100", &desc, nil)
+		nivel1 := c.criarNivel(2, 10)
+		nivel2 := c.criarNivel(3, 15)
+		desc1 := "pin 1"
+		senha1 := c.criarSenhaVigia(c.vigia.ID, "customizada", "2100", &desc1, toUUIDPtr(nivel1.String()))
 		desc2 := "pin 2"
-		c.criarSenhaVigia(c.vigia.ID, "customizada", "2101", &desc2, nil)
+		c.criarSenhaVigia(c.vigia.ID, "customizada", "2101", &desc2, toUUIDPtr(nivel2.String()))
 
 		status, _ := c.e.request(http.MethodPut, "/api/v1/usuarios/"+c.vigia.ID.String()+"/senhas/"+senha1.ID.String(), c.adminToken, map[string]any{
-			"codigo": "2101", // ja usado pelo pin 2
+			"codigo": "2101",
 		})
 		if status != http.StatusBadRequest {
 			t.Errorf("status = %d, esperado 400", status)
@@ -172,8 +217,9 @@ func TestSenhaVigiaCRUD(t *testing.T) {
 	})
 
 	t.Run("Update nao altera codigo para o proprio valor (idempotente)", func(t *testing.T) {
+		nivelID := c.criarNivel(2, 10)
 		desc := "pin 3"
-		senha := c.criarSenhaVigia(c.vigia.ID, "customizada", "3100", &desc, nil)
+		senha := c.criarSenhaVigia(c.vigia.ID, "customizada", "3100", &desc, toUUIDPtr(nivelID.String()))
 
 		var atualizada map[string]any
 		c.e.reqJSON(http.MethodPut, "/api/v1/usuarios/"+c.vigia.ID.String()+"/senhas/"+senha.ID.String(), c.adminToken, map[string]any{
@@ -202,20 +248,38 @@ func TestSenhaVigiaCRUD(t *testing.T) {
 		}
 	})
 
+	t.Run("Update emergencia rejeita alterar nivel_escalonamento_id", func(t *testing.T) {
+		var senhas []map[string]any
+		c.e.reqJSON(http.MethodGet, "/api/v1/usuarios/"+c.vigia.ID.String()+"/senhas", c.adminToken, nil, http.StatusOK, &senhas)
+
+		var emergenciaID string
+		for _, s := range senhas {
+			if s["tipo"] == "emergencia" {
+				emergenciaID = s["id"].(string)
+				break
+			}
+		}
+
+		nivelID := c.criarNivel(2, 10)
+		status, _ := c.e.request(http.MethodPut, "/api/v1/usuarios/"+c.vigia.ID.String()+"/senhas/"+emergenciaID, c.adminToken, map[string]any{
+			"nivel_escalonamento_id": nivelID.String(),
+		})
+		if status != http.StatusBadRequest {
+			t.Errorf("status = %d, esperado 400", status)
+		}
+	})
+
 	t.Run("Update altera descricao e nivel de senha customizada", func(t *testing.T) {
+		nivelOriginal := c.criarNivel(2, 10)
 		desc := "original"
-		senha := c.criarSenhaVigia(c.vigia.ID, "customizada", "4100", &desc, nil)
+		senha := c.criarSenhaVigia(c.vigia.ID, "customizada", "4100", &desc, toUUIDPtr(nivelOriginal.String()))
 
-		var nivel map[string]any
-		c.e.reqJSON(http.MethodPost, "/api/v1/config/escalonamento", c.adminToken, map[string]any{
-			"nivel": 2, "atraso_minutos": 10, "usuario_ids": []string{c.admin.ID.String()},
-		}, http.StatusCreated, &nivel)
-
+		nivelNovo := c.criarNivel(3, 15)
 		novaDesc := "atualizada"
 		var atualizada map[string]any
 		c.e.reqJSON(http.MethodPut, "/api/v1/usuarios/"+c.vigia.ID.String()+"/senhas/"+senha.ID.String(), c.adminToken, map[string]any{
-			"descricao":               novaDesc,
-			"nivel_escalonamento_id": nivel["id"],
+			"descricao":              novaDesc,
+			"nivel_escalonamento_id": nivelNovo.String(),
 		}, http.StatusOK, &atualizada)
 
 		if atualizada["descricao"] != novaDesc {
@@ -223,21 +287,19 @@ func TestSenhaVigiaCRUD(t *testing.T) {
 		}
 	})
 
-	t.Run("Update com nivel_dinamico=true forca nivel dinamico", func(t *testing.T) {
-		desc := "com nivel fixo"
-		var nivel map[string]any
-		c.e.reqJSON(http.MethodPost, "/api/v1/config/escalonamento", c.adminToken, map[string]any{
-			"nivel": 3, "atraso_minutos": 15, "usuario_ids": []string{c.admin.ID.String()},
-		}, http.StatusCreated, &nivel)
-		senha := c.criarSenhaVigia(c.vigia.ID, "customizada", "5100", &desc, toUUIDPtr(nivel["id"].(string)))
+	t.Run("Update customizada com nivel ja vinculado retorna 409", func(t *testing.T) {
+		nivel1 := c.criarNivel(2, 10)
+		nivel2 := c.criarNivel(3, 15)
+		desc1 := "pin A"
+		c.criarSenhaVigia(c.vigia.ID, "customizada", "6100", &desc1, toUUIDPtr(nivel1.String()))
+		desc2 := "pin B"
+		senhaB := c.criarSenhaVigia(c.vigia.ID, "customizada", "6101", &desc2, toUUIDPtr(nivel2.String()))
 
-		var atualizada map[string]any
-		c.e.reqJSON(http.MethodPut, "/api/v1/usuarios/"+c.vigia.ID.String()+"/senhas/"+senha.ID.String(), c.adminToken, map[string]any{
-			"nivel_dinamico": true,
-		}, http.StatusOK, &atualizada)
-
-		if atualizada["nivel_escalonamento_id"] != nil {
-			t.Errorf("nivel_escalonamento_id = %v, esperado nil (nivel dinamico)", atualizada["nivel_escalonamento_id"])
+		status, _ := c.e.request(http.MethodPut, "/api/v1/usuarios/"+c.vigia.ID.String()+"/senhas/"+senhaB.ID.String(), c.adminToken, map[string]any{
+			"nivel_escalonamento_id": nivel1.String(),
+		})
+		if status != http.StatusConflict {
+			t.Errorf("status = %d, esperado 409", status)
 		}
 	})
 
@@ -252,8 +314,9 @@ func TestSenhaVigiaCRUD(t *testing.T) {
 	})
 
 	t.Run("Delete remove senha customizada", func(t *testing.T) {
+		nivelID := c.criarNivel(2, 10)
 		desc := "para deletar"
-		senha := c.criarSenhaVigia(c.vigia.ID, "customizada", "6100", &desc, nil)
+		senha := c.criarSenhaVigia(c.vigia.ID, "customizada", "7100", &desc, toUUIDPtr(nivelID.String()))
 
 		status, _ := c.e.request(http.MethodDelete, "/api/v1/usuarios/"+c.vigia.ID.String()+"/senhas/"+senha.ID.String(), c.adminToken, nil)
 		if status != http.StatusOK {
@@ -311,9 +374,8 @@ func TestSenhaVigiaCRUD(t *testing.T) {
 	})
 
 	t.Run("CRUD rejeita acesso de vigia (somente admin)", func(t *testing.T) {
-		desc := "tentativa vigia"
 		status, _ := c.e.request(http.MethodPost, "/api/v1/usuarios/"+c.vigia.ID.String()+"/senhas", c.vigiaToken, map[string]any{
-			"tipo": "customizada", "codigo": "1111", "descricao": desc,
+			"tipo": "customizada", "codigo": "1111", "descricao": "tentativa vigia",
 		})
 		if status != http.StatusForbidden {
 			t.Errorf("status = %d, esperado 403", status)
@@ -321,8 +383,10 @@ func TestSenhaVigiaCRUD(t *testing.T) {
 	})
 
 	t.Run("Create codigo com menos de 4 digitos retorna 422", func(t *testing.T) {
+		nivelID := c.criarNivel(2, 10)
 		status, _ := c.e.request(http.MethodPost, "/api/v1/usuarios/"+c.vigia.ID.String()+"/senhas", c.adminToken, map[string]any{
 			"tipo": "customizada", "codigo": "12", "descricao": "curto",
+			"nivel_escalonamento_id": nivelID.String(),
 		})
 		if status != http.StatusUnprocessableEntity {
 			t.Errorf("status = %d, esperado 422", status)
@@ -330,8 +394,10 @@ func TestSenhaVigiaCRUD(t *testing.T) {
 	})
 
 	t.Run("Create codigo nao numerico retorna 422", func(t *testing.T) {
+		nivelID := c.criarNivel(2, 10)
 		status, _ := c.e.request(http.MethodPost, "/api/v1/usuarios/"+c.vigia.ID.String()+"/senhas", c.adminToken, map[string]any{
 			"tipo": "customizada", "codigo": "abcd", "descricao": "nao numerico",
+			"nivel_escalonamento_id": nivelID.String(),
 		})
 		if status != http.StatusUnprocessableEntity {
 			t.Errorf("status = %d, esperado 422", status)
