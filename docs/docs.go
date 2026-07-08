@@ -2819,6 +2819,9 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
+                "descricao": {
+                    "type": "string"
+                },
                 "empresa_id": {
                     "type": "string"
                 },
@@ -2827,6 +2830,9 @@ const docTemplate = `{
                 },
                 "nivel": {
                     "type": "integer"
+                },
+                "sistema": {
+                    "type": "boolean"
                 },
                 "usuario_ids": {
                     "type": "array",
@@ -2848,6 +2854,9 @@ const docTemplate = `{
                     "type": "integer",
                     "maximum": 1440,
                     "minimum": 1
+                },
+                "descricao": {
+                    "type": "string"
                 },
                 "nivel": {
                     "type": "integer",
@@ -3705,6 +3714,9 @@ const docTemplate = `{
                     "type": "integer",
                     "maximum": 1440,
                     "minimum": 1
+                },
+                "descricao": {
+                    "type": "string"
                 },
                 "usuario_ids": {
                     "type": "array",

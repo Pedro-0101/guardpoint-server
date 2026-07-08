@@ -1,0 +1,1 @@
+-- dados deletados nao podem ser restaurados

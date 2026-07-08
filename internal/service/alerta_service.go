@@ -21,6 +21,7 @@ var (
 	ErrAlertaTransicaoInvalida      = errors.New("transicao de status do alerta invalida")
 	ErrConfigEscalonamentoDuplicado = errors.New("nivel de escalonamento ja existe para esta empresa")
 	ErrUsuarioNaoPertenceAEmpresa   = errors.New("usuario nao pertence a empresa")
+	ErrUsuarioNaoAdmin              = errors.New("apenas administradores podem ser destinatarios de alertas")
 	ErrTipoEmergenciaInvalido       = errors.New("tipo de alerta de emergencia invalido")
 	ErrNivelEscalonamentoEmUso      = errors.New("nivel de escalonamento em uso por uma senha de vigia")
 	ErrNivelEscalonamentoSistema    = errors.New("nivel de escalonamento padrao do sistema nao pode ser removido")
@@ -322,6 +323,7 @@ func (s *AlertaService) CreateEscalonamento(ctx context.Context, empresaID strin
 			EmpresaID:     parsedEmpresaID,
 			Nivel:         req.Nivel,
 			AtrasoMinutos: req.AtrasoMinutos,
+			Descricao:     req.Descricao,
 			UsuarioIDs:    req.UsuarioIDs,
 		}
 		if err := s.configRepo.Upsert(ctx, c); err != nil {
@@ -334,6 +336,7 @@ func (s *AlertaService) CreateEscalonamento(ctx context.Context, empresaID strin
 		EmpresaID:     parsedEmpresaID,
 		Nivel:         req.Nivel,
 		AtrasoMinutos: req.AtrasoMinutos,
+		Descricao:     req.Descricao,
 		UsuarioIDs:    req.UsuarioIDs,
 	}
 
@@ -359,6 +362,7 @@ func (s *AlertaService) UpdateEscalonamento(ctx context.Context, empresaID, conf
 
 	c := &model.ConfigEscalonamento{
 		AtrasoMinutos: req.AtrasoMinutos,
+		Descricao:     req.Descricao,
 		UsuarioIDs:    req.UsuarioIDs,
 	}
 
@@ -413,6 +417,7 @@ func (s *AlertaService) ReplaceEscalonamento(ctx context.Context, empresaID stri
 		configs = append(configs, model.ConfigEscalonamento{
 			Nivel:         req.Nivel,
 			AtrasoMinutos: req.AtrasoMinutos,
+			Descricao:     req.Descricao,
 			UsuarioIDs:    req.UsuarioIDs,
 		})
 	}
@@ -498,11 +503,15 @@ func tipoEmergenciaValido(tipo string) bool {
 
 func (s *AlertaService) validarUsuariosDaEmpresa(ctx context.Context, empresaID uuid.UUID, usuarioIDs []uuid.UUID) error {
 	for _, usuarioID := range usuarioIDs {
-		if _, err := s.userRepo.FindByIDEmpresa(ctx, empresaID, usuarioID); err != nil {
+		user, err := s.userRepo.FindByIDEmpresa(ctx, empresaID, usuarioID)
+		if err != nil {
 			if errors.Is(err, pgx.ErrNoRows) {
 				return fmt.Errorf("%w: %s", ErrUsuarioNaoPertenceAEmpresa, usuarioID)
 			}
 			return fmt.Errorf("verificar usuario %s: %w", usuarioID, err)
+		}
+		if user.Role != "admin" {
+			return fmt.Errorf("%w: %s", ErrUsuarioNaoAdmin, usuarioID)
 		}
 	}
 	return nil

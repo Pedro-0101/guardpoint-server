@@ -26,22 +26,19 @@ func (s *EmpresaService) Update(ctx context.Context, empresaID uuid.UUID, req mo
 	return s.empresaRepo.Update(ctx, empresaID, req.Nome, req.AlertaSonoro)
 }
 
-// ProvisionarPadrao cria os 2 niveis de escalonamento padrao da empresa:
+// ProvisionarPadrao cria o nivel de escalonamento padrao da empresa:
 //   - nivel 1: emergencia sem atraso (0min), sistema (nao removivel)
-//   - nivel 2: atraso de 5 minutos, sistema (nao removivel)
 //
 // O nivel 1 e o destino padrao dos alertas disparados por senha de coacao
-// (emergencia) dos vigias. Ambos recebem o admin informado como destinatario
-// inicial. Idempotente: se o nivel ja existe, pula a criacao daquele nivel
-// especifico.
+// (emergencia) dos vigias. Recebe o admin informado como destinatario
+// inicial. Idempotente: se o nivel ja existe, pula a criacao.
 func (s *EmpresaService) ProvisionarPadrao(ctx context.Context, empresaID, adminID uuid.UUID) error {
 	niveis := []struct {
 		nivel         int
 		atrasoMinutos int
 		descricao     string
 	}{
-		{1, 0, "emergencia nao especificada"},
-		{2, 5, "atraso sem justificativa"},
+		{1, 0, "Emergencia nao especificada"},
 	}
 
 	for _, n := range niveis {

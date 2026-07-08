@@ -69,11 +69,13 @@ type AlertaPorHora struct {
 type CreateConfigEscalonamentoRequest struct {
 	Nivel         int         `json:"nivel" validate:"required,min=1,max=5"`
 	AtrasoMinutos int         `json:"atraso_minutos" validate:"required,min=1,max=1440"`
+	Descricao     string      `json:"descricao"`
 	UsuarioIDs    []uuid.UUID `json:"usuario_ids" validate:"required,min=1"`
 }
 
 type UpdateConfigEscalonamentoRequest struct {
 	AtrasoMinutos int         `json:"atraso_minutos" validate:"required,min=1,max=1440"`
+	Descricao     string      `json:"descricao"`
 	UsuarioIDs    []uuid.UUID `json:"usuario_ids" validate:"required,min=1"`
 }
 

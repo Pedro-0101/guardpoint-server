@@ -194,6 +194,10 @@ func (h *AlertaHandler) CreateEscalonamento(w http.ResponseWriter, r *http.Reque
 			writeError(w, http.StatusBadRequest, "usuario_id invalido para esta empresa")
 			return
 		}
+		if errors.Is(err, service.ErrUsuarioNaoAdmin) {
+			writeError(w, http.StatusBadRequest, "apenas administradores podem ser destinatarios de alertas")
+			return
+		}
 		slog.Error("create escalonamento failed", "error", err)
 		writeError(w, http.StatusInternalServerError, "erro ao criar configuracao")
 		return
@@ -230,6 +234,10 @@ func (h *AlertaHandler) UpdateEscalonamento(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		if errors.Is(err, service.ErrUsuarioNaoPertenceAEmpresa) {
 			writeError(w, http.StatusBadRequest, "usuario_id invalido para esta empresa")
+			return
+		}
+		if errors.Is(err, service.ErrUsuarioNaoAdmin) {
+			writeError(w, http.StatusBadRequest, "apenas administradores podem ser destinatarios de alertas")
 			return
 		}
 		slog.Error("update escalonamento failed", "error", err)
@@ -304,6 +312,10 @@ func (h *AlertaHandler) PutEscalonamento(w http.ResponseWriter, r *http.Request)
 			writeError(w, http.StatusBadRequest, "usuario_id invalido para esta empresa")
 			return
 		}
+		if errors.Is(err, service.ErrUsuarioNaoAdmin) {
+			writeError(w, http.StatusBadRequest, "apenas administradores podem ser destinatarios de alertas")
+			return
+		}
 		slog.Error("put escalonamento failed", "error", err)
 		writeError(w, http.StatusInternalServerError, "erro ao salvar configuracao")
 		return
@@ -363,6 +375,10 @@ func (h *AlertaHandler) PutAlertaEmergencia(w http.ResponseWriter, r *http.Reque
 		}
 		if errors.Is(err, service.ErrUsuarioNaoPertenceAEmpresa) {
 			writeError(w, http.StatusBadRequest, "usuario_id invalido para esta empresa")
+			return
+		}
+		if errors.Is(err, service.ErrUsuarioNaoAdmin) {
+			writeError(w, http.StatusBadRequest, "apenas administradores podem ser destinatarios de alertas")
 			return
 		}
 		slog.Error("put alerta emergencia failed", "error", err)

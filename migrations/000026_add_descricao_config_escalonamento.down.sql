@@ -1,1 +1,1 @@
-ALTER TABLE config_escalonamento DROP COLUMN descricao;
+ALTER TABLE config_escalonamento DROP COLUMN IF EXISTS descricao;

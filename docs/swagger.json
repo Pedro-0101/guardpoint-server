@@ -2812,6 +2812,9 @@
                 "created_at": {
                     "type": "string"
                 },
+                "descricao": {
+                    "type": "string"
+                },
                 "empresa_id": {
                     "type": "string"
                 },
@@ -2820,6 +2823,9 @@
                 },
                 "nivel": {
                     "type": "integer"
+                },
+                "sistema": {
+                    "type": "boolean"
                 },
                 "usuario_ids": {
                     "type": "array",
@@ -2841,6 +2847,9 @@
                     "type": "integer",
                     "maximum": 1440,
                     "minimum": 1
+                },
+                "descricao": {
+                    "type": "string"
                 },
                 "nivel": {
                     "type": "integer",
@@ -3698,6 +3707,9 @@
                     "type": "integer",
                     "maximum": 1440,
                     "minimum": 1
+                },
+                "descricao": {
+                    "type": "string"
                 },
                 "usuario_ids": {
                     "type": "array",
