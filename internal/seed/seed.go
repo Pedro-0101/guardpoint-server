@@ -35,9 +35,6 @@ func Run(ctx context.Context, empresaRepo *repository.EmpresaRepository, userRep
 	existingAdmin, err := userRepo.FindByEmail(ctx, "admin@guardpoint.com")
 	if err == nil && existingAdmin != nil {
 		slog.Info("admin ja existe, pulando seed", "id", existingAdmin.ID.String())
-		if err := empresaService.ProvisionarPadrao(ctx, empresa.ID, existingAdmin.ID); err != nil {
-			return err
-		}
 		return nil
 	}
 
@@ -59,10 +56,6 @@ func Run(ctx context.Context, empresaRepo *repository.EmpresaRepository, userRep
 	}
 
 	slog.Info("admin criado", "id", admin.ID.String(), "email", admin.Email)
-
-	if err := empresaService.ProvisionarPadrao(ctx, empresa.ID, admin.ID); err != nil {
-		return err
-	}
 
 	return nil
 }
