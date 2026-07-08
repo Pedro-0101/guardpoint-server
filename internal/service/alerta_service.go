@@ -23,6 +23,7 @@ var (
 	ErrUsuarioNaoPertenceAEmpresa   = errors.New("usuario nao pertence a empresa")
 	ErrTipoEmergenciaInvalido       = errors.New("tipo de alerta de emergencia invalido")
 	ErrNivelEscalonamentoEmUso      = errors.New("nivel de escalonamento em uso por uma senha de vigia")
+	ErrNivelEscalonamentoSistema    = errors.New("nivel de escalonamento padrao do sistema nao pode ser removido")
 )
 
 // codigoPgViolacaoFK e o codigo de erro do Postgres para violacao de foreign
@@ -101,13 +102,16 @@ func (s *AlertaService) CreateAlertaImediato(ctx context.Context, empresaID, tur
 
 // CreateAlertaPorSenha cria um alerta imediato (sem dedupe, mesmo padrao de
 // CreateAlertaImediato) cujos destinatarios vem do nivel de escalonamento vinculado
-// ao PIN: nivel especifico (senha.NivelEscalonamentoID) ou nivel maximo dinamico da
-// empresa (NivelEscalonamentoID == nil), sempre resolvido em runtime no momento do
-// disparo -- nunca fixado na criacao do PIN.
+// ao PIN: para senhas do tipo "emergencia" usa o nivel de emergencia padrao
+// (sistema=true, nivel=2, atraso=0); para senhas customizada usa o nivel especifico
+// (senha.NivelEscalonamentoID) ou o nivel maximo dinamico da empresa, sempre
+// resolvido em runtime no momento do disparo.
 func (s *AlertaService) CreateAlertaPorSenha(ctx context.Context, empresaID, turnoID uuid.UUID, tipo string, senha *model.SenhaVigia, mensagem string) (*model.Alerta, error) {
 	var cfg *model.ConfigEscalonamento
 	var err error
-	if senha.NivelEscalonamentoID != nil {
+	if senha.Tipo == "emergencia" {
+		cfg, err = s.configRepo.FindEmergenciaPadrao(ctx, empresaID)
+	} else if senha.NivelEscalonamentoID != nil {
 		cfg, err = s.configRepo.FindByID(ctx, *senha.NivelEscalonamentoID, empresaID)
 	} else {
 		cfg, err = s.configRepo.FindMaiorNivel(ctx, empresaID)
@@ -373,6 +377,18 @@ func (s *AlertaService) DeleteEscalonamento(ctx context.Context, empresaID, conf
 	if err != nil {
 		return fmt.Errorf("config_id invalido: %w", err)
 	}
+
+	cfg, err := s.configRepo.FindByID(ctx, parsedConfigID, parsedEmpresaID)
+	if err != nil {
+		return err
+	}
+	if cfg == nil {
+		return fmt.Errorf("config escalonamento nao encontrado")
+	}
+	if cfg.Sistema {
+		return ErrNivelEscalonamentoSistema
+	}
+
 	if err := s.configRepo.Delete(ctx, parsedConfigID, parsedEmpresaID); err != nil {
 		var pgErr *pgconn.PgError
 		if errors.As(err, &pgErr) && pgErr.Code == codigoPgViolacaoFK {

@@ -26,29 +26,45 @@ func (s *EmpresaService) Update(ctx context.Context, empresaID uuid.UUID, req mo
 	return s.empresaRepo.Update(ctx, empresaID, req.Nome, req.AlertaSonoro)
 }
 
-// ProvisionarPadrao cria o nivel de escalonamento inicial (nivel=1, atraso=15min) com
-// o usuario informado (o admin recem-criado da empresa) como destinatario. Chamado
-// logo apos a criacao do primeiro admin de uma empresa, garantindo que "nivel maximo
-// dinamico" (usado pelas senhas de emergencia/customizada) sempre tenha alguem pra
-// notificar. Idempotente: se a empresa ja tem um nivel 1 configurado (ex.: chamada
-// repetida), nao faz nada -- inclusive se esse nivel existente nao tiver nenhum
-// destinatario (ex.: criado por uma empresa que nao tinha admin no momento da
-// migration 000024). Chamadores futuros que reusarem este metodo para "completar"
-// provisionamento de empresas antigas precisam checar destinatarios separadamente.
+// ProvisionarPadrao cria os 2 niveis de escalonamento padrao da empresa:
+//   - nivel 1: emergencia sem atraso (0min), sistema (nao removivel)
+//   - nivel 2: atraso de 5 minutos, sistema (nao removivel)
+//
+// O nivel 1 e o destino padrao dos alertas disparados por senha de coacao
+// (emergencia) dos vigias. Ambos recebem o admin informado como destinatario
+// inicial. Idempotente: se o nivel ja existe, pula a criacao daquele nivel
+// especifico.
 func (s *EmpresaService) ProvisionarPadrao(ctx context.Context, empresaID, adminID uuid.UUID) error {
-	existing, err := s.configEscalonamentoRepo.FindByEmpresaENivel(ctx, empresaID, 1)
-	if err != nil {
-		return err
-	}
-	if existing != nil {
-		return nil
+	niveis := []struct {
+		nivel         int
+		atrasoMinutos int
+		descricao     string
+	}{
+		{1, 0, "emergencia nao especificada"},
+		{2, 5, "atraso sem justificativa"},
 	}
 
-	cfg := &model.ConfigEscalonamento{
-		EmpresaID:     empresaID,
-		Nivel:         1,
-		AtrasoMinutos: 15,
-		UsuarioIDs:    []uuid.UUID{adminID},
+	for _, n := range niveis {
+		existing, err := s.configEscalonamentoRepo.FindByEmpresaENivel(ctx, empresaID, n.nivel)
+		if err != nil {
+			return err
+		}
+		if existing != nil {
+			continue
+		}
+
+		cfg := &model.ConfigEscalonamento{
+			EmpresaID:     empresaID,
+			Nivel:         n.nivel,
+			AtrasoMinutos: n.atrasoMinutos,
+			Sistema:       true,
+			Descricao:     n.descricao,
+			UsuarioIDs:    []uuid.UUID{adminID},
+		}
+		if err := s.configEscalonamentoRepo.Create(ctx, cfg); err != nil {
+			return err
+		}
 	}
-	return s.configEscalonamentoRepo.Create(ctx, cfg)
+
+	return nil
 }

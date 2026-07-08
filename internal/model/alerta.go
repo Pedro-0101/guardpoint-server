@@ -23,6 +23,8 @@ type ConfigEscalonamento struct {
 	EmpresaID     uuid.UUID   `json:"empresa_id"`
 	Nivel         int         `json:"nivel"`
 	AtrasoMinutos int         `json:"atraso_minutos"`
+	Sistema       bool        `json:"sistema"`
+	Descricao     string      `json:"descricao"`
 	UsuarioIDs    []uuid.UUID `json:"usuario_ids"`
 	CreatedAt     time.Time   `json:"created_at"`
 }

@@ -257,6 +257,10 @@ func (h *AlertaHandler) DeleteEscalonamento(w http.ResponseWriter, r *http.Reque
 			writeError(w, http.StatusConflict, "nivel de escalonamento em uso por uma senha de vigia")
 			return
 		}
+		if errors.Is(err, service.ErrNivelEscalonamentoSistema) {
+			writeError(w, http.StatusConflict, "nivel de escalonamento padrao do sistema nao pode ser removido")
+			return
+		}
 		slog.Error("delete escalonamento failed", "error", err)
 		writeError(w, http.StatusInternalServerError, "erro ao deletar configuracao")
 		return

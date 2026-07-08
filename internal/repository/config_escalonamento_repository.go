@@ -28,11 +28,11 @@ func (r *ConfigEscalonamentoRepository) Create(ctx context.Context, c *model.Con
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	query := `
-		INSERT INTO config_escalonamento (empresa_id, nivel, atraso_minutos)
-		VALUES ($1, $2, $3)
+		INSERT INTO config_escalonamento (empresa_id, nivel, atraso_minutos, sistema, descricao)
+		VALUES ($1, $2, $3, $4, $5)
 		RETURNING id, created_at
 	`
-	if err := tx.QueryRow(ctx, query, c.EmpresaID, c.Nivel, c.AtrasoMinutos).Scan(&c.ID, &c.CreatedAt); err != nil {
+	if err := tx.QueryRow(ctx, query, c.EmpresaID, c.Nivel, c.AtrasoMinutos, c.Sistema, c.Descricao).Scan(&c.ID, &c.CreatedAt); err != nil {
 		return fmt.Errorf("criar config escalonamento: %w", err)
 	}
 
@@ -45,7 +45,7 @@ func (r *ConfigEscalonamentoRepository) Create(ctx context.Context, c *model.Con
 
 func (r *ConfigEscalonamentoRepository) FindByEmpresa(ctx context.Context, empresaID uuid.UUID) ([]model.ConfigEscalonamento, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT id, empresa_id, nivel, atraso_minutos, created_at
+		SELECT id, empresa_id, nivel, atraso_minutos, sistema, descricao, created_at
 		FROM config_escalonamento
 		WHERE empresa_id = $1
 		ORDER BY nivel ASC
@@ -58,7 +58,7 @@ func (r *ConfigEscalonamentoRepository) FindByEmpresa(ctx context.Context, empre
 	var configs []model.ConfigEscalonamento
 	for rows.Next() {
 		var c model.ConfigEscalonamento
-		if err := rows.Scan(&c.ID, &c.EmpresaID, &c.Nivel, &c.AtrasoMinutos, &c.CreatedAt); err != nil {
+		if err := rows.Scan(&c.ID, &c.EmpresaID, &c.Nivel, &c.AtrasoMinutos, &c.Sistema, &c.Descricao, &c.CreatedAt); err != nil {
 			return nil, fmt.Errorf("scan config escalonamento: %w", err)
 		}
 		configs = append(configs, c)
@@ -106,10 +106,10 @@ func (r *ConfigEscalonamentoRepository) destinatariosPorEmpresa(ctx context.Cont
 func (r *ConfigEscalonamentoRepository) FindByEmpresaENivel(ctx context.Context, empresaID uuid.UUID, nivel int) (*model.ConfigEscalonamento, error) {
 	var c model.ConfigEscalonamento
 	err := r.db.QueryRow(ctx, `
-		SELECT id, empresa_id, nivel, atraso_minutos, created_at
+		SELECT id, empresa_id, nivel, atraso_minutos, sistema, descricao, created_at
 		FROM config_escalonamento
 		WHERE empresa_id = $1 AND nivel = $2
-	`, empresaID, nivel).Scan(&c.ID, &c.EmpresaID, &c.Nivel, &c.AtrasoMinutos, &c.CreatedAt)
+	`, empresaID, nivel).Scan(&c.ID, &c.EmpresaID, &c.Nivel, &c.AtrasoMinutos, &c.Sistema, &c.Descricao, &c.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -135,14 +135,22 @@ func (r *ConfigEscalonamentoRepository) FindByEmpresaENivel(ctx context.Context,
 	return &c, nil
 }
 
+// FindEmergenciaPadrao retorna o nivel de escalonamento de emergencia padrao da
+// empresa (sistema=true, atraso_minutos=0, nivel=2), criado automaticamente no
+// provisionamento inicial e usado como destino dos alertas disparados por senha
+// de coacao/emergencia dos vigias.
+func (r *ConfigEscalonamentoRepository) FindEmergenciaPadrao(ctx context.Context, empresaID uuid.UUID) (*model.ConfigEscalonamento, error) {
+	return r.FindByEmpresaENivel(ctx, empresaID, 1)
+}
+
 // FindByID busca um nivel de escalonamento especifico pertencente a empresa.
 func (r *ConfigEscalonamentoRepository) FindByID(ctx context.Context, id, empresaID uuid.UUID) (*model.ConfigEscalonamento, error) {
 	var c model.ConfigEscalonamento
 	err := r.db.QueryRow(ctx, `
-		SELECT id, empresa_id, nivel, atraso_minutos, created_at
+		SELECT id, empresa_id, nivel, atraso_minutos, sistema, descricao, created_at
 		FROM config_escalonamento
 		WHERE id = $1 AND empresa_id = $2
-	`, id, empresaID).Scan(&c.ID, &c.EmpresaID, &c.Nivel, &c.AtrasoMinutos, &c.CreatedAt)
+	`, id, empresaID).Scan(&c.ID, &c.EmpresaID, &c.Nivel, &c.AtrasoMinutos, &c.Sistema, &c.Descricao, &c.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -194,10 +202,10 @@ func (r *ConfigEscalonamentoRepository) Update(ctx context.Context, id, empresaI
 		UPDATE config_escalonamento
 		SET atraso_minutos = $1
 		WHERE id = $2 AND empresa_id = $3
-		RETURNING id, empresa_id, nivel, atraso_minutos, created_at
+		RETURNING id, empresa_id, nivel, atraso_minutos, sistema, descricao, created_at
 	`
 	if err := tx.QueryRow(ctx, query, c.AtrasoMinutos, id, empresaID).Scan(
-		&c.ID, &c.EmpresaID, &c.Nivel, &c.AtrasoMinutos, &c.CreatedAt,
+		&c.ID, &c.EmpresaID, &c.Nivel, &c.AtrasoMinutos, &c.Sistema, &c.Descricao, &c.CreatedAt,
 	); err != nil {
 		return fmt.Errorf("atualizar config escalonamento: %w", err)
 	}
@@ -220,13 +228,13 @@ func (r *ConfigEscalonamentoRepository) Upsert(ctx context.Context, c *model.Con
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	query := `
-		INSERT INTO config_escalonamento (empresa_id, nivel, atraso_minutos)
-		VALUES ($1, $2, $3)
+		INSERT INTO config_escalonamento (empresa_id, nivel, atraso_minutos, sistema, descricao)
+		VALUES ($1, $2, $3, $4, $5)
 		ON CONFLICT (empresa_id, nivel)
 		DO UPDATE SET atraso_minutos = $3
 		RETURNING id, created_at
 	`
-	if err := tx.QueryRow(ctx, query, c.EmpresaID, c.Nivel, c.AtrasoMinutos).Scan(&c.ID, &c.CreatedAt); err != nil {
+	if err := tx.QueryRow(ctx, query, c.EmpresaID, c.Nivel, c.AtrasoMinutos, c.Sistema, c.Descricao).Scan(&c.ID, &c.CreatedAt); err != nil {
 		return fmt.Errorf("atualizar config escalonamento: %w", err)
 	}
 
@@ -267,7 +275,7 @@ func (r *ConfigEscalonamentoRepository) ReplaceByEmpresa(ctx context.Context, em
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	if _, err := tx.Exec(ctx, `DELETE FROM config_escalonamento WHERE empresa_id = $1`, empresaID); err != nil {
+	if _, err := tx.Exec(ctx, `DELETE FROM config_escalonamento WHERE empresa_id = $1 AND sistema = false`, empresaID); err != nil {
 		return fmt.Errorf("deletar configs existentes: %w", err)
 	}
 
@@ -275,12 +283,14 @@ func (r *ConfigEscalonamentoRepository) ReplaceByEmpresa(ctx context.Context, em
 		configs[i].EmpresaID = empresaID
 		var configID uuid.UUID
 		query := `
-			INSERT INTO config_escalonamento (empresa_id, nivel, atraso_minutos)
-			VALUES ($1, $2, $3)
+			INSERT INTO config_escalonamento (empresa_id, nivel, atraso_minutos, sistema, descricao)
+			VALUES ($1, $2, $3, false, $4)
+			ON CONFLICT (empresa_id, nivel)
+			DO UPDATE SET atraso_minutos = EXCLUDED.atraso_minutos
 			RETURNING id
 		`
 		if err := tx.QueryRow(ctx, query,
-			configs[i].EmpresaID, configs[i].Nivel, configs[i].AtrasoMinutos,
+			configs[i].EmpresaID, configs[i].Nivel, configs[i].AtrasoMinutos, configs[i].Descricao,
 		).Scan(&configID); err != nil {
 			return fmt.Errorf("inserir config nivel %d: %w", configs[i].Nivel, err)
 		}
