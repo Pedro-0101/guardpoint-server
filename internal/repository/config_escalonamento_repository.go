@@ -200,11 +200,11 @@ func (r *ConfigEscalonamentoRepository) Update(ctx context.Context, id, empresaI
 
 	query := `
 		UPDATE config_escalonamento
-		SET atraso_minutos = $1
+		SET atraso_minutos = $1, descricao = $4
 		WHERE id = $2 AND empresa_id = $3
 		RETURNING id, empresa_id, nivel, atraso_minutos, sistema, descricao, created_at
 	`
-	if err := tx.QueryRow(ctx, query, c.AtrasoMinutos, id, empresaID).Scan(
+	if err := tx.QueryRow(ctx, query, c.AtrasoMinutos, id, empresaID, c.Descricao).Scan(
 		&c.ID, &c.EmpresaID, &c.Nivel, &c.AtrasoMinutos, &c.Sistema, &c.Descricao, &c.CreatedAt,
 	); err != nil {
 		return fmt.Errorf("atualizar config escalonamento: %w", err)
@@ -231,7 +231,7 @@ func (r *ConfigEscalonamentoRepository) Upsert(ctx context.Context, c *model.Con
 		INSERT INTO config_escalonamento (empresa_id, nivel, atraso_minutos, sistema, descricao)
 		VALUES ($1, $2, $3, $4, $5)
 		ON CONFLICT (empresa_id, nivel)
-		DO UPDATE SET atraso_minutos = $3
+		DO UPDATE SET atraso_minutos = $3, descricao = $5
 		RETURNING id, created_at
 	`
 	if err := tx.QueryRow(ctx, query, c.EmpresaID, c.Nivel, c.AtrasoMinutos, c.Sistema, c.Descricao).Scan(&c.ID, &c.CreatedAt); err != nil {
@@ -286,7 +286,7 @@ func (r *ConfigEscalonamentoRepository) ReplaceByEmpresa(ctx context.Context, em
 			INSERT INTO config_escalonamento (empresa_id, nivel, atraso_minutos, sistema, descricao)
 			VALUES ($1, $2, $3, false, $4)
 			ON CONFLICT (empresa_id, nivel)
-			DO UPDATE SET atraso_minutos = EXCLUDED.atraso_minutos
+			DO UPDATE SET atraso_minutos = EXCLUDED.atraso_minutos, descricao = EXCLUDED.descricao
 			RETURNING id
 		`
 		if err := tx.QueryRow(ctx, query,
