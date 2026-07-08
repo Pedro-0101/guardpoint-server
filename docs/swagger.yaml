@@ -1301,7 +1301,7 @@ paths:
   /config/alertas-emergencia/{tipo}:
     put:
       parameters:
-      - description: Tipo de emergencia (coacao, sabotagem, no_show)
+      - description: Tipo de emergencia (sabotagem, no_show)
         in: path
         name: tipo
         required: true
@@ -2316,7 +2316,7 @@ paths:
             additionalProperties:
               type: string
             type: object
-      summary: Registra uma senha de coacao/sabotagem durante um turno
+      summary: Registra uma sabotagem durante um turno
       tags:
       - turnos
   /turnos/status:

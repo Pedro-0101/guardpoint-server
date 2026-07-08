@@ -330,7 +330,7 @@ func (h *AlertaHandler) GetAlertasEmergencia(w http.ResponseWriter, r *http.Requ
 // PutAlertaEmergencia godoc
 // @Summary      Define os destinatarios de um tipo de alerta de emergencia (somente admin)
 // @Tags         config
-// @Param        tipo path string true "Tipo de emergencia (coacao, sabotagem, no_show)"
+// @Param        tipo path string true "Tipo de emergencia (sabotagem, no_show)"
 // @Param        request body model.UpdateConfigAlertaEmergenciaRequest true "Lista de usuarios destinatarios"
 // @Success      200 {object} model.ConfigAlertaEmergencia
 // @Failure      400 {object} map[string]string

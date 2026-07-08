@@ -556,7 +556,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Tipo de emergencia (coacao, sabotagem, no_show)",
+                        "description": "Tipo de emergencia (sabotagem, no_show)",
                         "name": "tipo",
                         "in": "path",
                         "required": true
@@ -1973,7 +1973,7 @@ const docTemplate = `{
                 "tags": [
                     "turnos"
                 ],
-                "summary": "Registra uma senha de coacao/sabotagem durante um turno",
+                "summary": "Registra uma sabotagem durante um turno",
                 "parameters": [
                     {
                         "description": "Dados da sabotagem",

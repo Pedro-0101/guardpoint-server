@@ -346,7 +346,7 @@ func (h *TurnoHandler) Reassociar(w http.ResponseWriter, r *http.Request) {
 }
 
 // Sabotagem godoc
-// @Summary      Registra uma senha de coacao/sabotagem durante um turno
+// @Summary      Registra uma sabotagem durante um turno
 // @Tags         turnos
 // @Param        request body model.SabotagemRequest true "Dados da sabotagem"
 // @Success      202 {object} model.SabotagemResponse
