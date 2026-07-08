@@ -18,8 +18,20 @@ type Alerta struct {
 	CreatedAt   time.Time  `json:"created_at"`
 }
 
+type ConfigEscalonamento struct {
+	ID            uuid.UUID   `json:"id"`
+	EmpresaID     uuid.UUID   `json:"empresa_id"`
+	Nivel         int         `json:"nivel"`
+	AtrasoMinutos int         `json:"atraso_minutos"`
+	Sistema       bool        `json:"sistema"`
+	Descricao     string      `json:"descricao"`
+	UsuarioIDs    []uuid.UUID `json:"usuario_ids"`
+	CreatedAt     time.Time   `json:"created_at"`
+}
+
 // ConfigAlertaEmergencia define quais usuarios recebem um tipo especifico de
-// alerta de emergencia (coacao, sabotagem, no_show).
+// alerta de emergencia (coacao, sabotagem, no_show), independente dos niveis
+// de escalonamento por atraso.
 type ConfigAlertaEmergencia struct {
 	ID         uuid.UUID   `json:"id"`
 	EmpresaID  uuid.UUID   `json:"empresa_id"`
@@ -52,6 +64,19 @@ type AlertaPorTipo struct {
 type AlertaPorHora struct {
 	Hora       string `json:"hora"`
 	Quantidade int    `json:"quantidade"`
+}
+
+type CreateConfigEscalonamentoRequest struct {
+	Nivel         int         `json:"nivel" validate:"required,min=1,max=5"`
+	AtrasoMinutos int         `json:"atraso_minutos" validate:"required,min=1,max=1440"`
+	Descricao     string      `json:"descricao"`
+	UsuarioIDs    []uuid.UUID `json:"usuario_ids" validate:"required,min=1"`
+}
+
+type UpdateConfigEscalonamentoRequest struct {
+	AtrasoMinutos *int        `json:"atraso_minutos,omitempty" validate:"omitempty,min=1,max=1440"`
+	Descricao     *string     `json:"descricao,omitempty"`
+	UsuarioIDs    []uuid.UUID `json:"usuario_ids" validate:"required,min=1"`
 }
 
 type UpdateConfigAlertaEmergenciaRequest struct {

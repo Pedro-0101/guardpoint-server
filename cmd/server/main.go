@@ -60,7 +60,8 @@ func main() {
 	if cfg.Env == "development" {
 		empresaRepo := repository.NewEmpresaRepository(pool)
 		userRepo := repository.NewUserRepository(pool)
-		empresaService := service.NewEmpresaService(empresaRepo)
+		configEscalonamentoRepo := repository.NewConfigEscalonamentoRepository(pool)
+		empresaService := service.NewEmpresaService(empresaRepo, configEscalonamentoRepo)
 		if err := seed.Run(ctx, empresaRepo, userRepo, empresaService); err != nil {
 			slog.Error("seed failed", "error", err)
 			os.Exit(1)

@@ -170,6 +170,49 @@ definitions:
           type: string
         type: array
     type: object
+  model.ConfigEscalonamento:
+    properties:
+      atraso_minutos:
+        type: integer
+      created_at:
+        type: string
+      descricao:
+        type: string
+      empresa_id:
+        type: string
+      id:
+        type: string
+      nivel:
+        type: integer
+      sistema:
+        type: boolean
+      usuario_ids:
+        items:
+          type: string
+        type: array
+    type: object
+  model.CreateConfigEscalonamentoRequest:
+    properties:
+      atraso_minutos:
+        maximum: 1440
+        minimum: 1
+        type: integer
+      descricao:
+        type: string
+      nivel:
+        maximum: 5
+        minimum: 1
+        type: integer
+      usuario_ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - atraso_minutos
+    - nivel
+    - usuario_ids
+    type: object
   model.CreateEscalaLoteRequest:
     properties:
       dias:
@@ -253,10 +296,6 @@ definitions:
     type: object
   model.CreateSenhaVigiaRequest:
     properties:
-      atraso_minutos:
-        maximum: 1440
-        minimum: 0
-        type: integer
       codigo:
         maxLength: 6
         minLength: 4
@@ -264,11 +303,9 @@ definitions:
       descricao:
         maxLength: 255
         type: string
-      destinatarios:
-        items:
-          type: string
-        minItems: 1
-        type: array
+      nivel_escalonamento_id:
+        description: obrigatorio para emergencia/customizada (validado no service)
+        type: string
       tipo:
         enum:
         - ok
@@ -597,23 +634,21 @@ definitions:
     type: object
   model.SenhaVigia:
     properties:
-      atraso_minutos:
-        type: integer
       codigo:
         type: string
       created_at:
         type: string
       descricao:
         type: string
-      destinatarios:
-        items:
-          type: string
-        type: array
       empresa_id:
         type: string
       id:
         type: string
+      nivel_escalonamento_id:
+        description: NULL apenas para tipo "ok"; obrigatorio para emergencia/customizada
+        type: string
       tipo:
+        description: ok | emergencia | customizada
         type: string
       updated_at:
         type: string
@@ -753,6 +788,23 @@ definitions:
     required:
     - usuario_ids
     type: object
+  model.UpdateConfigEscalonamentoRequest:
+    properties:
+      atraso_minutos:
+        maximum: 1440
+        minimum: 1
+        type: integer
+      descricao:
+        type: string
+      usuario_ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - atraso_minutos
+    - usuario_ids
+    type: object
   model.UpdateEmpresaRequest:
     properties:
       alerta_sonoro:
@@ -807,10 +859,6 @@ definitions:
     type: object
   model.UpdateSenhaVigiaRequest:
     properties:
-      atraso_minutos:
-        maximum: 1440
-        minimum: 0
-        type: integer
       codigo:
         maxLength: 6
         minLength: 4
@@ -818,11 +866,9 @@ definitions:
       descricao:
         maxLength: 255
         type: string
-      destinatarios:
-        items:
-          type: string
-        minItems: 1
-        type: array
+      nivel_escalonamento_id:
+        description: somente customizada pode alterar
+        type: string
     type: object
   model.UpdateSubstituicaoRequest:
     properties:
@@ -1292,6 +1338,143 @@ paths:
             type: object
       summary: Define os destinatarios de um tipo de alerta de emergencia (somente
         admin)
+      tags:
+      - config
+  /config/escalonamento:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.ConfigEscalonamento'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Lista a configuracao de escalonamento de alertas (somente admin)
+      tags:
+      - config
+    post:
+      parameters:
+      - description: Dados do nivel
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateConfigEscalonamentoRequest'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.ConfigEscalonamento'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Cria um nivel de escalonamento de alertas (somente admin)
+      tags:
+      - config
+    put:
+      parameters:
+      - description: Lista completa de niveis
+        in: body
+        name: request
+        required: true
+        schema:
+          items:
+            $ref: '#/definitions/model.CreateConfigEscalonamentoRequest'
+          type: array
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.ConfigEscalonamento'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Substitui todos os niveis de escalonamento de alertas (somente admin)
+      tags:
+      - config
+  /config/escalonamento/{id}:
+    delete:
+      parameters:
+      - description: ID da configuracao (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "204":
+          description: sem conteudo
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Remove um nivel de escalonamento de alertas (somente admin)
+      tags:
+      - config
+    put:
+      parameters:
+      - description: ID da configuracao (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Campos a atualizar
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateConfigEscalonamentoRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ConfigEscalonamento'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Atualiza um nivel de escalonamento de alertas (somente admin)
       tags:
       - config
   /dashboard/summary:
