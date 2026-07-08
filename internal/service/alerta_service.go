@@ -24,7 +24,8 @@ var (
 	ErrUsuarioNaoAdmin              = errors.New("apenas administradores podem ser destinatarios de alertas")
 	ErrTipoEmergenciaInvalido       = errors.New("tipo de alerta de emergencia invalido")
 	ErrNivelEscalonamentoEmUso      = errors.New("nivel de escalonamento em uso por uma senha de vigia")
-	ErrNivelEscalonamentoSistema    = errors.New("nivel de escalonamento padrao do sistema nao pode ser removido")
+	ErrNivelEscalonamentoSistema                   = errors.New("nivel de escalonamento padrao do sistema nao pode ser removido")
+	ErrNivelEscalonamentoSistemaSomenteDestinatarios = errors.New("escalonamento padrao do sistema: apenas os destinatarios podem ser alterados")
 )
 
 // codigoPgViolacaoFK e o codigo de erro do Postgres para violacao de foreign
@@ -350,13 +351,36 @@ func (s *AlertaService) UpdateEscalonamento(ctx context.Context, empresaID, conf
 		return nil, fmt.Errorf("config_id invalido: %w", err)
 	}
 
+	existing, err := s.configRepo.FindByID(ctx, parsedConfigID, parsedEmpresaID)
+	if err != nil {
+		return nil, fmt.Errorf("buscar config existente: %w", err)
+	}
+	if existing == nil {
+		return nil, fmt.Errorf("config escalonamento nao encontrado")
+	}
+
+	if existing.Sistema {
+		if req.AtrasoMinutos != nil || req.Descricao != nil {
+			return nil, ErrNivelEscalonamentoSistemaSomenteDestinatarios
+		}
+		req.AtrasoMinutos = &existing.AtrasoMinutos
+		req.Descricao = &existing.Descricao
+	} else {
+		if req.AtrasoMinutos == nil {
+			req.AtrasoMinutos = &existing.AtrasoMinutos
+		}
+		if req.Descricao == nil {
+			req.Descricao = &existing.Descricao
+		}
+	}
+
 	if err := s.validarUsuariosDaEmpresa(ctx, parsedEmpresaID, req.UsuarioIDs); err != nil {
 		return nil, err
 	}
 
 	c := &model.ConfigEscalonamento{
-		AtrasoMinutos: req.AtrasoMinutos,
-		Descricao:     req.Descricao,
+		AtrasoMinutos: *req.AtrasoMinutos,
+		Descricao:     *req.Descricao,
 		UsuarioIDs:    req.UsuarioIDs,
 	}
 

@@ -74,8 +74,8 @@ type CreateConfigEscalonamentoRequest struct {
 }
 
 type UpdateConfigEscalonamentoRequest struct {
-	AtrasoMinutos int         `json:"atraso_minutos" validate:"required,min=1,max=1440"`
-	Descricao     string      `json:"descricao"`
+	AtrasoMinutos *int        `json:"atraso_minutos,omitempty" validate:"omitempty,min=1,max=1440"`
+	Descricao     *string     `json:"descricao,omitempty"`
 	UsuarioIDs    []uuid.UUID `json:"usuario_ids" validate:"required,min=1"`
 }
 

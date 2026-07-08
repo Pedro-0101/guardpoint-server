@@ -240,6 +240,10 @@ func (h *AlertaHandler) UpdateEscalonamento(w http.ResponseWriter, r *http.Reque
 			writeError(w, http.StatusBadRequest, "apenas administradores podem ser destinatarios de alertas")
 			return
 		}
+		if errors.Is(err, service.ErrNivelEscalonamentoSistemaSomenteDestinatarios) {
+			writeError(w, http.StatusBadRequest, "escalonamento padrao do sistema: apenas os destinatarios podem ser alterados")
+			return
+		}
 		slog.Error("update escalonamento failed", "error", err)
 		writeError(w, http.StatusInternalServerError, "erro ao atualizar configuracao")
 		return
