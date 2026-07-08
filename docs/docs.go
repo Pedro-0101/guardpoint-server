@@ -788,6 +788,15 @@ const docTemplate = `{
                     "204": {
                         "description": "sem conteudo"
                     },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
@@ -2331,6 +2340,221 @@ const docTemplate = `{
                     }
                 }
             }
+        },
+        "/usuarios/{id}/senhas": {
+            "get": {
+                "tags": [
+                    "usuarios"
+                ],
+                "summary": "Lista as senhas cadastradas para um vigia (somente admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do usuario/vigia (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.SenhaVigia"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "usuarios"
+                ],
+                "summary": "Cria uma senha para um vigia (somente admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do usuario/vigia (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Dados da senha",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateSenhaVigiaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.SenhaVigia"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/usuarios/{id}/senhas/{senhaId}": {
+            "put": {
+                "tags": [
+                    "usuarios"
+                ],
+                "summary": "Atualiza uma senha de um vigia (somente admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do usuario/vigia (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID da senha (uuid)",
+                        "name": "senhaId",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Campos a atualizar",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateSenhaVigiaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.SenhaVigia"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "usuarios"
+                ],
+                "summary": "Remove uma senha customizada de um vigia (somente admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do usuario/vigia (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID da senha (uuid)",
+                        "name": "senhaId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
         }
     },
     "definitions": {
@@ -2470,6 +2694,10 @@ const docTemplate = `{
                 "empresa_id": {
                     "type": "string"
                 },
+                "evento": {
+                    "description": "inicio | checkin | finalizacao | sabotagem",
+                    "type": "string"
+                },
                 "flag_geofence": {
                     "type": "string"
                 },
@@ -2485,6 +2713,9 @@ const docTemplate = `{
                 "origem_rede": {
                     "type": "string"
                 },
+                "senha_vigia_id": {
+                    "type": "string"
+                },
                 "timestamp_criacao": {
                     "type": "string"
                 },
@@ -2492,6 +2723,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "tipo_senha": {
+                    "description": "ok | emergencia | customizada (nil p/ sabotagem)",
                     "type": "string"
                 },
                 "turno_id": {
@@ -2505,8 +2737,8 @@ const docTemplate = `{
                 "device_id",
                 "latitude",
                 "longitude",
+                "senha",
                 "timestamp",
-                "tipo_senha",
                 "turno_id"
             ],
             "properties": {
@@ -2522,17 +2754,13 @@ const docTemplate = `{
                 "longitude": {
                     "type": "number"
                 },
+                "senha": {
+                    "type": "string",
+                    "maxLength": 6,
+                    "minLength": 4
+                },
                 "timestamp": {
                     "type": "string"
-                },
-                "tipo_senha": {
-                    "type": "string",
-                    "enum": [
-                        "padrao",
-                        "coacao",
-                        "finalizacao",
-                        "sabotagem"
-                    ]
                 },
                 "turno_id": {
                     "type": "string"
@@ -2748,6 +2976,35 @@ const docTemplate = `{
                 }
             }
         },
+        "model.CreateSenhaVigiaRequest": {
+            "type": "object",
+            "required": [
+                "codigo",
+                "tipo"
+            ],
+            "properties": {
+                "codigo": {
+                    "type": "string",
+                    "maxLength": 6,
+                    "minLength": 4
+                },
+                "descricao": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "nivel_escalonamento_id": {
+                    "type": "string"
+                },
+                "tipo": {
+                    "type": "string",
+                    "enum": [
+                        "ok",
+                        "emergencia",
+                        "customizada"
+                    ]
+                }
+            }
+        },
         "model.CreateSubstituicaoRequest": {
             "type": "object",
             "required": [
@@ -2957,6 +3214,7 @@ const docTemplate = `{
                 "device_id",
                 "latitude",
                 "longitude",
+                "senha",
                 "timestamp",
                 "turno_id"
             ],
@@ -2970,6 +3228,11 @@ const docTemplate = `{
                 "longitude": {
                     "type": "number"
                 },
+                "senha": {
+                    "type": "string",
+                    "maxLength": 6,
+                    "minLength": 4
+                },
                 "timestamp": {
                     "type": "string"
                 },
@@ -2982,7 +3245,10 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "device_id",
-                "posto_id"
+                "latitude",
+                "longitude",
+                "posto_id",
+                "senha"
             ],
             "properties": {
                 "device_id": {
@@ -2993,8 +3259,19 @@ const docTemplate = `{
                     "maximum": 120,
                     "minimum": 1
                 },
+                "latitude": {
+                    "type": "number"
+                },
+                "longitude": {
+                    "type": "number"
+                },
                 "posto_id": {
                     "type": "string"
+                },
+                "senha": {
+                    "type": "string",
+                    "maxLength": 6,
+                    "minLength": 4
                 }
             }
         },
@@ -3177,6 +3454,40 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "status": {
+                    "type": "string"
+                }
+            }
+        },
+        "model.SenhaVigia": {
+            "type": "object",
+            "properties": {
+                "codigo": {
+                    "type": "string"
+                },
+                "created_at": {
+                    "type": "string"
+                },
+                "descricao": {
+                    "type": "string"
+                },
+                "empresa_id": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "nivel_escalonamento_id": {
+                    "description": "nil = nivel maximo dinamico",
+                    "type": "string"
+                },
+                "tipo": {
+                    "description": "ok | emergencia | customizada",
+                    "type": "string"
+                },
+                "updated_at": {
+                    "type": "string"
+                },
+                "usuario_id": {
                     "type": "string"
                 }
             }
@@ -3475,6 +3786,27 @@ const docTemplate = `{
                     "type": "integer",
                     "maximum": 5000,
                     "minimum": 10
+                }
+            }
+        },
+        "model.UpdateSenhaVigiaRequest": {
+            "type": "object",
+            "properties": {
+                "codigo": {
+                    "type": "string",
+                    "maxLength": 6,
+                    "minLength": 4
+                },
+                "descricao": {
+                    "type": "string",
+                    "maxLength": 255
+                },
+                "nivel_dinamico": {
+                    "description": "true = forca nivel_escalonamento_id = NULL",
+                    "type": "boolean"
+                },
+                "nivel_escalonamento_id": {
+                    "type": "string"
                 }
             }
         },

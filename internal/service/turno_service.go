@@ -28,6 +28,13 @@ var (
 	ErrSessaoOutroDispositivo    = errors.New("turno associado a outro dispositivo")
 	ErrPinInvalido               = errors.New("pin invalido")
 	ErrPinExpirado               = errors.New("pin expirado")
+
+	// ErrSenhaVigiaInvalida e ErrVigiaSemSenhasConfiguradas sao erros internos de
+	// resolverSenha. NUNCA sao retornados ao chamador HTTP -- aplicarConsequenciaSenha
+	// os engole e apenas loga, pois a acao chamadora (checkin/inicio/finalizacao) ja
+	// foi ou sera persistida com sucesso independente do resultado da resolucao do PIN.
+	ErrSenhaVigiaInvalida         = errors.New("senha invalida")
+	ErrVigiaSemSenhasConfiguradas = errors.New("vigia sem senhas configuradas")
 )
 
 type TurnoService struct {
@@ -38,6 +45,7 @@ type TurnoService struct {
 	sessaoDispositivoRepo *repository.SessaoDispositivoRepository
 	escalaRepo            *repository.EscalaRepository
 	substituicaoRepo      *repository.SubstituicaoRepository
+	senhaVigiaRepo        *repository.SenhaVigiaRepository
 	alertaService         *AlertaService
 	hub                   *ws.Hub
 }
@@ -50,6 +58,7 @@ func NewTurnoService(
 	sessaoDispositivoRepo *repository.SessaoDispositivoRepository,
 	escalaRepo *repository.EscalaRepository,
 	substituicaoRepo *repository.SubstituicaoRepository,
+	senhaVigiaRepo *repository.SenhaVigiaRepository,
 	alertaService *AlertaService,
 	hub *ws.Hub,
 ) *TurnoService {
@@ -61,9 +70,67 @@ func NewTurnoService(
 		sessaoDispositivoRepo: sessaoDispositivoRepo,
 		escalaRepo:            escalaRepo,
 		substituicaoRepo:      substituicaoRepo,
+		senhaVigiaRepo:        senhaVigiaRepo,
 		alertaService:         alertaService,
 		hub:                   hub,
 	}
+}
+
+// resolverSenha busca o PIN do vigia (escopado por usuario_id) que bate com o codigo
+// informado. Distingue "vigia sem nenhum PIN cadastrado" de "codigo nao corresponde a
+// nenhum PIN".
+func (s *TurnoService) resolverSenha(ctx context.Context, empresaID, usuarioID uuid.UUID, codigo string) (*model.SenhaVigia, error) {
+	total, err := s.senhaVigiaRepo.CountByUsuario(ctx, empresaID, usuarioID)
+	if err != nil {
+		return nil, fmt.Errorf("contar senhas do vigia: %w", err)
+	}
+	if total == 0 {
+		return nil, ErrVigiaSemSenhasConfiguradas
+	}
+	senha, err := s.senhaVigiaRepo.FindByUsuarioECodigo(ctx, empresaID, usuarioID, codigo)
+	if err != nil {
+		return nil, fmt.Errorf("buscar senha: %w", err)
+	}
+	if senha == nil {
+		return nil, ErrSenhaVigiaInvalida
+	}
+	return senha, nil
+}
+
+// aplicarConsequenciaSenha resolve o PIN e, se nao for 'ok', marca o turno como
+// critico e dispara o alerta via AlertaService.CreateAlertaPorSenha. Erros de
+// resolucao (PIN invalido/vigia sem PINs) sao SEMPRE ENGOLIDOS aqui (so logados) --
+// a acao chamadora ja foi ou sera persistida com sucesso independente do resultado.
+// Retorna o *model.SenhaVigia resolvido (ou nil) para popular
+// Checkin.TipoSenha/SenhaVigiaID antes do INSERT.
+func (s *TurnoService) aplicarConsequenciaSenha(ctx context.Context, empresaIDStr string, empresaID, turnoID, usuarioID uuid.UUID, codigo string) *model.SenhaVigia {
+	senha, err := s.resolverSenha(ctx, empresaID, usuarioID, codigo)
+	if err != nil {
+		slog.Warn("senha de vigia nao resolvida", "error", err, "turno_id", turnoID, "usuario_id", usuarioID)
+		return nil
+	}
+	if senha.Tipo == "ok" {
+		return senha
+	}
+
+	_ = s.turnoRepo.UpdateStatus(ctx, turnoID, empresaID, "critico", nil)
+
+	tipoAlerta := "senha_emergencia"
+	mensagem := "Senha de emergencia detectada"
+	if senha.Tipo == "customizada" {
+		tipoAlerta = "senha_customizada"
+		desc := ""
+		if senha.Descricao != nil {
+			desc = *senha.Descricao
+		}
+		mensagem = "Senha customizada detectada: " + desc
+	}
+
+	if _, err := s.alertaService.CreateAlertaPorSenha(ctx, empresaID, turnoID, tipoAlerta, senha, mensagem); err != nil {
+		slog.Error("criar alerta de senha", "error", err, "turno_id", turnoID)
+	}
+	s.hub.Broadcast(empresaIDStr, ws.NewStatusChangeEvent(turnoID.String(), "critico"))
+	return senha
 }
 
 func (s *TurnoService) Iniciar(ctx context.Context, userID, empresaID string, req model.IniciarTurnoRequest) (*model.Turno, error) {
@@ -143,6 +210,34 @@ func (s *TurnoService) Iniciar(ctx context.Context, userID, empresaID string, re
 	}
 
 	s.hub.Broadcast(empresaID, ws.NewStatusChangeEvent(turno.ID.String(), "em_andamento"))
+
+	flagGeofence := s.calcularGeofence(ctx, turno.PostoID, parsedEmpresaID, req.Latitude, req.Longitude)
+	senha := s.aplicarConsequenciaSenha(ctx, empresaID, parsedEmpresaID, turno.ID, parsedUserID, req.Senha)
+
+	checkinInicio := &model.Checkin{
+		TurnoID:          turno.ID,
+		EmpresaID:        parsedEmpresaID,
+		Latitude:         req.Latitude,
+		Longitude:        req.Longitude,
+		TimestampCriacao: now,
+		Evento:           "inicio",
+		FlagGeofence:     flagGeofence,
+		OrigemRede:       "online",
+	}
+	if senha != nil {
+		tipoSenha := senha.Tipo
+		checkinInicio.TipoSenha = &tipoSenha
+		senhaID := senha.ID
+		checkinInicio.SenhaVigiaID = &senhaID
+	}
+
+	if err := s.checkinRepo.Create(ctx, checkinInicio); err != nil {
+		return nil, fmt.Errorf("criar checkin de inicio: %w", err)
+	}
+
+	if senha != nil && senha.Tipo != "ok" {
+		turno.Status = "critico"
+	}
 
 	return turno, nil
 }
@@ -235,15 +330,29 @@ func (s *TurnoService) Checkin(ctx context.Context, userID, empresaID string, re
 
 	flagGeofence := s.calcularGeofence(ctx, turno.PostoID, parsedEmpresaID, req.Latitude, req.Longitude)
 
+	// resolucao da senha (sem efeito colateral) para montar o Checkin antes do
+	// unico INSERT -- evita um UPDATE posterior para gravar TipoSenha/SenhaVigiaID
+	senhaResolvida, err := s.resolverSenha(ctx, parsedEmpresaID, parsedUserID, req.Senha)
+	if err != nil {
+		slog.Warn("senha de vigia nao resolvida", "error", err, "turno_id", parsedTurnoID, "usuario_id", parsedUserID)
+		senhaResolvida = nil
+	}
+
 	checkin := &model.Checkin{
 		TurnoID:          parsedTurnoID,
 		EmpresaID:        parsedEmpresaID,
 		Latitude:         req.Latitude,
 		Longitude:        req.Longitude,
 		TimestampCriacao: timestampCriacao,
-		TipoSenha:        req.TipoSenha,
+		Evento:           "checkin",
 		FlagGeofence:     flagGeofence,
 		OrigemRede:       "online",
+	}
+	if senhaResolvida != nil {
+		tipoSenha := senhaResolvida.Tipo
+		checkin.TipoSenha = &tipoSenha
+		senhaID := senhaResolvida.ID
+		checkin.SenhaVigiaID = &senhaID
 	}
 
 	// o ultimo check-in precisa ser capturado antes do INSERT, senao a ancora
@@ -265,11 +374,9 @@ func (s *TurnoService) Checkin(ctx context.Context, userID, empresaID string, re
 	dl := timestampCriacao.Add(time.Duration(turno.IntervaloMin) * time.Minute)
 	proximoDeadline := &dl
 
-	if req.TipoSenha == "coacao" {
-		_ = s.turnoRepo.UpdateStatus(ctx, parsedTurnoID, parsedEmpresaID, "critico", nil)
-		_, _ = s.alertaService.CreateAlertaImediato(ctx, parsedEmpresaID, parsedTurnoID, "coacao", 1, "Senha de coacao detectada no check-in")
-		s.hub.Broadcast(empresaID, ws.NewStatusChangeEvent(req.TurnoID, "critico"))
-	}
+	// efeito colateral da senha (status critico + alerta), na mesma posicao
+	// relativa que o antigo bloco de coacao ocupava
+	s.aplicarConsequenciaSenha(ctx, empresaID, parsedEmpresaID, parsedTurnoID, parsedUserID, req.Senha)
 
 	s.emitirGPSUpdate(empresaID, req.TurnoID, req.Latitude, req.Longitude, timestampCriacao, flagGeofence)
 
@@ -326,20 +433,37 @@ func (s *TurnoService) Finalizar(ctx context.Context, userID, empresaID string, 
 
 	flagGeofence := s.calcularGeofence(ctx, turno.PostoID, parsedEmpresaID, req.Latitude, req.Longitude)
 
+	senhaResolvida, err := s.resolverSenha(ctx, parsedEmpresaID, parsedUserID, req.Senha)
+	if err != nil {
+		slog.Warn("senha de vigia nao resolvida", "error", err, "turno_id", parsedTurnoID, "usuario_id", parsedUserID)
+		senhaResolvida = nil
+	}
+
 	checkin := &model.Checkin{
 		TurnoID:          parsedTurnoID,
 		EmpresaID:        parsedEmpresaID,
 		Latitude:         req.Latitude,
 		Longitude:        req.Longitude,
 		TimestampCriacao: timestampCriacao,
-		TipoSenha:        "finalizacao",
+		Evento:           "finalizacao",
 		FlagGeofence:     flagGeofence,
 		OrigemRede:       "online",
+	}
+	if senhaResolvida != nil {
+		tipoSenha := senhaResolvida.Tipo
+		checkin.TipoSenha = &tipoSenha
+		senhaID := senhaResolvida.ID
+		checkin.SenhaVigiaID = &senhaID
 	}
 
 	if err := s.checkinRepo.Create(ctx, checkin); err != nil {
 		return nil, fmt.Errorf("criar checkin finalizacao: %w", err)
 	}
+
+	// efeito colateral da senha (status critico transitorio + alerta); o status
+	// final do turno e sempre "finalizado" -- e sobrescrito logo abaixo. O
+	// alerta e quem carrega a urgencia, nao o status final do turno.
+	s.aplicarConsequenciaSenha(ctx, empresaID, parsedEmpresaID, parsedTurnoID, parsedUserID, req.Senha)
 
 	now := time.Now()
 	if err := s.turnoRepo.UpdateStatus(ctx, parsedTurnoID, parsedEmpresaID, "finalizado", &now); err != nil {
@@ -637,7 +761,7 @@ func (s *TurnoService) Sabotagem(ctx context.Context, userID, empresaID string, 
 		Latitude:         req.Latitude,
 		Longitude:        req.Longitude,
 		TimestampCriacao: timestampCriacao,
-		TipoSenha:        "sabotagem",
+		Evento:           "sabotagem",
 		FlagGeofence:     flagGeofence,
 		OrigemRede:       "online",
 	}
@@ -704,15 +828,27 @@ func (s *TurnoService) ProcessarLote(ctx context.Context, userID, empresaID stri
 
 		origemRede := "offline_sincronizado"
 
+		senhaResolvida, err := s.resolverSenha(ctx, parsedEmpresaID, parsedUserID, req.Senha)
+		if err != nil {
+			slog.Warn("senha de vigia nao resolvida", "error", err, "turno_id", parsedTurnoID, "usuario_id", parsedUserID)
+			senhaResolvida = nil
+		}
+
 		checkin := &model.Checkin{
 			TurnoID:          parsedTurnoID,
 			EmpresaID:        parsedEmpresaID,
 			Latitude:         req.Latitude,
 			Longitude:        req.Longitude,
 			TimestampCriacao: timestampCriacao,
-			TipoSenha:        req.TipoSenha,
+			Evento:           "checkin",
 			FlagGeofence:     flagGeofence,
 			OrigemRede:       origemRede,
+		}
+		if senhaResolvida != nil {
+			tipoSenha := senhaResolvida.Tipo
+			checkin.TipoSenha = &tipoSenha
+			senhaID := senhaResolvida.ID
+			checkin.SenhaVigiaID = &senhaID
 		}
 
 		var anterior *time.Time
@@ -732,11 +868,7 @@ func (s *TurnoService) ProcessarLote(ctx context.Context, userID, empresaID stri
 			}
 		}
 
-		if req.TipoSenha == "coacao" {
-			_ = s.turnoRepo.UpdateStatus(ctx, parsedTurnoID, parsedEmpresaID, "critico", nil)
-			_, _ = s.alertaService.CreateAlertaImediato(ctx, parsedEmpresaID, parsedTurnoID, "coacao", 1, "Senha de coacao detectada em lote offline")
-			s.hub.Broadcast(empresaID, ws.NewStatusChangeEvent(req.TurnoID, "critico"))
-		}
+		s.aplicarConsequenciaSenha(ctx, empresaID, parsedEmpresaID, parsedTurnoID, parsedUserID, req.Senha)
 
 		s.emitirGPSUpdate(empresaID, req.TurnoID, req.Latitude, req.Longitude, timestampCriacao, flagGeofence)
 

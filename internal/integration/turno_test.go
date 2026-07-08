@@ -21,6 +21,7 @@ func TestIniciarTurno(t *testing.T) {
 	t.Run("device nao registrado retorna 403", func(t *testing.T) {
 		status, _ := c.e.request(http.MethodPost, "/api/v1/turnos/iniciar", c.vigiaToken, map[string]any{
 			"posto_id": c.posto.ID.String(), "device_id": "device-nao-registrado",
+			"latitude": postoLat, "longitude": postoLon, "senha": SenhaOK,
 		})
 		if status != http.StatusForbidden {
 			t.Errorf("status = %d, esperado 403", status)
@@ -43,6 +44,7 @@ func TestIniciarTurno(t *testing.T) {
 	t.Run("segundo turno simultaneo retorna 409", func(t *testing.T) {
 		status, _ := c.e.request(http.MethodPost, "/api/v1/turnos/iniciar", c.vigiaToken, map[string]any{
 			"posto_id": c.posto.ID.String(), "device_id": c.deviceID,
+			"latitude": postoLat, "longitude": postoLon, "senha": SenhaOK,
 		})
 		if status != http.StatusConflict {
 			t.Errorf("status = %d, esperado 409", status)
@@ -63,6 +65,7 @@ func TestIniciarTurnoSemEscalaEForaTolerancia(t *testing.T) {
 	t.Run("sem escala ativa retorna 403", func(t *testing.T) {
 		status, raw := c.e.request(http.MethodPost, "/api/v1/turnos/iniciar", token2, map[string]any{
 			"posto_id": c.posto.ID.String(), "device_id": "device-vigia-2",
+			"latitude": postoLat, "longitude": postoLon, "senha": SenhaOK,
 		})
 		if status != http.StatusForbidden || !strings.Contains(string(raw), "escala") {
 			t.Errorf("status = %d (corpo %s), esperado 403 por falta de escala", status, raw)
@@ -75,6 +78,7 @@ func TestIniciarTurnoSemEscalaEForaTolerancia(t *testing.T) {
 
 		status, raw := c.e.request(http.MethodPost, "/api/v1/turnos/iniciar", token2, map[string]any{
 			"posto_id": c.posto.ID.String(), "device_id": "device-vigia-2",
+			"latitude": postoLat, "longitude": postoLon, "senha": SenhaOK,
 		})
 		if status != http.StatusForbidden || !strings.Contains(string(raw), "tolerancia") {
 			t.Errorf("status = %d (corpo %s), esperado 403 por tolerancia", status, raw)
@@ -123,7 +127,7 @@ func TestCheckin(t *testing.T) {
 	t.Run("dentro do geofence", func(t *testing.T) {
 		var resp model.CheckinResponse
 		c.e.reqJSON(http.MethodPost, "/api/v1/turnos/checkin", c.vigiaToken,
-			c.checkinBody(turno.ID, "padrao", base), http.StatusOK, &resp)
+			c.checkinBody(turno.ID, SenhaOK, base), http.StatusOK, &resp)
 		if resp.Checkin.FlagGeofence == nil || *resp.Checkin.FlagGeofence != "ok" {
 			t.Errorf("flag_geofence = %v, esperado ok", resp.Checkin.FlagGeofence)
 		}
@@ -136,7 +140,7 @@ func TestCheckin(t *testing.T) {
 	})
 
 	t.Run("fora do raio marca desvio_rota", func(t *testing.T) {
-		body := c.checkinBody(turno.ID, "padrao", base.Add(1*time.Minute))
+		body := c.checkinBody(turno.ID, SenhaOK, base.Add(1*time.Minute))
 		body["latitude"] = postoLat + 0.01 // ~1.1 km
 		var resp model.CheckinResponse
 		c.e.reqJSON(http.MethodPost, "/api/v1/turnos/checkin", c.vigiaToken, body, http.StatusOK, &resp)
@@ -148,14 +152,14 @@ func TestCheckin(t *testing.T) {
 	t.Run("check-in alem da janela marca atrasado (A2)", func(t *testing.T) {
 		var resp model.CheckinResponse
 		c.e.reqJSON(http.MethodPost, "/api/v1/turnos/checkin", c.vigiaToken,
-			c.checkinBody(turno.ID, "padrao", base.Add(45*time.Minute)), http.StatusOK, &resp)
+			c.checkinBody(turno.ID, SenhaOK, base.Add(45*time.Minute)), http.StatusOK, &resp)
 		if !resp.Atrasado {
 			t.Error("check-in 45 min apos o anterior (intervalo 30) nao marcou atrasado")
 		}
 	})
 
 	t.Run("device diferente retorna 403 (A4)", func(t *testing.T) {
-		body := c.checkinBody(turno.ID, "padrao", base.Add(46*time.Minute))
+		body := c.checkinBody(turno.ID, SenhaOK, base.Add(46*time.Minute))
 		body["device_id"] = "device-clonado"
 		status, _ := c.e.request(http.MethodPost, "/api/v1/turnos/checkin", c.vigiaToken, body)
 		if status != http.StatusForbidden {
@@ -163,17 +167,17 @@ func TestCheckin(t *testing.T) {
 		}
 	})
 
-	t.Run("coacao gera alerta e status critico com resposta normal", func(t *testing.T) {
+	t.Run("senha de emergencia gera alerta e status critico com resposta normal", func(t *testing.T) {
 		var resp model.CheckinResponse
 		c.e.reqJSON(http.MethodPost, "/api/v1/turnos/checkin", c.vigiaToken,
-			c.checkinBody(turno.ID, "coacao", base.Add(47*time.Minute)), http.StatusOK, &resp)
+			c.checkinBody(turno.ID, SenhaEmergencia, base.Add(47*time.Minute)), http.StatusOK, &resp)
 
 		det := c.getTurno(turno.ID)
 		if det.Status != "critico" {
-			t.Errorf("status do turno apos coacao = %q, esperado critico", det.Status)
+			t.Errorf("status do turno apos senha de emergencia = %q, esperado critico", det.Status)
 		}
-		if c.contarAlertas("coacao") == 0 {
-			t.Error("coacao nao gerou alerta")
+		if c.contarAlertas("senha_emergencia") == 0 {
+			t.Error("senha de emergencia nao gerou alerta")
 		}
 	})
 }
@@ -202,7 +206,7 @@ func TestFinalizarESabotagem(t *testing.T) {
 		var fin model.Turno
 		c.e.reqJSON(http.MethodPost, "/api/v1/turnos/finalizar", c.vigiaToken, map[string]any{
 			"turno_id": turno.ID.String(), "device_id": c.deviceID,
-			"latitude": postoLat, "longitude": postoLon, "timestamp": nowRFC3339(),
+			"latitude": postoLat, "longitude": postoLon, "senha": SenhaOK, "timestamp": nowRFC3339(),
 		}, http.StatusOK, &fin)
 		if fin.Status != "finalizado" || fin.FimReal == nil {
 			t.Errorf("turno nao finalizado corretamente: status=%q fim_real=%v", fin.Status, fin.FimReal)
@@ -211,18 +215,18 @@ func TestFinalizarESabotagem(t *testing.T) {
 		det := c.getTurno(turno.ID)
 		var temFinalizacao bool
 		for _, ck := range det.Checkins {
-			if ck.TipoSenha == "finalizacao" {
+			if ck.Evento == "finalizacao" {
 				temFinalizacao = true
 			}
 		}
 		if !temFinalizacao {
-			t.Error("finalizacao nao gravou check-in tipo finalizacao")
+			t.Error("finalizacao nao gravou check-in de evento finalizacao")
 		}
 	})
 
 	t.Run("checkin em turno finalizado retorna 409", func(t *testing.T) {
 		status, _ := c.e.request(http.MethodPost, "/api/v1/turnos/checkin", c.vigiaToken,
-			c.checkinBody(turno.ID, "padrao", time.Now()))
+			c.checkinBody(turno.ID, SenhaOK, time.Now()))
 		if status != http.StatusConflict {
 			t.Errorf("status = %d, esperado 409", status)
 		}
@@ -234,15 +238,15 @@ func TestLoteOffline(t *testing.T) {
 	turno := c.iniciarTurno()
 	base := time.Now().Add(-30 * time.Minute)
 
-	item := func(clienteID, tipo string, ts time.Time) map[string]any {
-		b := c.checkinBody(turno.ID, tipo, ts)
+	item := func(clienteID, senha string, ts time.Time) map[string]any {
+		b := c.checkinBody(turno.ID, senha, ts)
 		b["cliente_checkin_id"] = clienteID
 		return b
 	}
 	id1, id2 := "0d4de1a1-0000-4000-8000-000000000001", "0d4de1a1-0000-4000-8000-000000000002"
 	lote := []map[string]any{
-		item(id1, "padrao", base),
-		item(id2, "padrao", base.Add(15*time.Minute)),
+		item(id1, SenhaOK, base),
+		item(id2, SenhaOK, base.Add(15*time.Minute)),
 	}
 
 	contarCheckins := func() int {
@@ -254,15 +258,18 @@ func TestLoteOffline(t *testing.T) {
 		return n
 	}
 
+	// iniciarTurno ja grava 1 checkin de evento "inicio"; +2 do lote = 3.
+	const checkinsAposIniciarETurno = 3
+
 	c.e.reqJSON(http.MethodPost, "/api/v1/checkins/lote", c.vigiaToken, lote, http.StatusOK, nil)
 	antes := contarCheckins()
-	if antes != 2 {
-		t.Fatalf("lote inicial gravou %d checkins, esperado 2", antes)
+	if antes != checkinsAposIniciarETurno {
+		t.Fatalf("lote inicial gravou %d checkins, esperado %d (1 de inicio + 2 do lote)", antes, checkinsAposIniciarETurno)
 	}
 
 	t.Run("reenvio do lote e idempotente", func(t *testing.T) {
 		c.e.reqJSON(http.MethodPost, "/api/v1/checkins/lote", c.vigiaToken, lote, http.StatusOK, nil)
-		if depois := contarCheckins(); depois != 2 {
+		if depois := contarCheckins(); depois != checkinsAposIniciarETurno {
 			t.Errorf("reenvio duplicou checkins: %d", depois)
 		}
 	})
@@ -277,7 +284,7 @@ func TestLoteOffline(t *testing.T) {
 
 		// lote sincronizado cobrindo o gap ate agora
 		c.e.reqJSON(http.MethodPost, "/api/v1/checkins/lote", c.vigiaToken, []map[string]any{
-			item("0d4de1a1-0000-4000-8000-000000000003", "padrao", time.Now()),
+			item("0d4de1a1-0000-4000-8000-000000000003", SenhaOK, time.Now()),
 		}, http.StatusOK, nil)
 
 		var status string
@@ -290,9 +297,9 @@ func TestLoteOffline(t *testing.T) {
 		}
 	})
 
-	t.Run("coacao em lote deixa turno critico", func(t *testing.T) {
+	t.Run("senha de emergencia em lote deixa turno critico", func(t *testing.T) {
 		c.e.reqJSON(http.MethodPost, "/api/v1/checkins/lote", c.vigiaToken, []map[string]any{
-			item("0d4de1a1-0000-4000-8000-000000000004", "coacao", time.Now()),
+			item("0d4de1a1-0000-4000-8000-000000000004", SenhaEmergencia, time.Now()),
 		}, http.StatusOK, nil)
 		if det := c.getTurno(turno.ID); det.Status != "critico" {
 			t.Errorf("status = %q, esperado critico", det.Status)
@@ -321,7 +328,7 @@ func TestRevogarEReassociar(t *testing.T) {
 
 	t.Run("checkin do device revogado retorna 403", func(t *testing.T) {
 		status, raw := c.e.request(http.MethodPost, "/api/v1/turnos/checkin", c.vigiaToken,
-			c.checkinBody(turno.ID, "padrao", time.Now()))
+			c.checkinBody(turno.ID, SenhaOK, time.Now()))
 		if status != http.StatusForbidden || !strings.Contains(string(raw), "revogada") {
 			t.Errorf("status = %d (corpo %s), esperado 403 sessao revogada", status, raw)
 		}
@@ -357,7 +364,7 @@ func TestRevogarEReassociar(t *testing.T) {
 		c.deviceID = novoDevice
 		var resp model.CheckinResponse
 		c.e.reqJSON(http.MethodPost, "/api/v1/turnos/checkin", c.vigiaToken,
-			c.checkinBody(turno.ID, "padrao", time.Now()), http.StatusOK, &resp)
+			c.checkinBody(turno.ID, SenhaOK, time.Now()), http.StatusOK, &resp)
 	})
 
 	t.Run("pin nao pode ser reutilizado", func(t *testing.T) {
@@ -373,16 +380,16 @@ func TestAlertasTransicoes(t *testing.T) {
 	c := novoCenario(t)
 	turno := c.iniciarTurno()
 
-	// gera um alerta de coacao
+	// gera um alerta de senha de emergencia
 	c.e.reqJSON(http.MethodPost, "/api/v1/turnos/checkin", c.vigiaToken,
-		c.checkinBody(turno.ID, "coacao", time.Now()), http.StatusOK, nil)
+		c.checkinBody(turno.ID, SenhaEmergencia, time.Now()), http.StatusOK, nil)
 
 	var lista struct {
 		Data []model.Alerta `json:"data"`
 	}
-	c.e.reqJSON(http.MethodGet, "/api/v1/alertas?tipo=coacao", c.adminToken, nil, http.StatusOK, &lista)
+	c.e.reqJSON(http.MethodGet, "/api/v1/alertas?tipo=senha_emergencia", c.adminToken, nil, http.StatusOK, &lista)
 	if len(lista.Data) == 0 {
-		t.Fatal("alerta de coacao nao encontrado")
+		t.Fatal("alerta de senha de emergencia nao encontrado")
 	}
 	alertaID := lista.Data[0].ID.String()
 

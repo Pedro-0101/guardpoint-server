@@ -91,6 +91,9 @@ definitions:
         type: string
       empresa_id:
         type: string
+      evento:
+        description: inicio | checkin | finalizacao | sabotagem
+        type: string
       flag_geofence:
         type: string
       id:
@@ -101,11 +104,14 @@ definitions:
         type: number
       origem_rede:
         type: string
+      senha_vigia_id:
+        type: string
       timestamp_criacao:
         type: string
       timestamp_recebimento:
         type: string
       tipo_senha:
+        description: ok | emergencia | customizada (nil p/ sabotagem)
         type: string
       turno_id:
         type: string
@@ -120,14 +126,11 @@ definitions:
         type: number
       longitude:
         type: number
-      timestamp:
+      senha:
+        maxLength: 6
+        minLength: 4
         type: string
-      tipo_senha:
-        enum:
-        - padrao
-        - coacao
-        - finalizacao
-        - sabotagem
+      timestamp:
         type: string
       turno_id:
         type: string
@@ -135,8 +138,8 @@ definitions:
     - device_id
     - latitude
     - longitude
+    - senha
     - timestamp
-    - tipo_senha
     - turno_id
     type: object
   model.CheckinResponse:
@@ -284,6 +287,27 @@ definitions:
     - latitude
     - longitude
     - nome
+    type: object
+  model.CreateSenhaVigiaRequest:
+    properties:
+      codigo:
+        maxLength: 6
+        minLength: 4
+        type: string
+      descricao:
+        maxLength: 255
+        type: string
+      nivel_escalonamento_id:
+        type: string
+      tipo:
+        enum:
+        - ok
+        - emergencia
+        - customizada
+        type: string
+    required:
+    - codigo
+    - tipo
     type: object
   model.CreateSubstituicaoRequest:
     properties:
@@ -434,6 +458,10 @@ definitions:
         type: number
       longitude:
         type: number
+      senha:
+        maxLength: 6
+        minLength: 4
+        type: string
       timestamp:
         type: string
       turno_id:
@@ -442,6 +470,7 @@ definitions:
     - device_id
     - latitude
     - longitude
+    - senha
     - timestamp
     - turno_id
     type: object
@@ -453,11 +482,22 @@ definitions:
         maximum: 120
         minimum: 1
         type: integer
+      latitude:
+        type: number
+      longitude:
+        type: number
       posto_id:
+        type: string
+      senha:
+        maxLength: 6
+        minLength: 4
         type: string
     required:
     - device_id
+    - latitude
+    - longitude
     - posto_id
+    - senha
     type: object
   model.LoginRequest:
     properties:
@@ -583,6 +623,29 @@ definitions:
       mensagem:
         type: string
       status:
+        type: string
+    type: object
+  model.SenhaVigia:
+    properties:
+      codigo:
+        type: string
+      created_at:
+        type: string
+      descricao:
+        type: string
+      empresa_id:
+        type: string
+      id:
+        type: string
+      nivel_escalonamento_id:
+        description: nil = nivel maximo dinamico
+        type: string
+      tipo:
+        description: ok | emergencia | customizada
+        type: string
+      updated_at:
+        type: string
+      usuario_id:
         type: string
     type: object
   model.Substituicao:
@@ -784,6 +847,21 @@ definitions:
         maximum: 5000
         minimum: 10
         type: integer
+    type: object
+  model.UpdateSenhaVigiaRequest:
+    properties:
+      codigo:
+        maxLength: 6
+        minLength: 4
+        type: string
+      descricao:
+        maxLength: 255
+        type: string
+      nivel_dinamico:
+        description: true = forca nivel_escalonamento_id = NULL
+        type: boolean
+      nivel_escalonamento_id:
+        type: string
     type: object
   model.UpdateSubstituicaoRequest:
     properties:
@@ -1344,6 +1422,12 @@ paths:
       responses:
         "204":
           description: sem conteudo
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
         "500":
           description: Internal Server Error
           schema:
@@ -2385,6 +2469,148 @@ paths:
               type: string
             type: object
       summary: Atualiza um usuario (somente admin)
+      tags:
+      - usuarios
+  /usuarios/{id}/senhas:
+    get:
+      parameters:
+      - description: ID do usuario/vigia (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.SenhaVigia'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Lista as senhas cadastradas para um vigia (somente admin)
+      tags:
+      - usuarios
+    post:
+      parameters:
+      - description: ID do usuario/vigia (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados da senha
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.CreateSenhaVigiaRequest'
+      responses:
+        "201":
+          description: Created
+          schema:
+            $ref: '#/definitions/model.SenhaVigia'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Cria uma senha para um vigia (somente admin)
+      tags:
+      - usuarios
+  /usuarios/{id}/senhas/{senhaId}:
+    delete:
+      parameters:
+      - description: ID do usuario/vigia (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: ID da senha (uuid)
+        in: path
+        name: senhaId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "409":
+          description: Conflict
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Remove uma senha customizada de um vigia (somente admin)
+      tags:
+      - usuarios
+    put:
+      parameters:
+      - description: ID do usuario/vigia (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: ID da senha (uuid)
+        in: path
+        name: senhaId
+        required: true
+        type: string
+      - description: Campos a atualizar
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateSenhaVigiaRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.SenhaVigia'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Atualiza uma senha de um vigia (somente admin)
       tags:
       - usuarios
 produces:

@@ -55,6 +55,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 	configAlertaEmergenciaRepo := repository.NewConfigAlertaEmergenciaRepository(pool)
 	escalaRepo := repository.NewEscalaRepository(pool)
 	substituicaoRepo := repository.NewSubstituicaoRepository(pool)
+	senhaVigiaRepo := repository.NewSenhaVigiaRepository(pool)
 
 	authService := service.NewAuthService(jwtService, userRepo, empresaRepo, sessaoDispositivoRepo)
 	authHandler := handler.NewAuthHandler(authService)
@@ -64,9 +65,12 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 
 	alertaService := service.NewAlertaService(alertaRepo, configEscalonamentoRepo, configAlertaEmergenciaRepo, turnoRepo, checkinRepo, userRepo, hub)
 
-	turnoService := service.NewTurnoService(turnoRepo, checkinRepo, postoRepo, userRepo, sessaoDispositivoRepo, escalaRepo, substituicaoRepo, alertaService, hub)
+	turnoService := service.NewTurnoService(turnoRepo, checkinRepo, postoRepo, userRepo, sessaoDispositivoRepo, escalaRepo, substituicaoRepo, senhaVigiaRepo, alertaService, hub)
 	syncReconciler := worker.NewSyncReconciler(alertaRepo, checkinRepo, turnoRepo, hub)
 	turnoHandler := handler.NewTurnoHandler(turnoService, syncReconciler)
+
+	senhaVigiaService := service.NewSenhaVigiaService(senhaVigiaRepo, userRepo, configEscalonamentoRepo)
+	senhaVigiaHandler := handler.NewSenhaVigiaHandler(senhaVigiaService)
 
 	usuarioService := service.NewUsuarioService(userRepo)
 	usuarioHandler := handler.NewUsuarioHandler(usuarioService)
@@ -79,7 +83,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 	escalaService := service.NewEscalaService(escalaRepo)
 	escalaHandler := handler.NewEscalaHandler(escalaService)
 
-	empresaService := service.NewEmpresaService(empresaRepo)
+	empresaService := service.NewEmpresaService(empresaRepo, configEscalonamentoRepo)
 	empresaHandler := handler.NewEmpresaHandler(empresaService)
 
 	substituicaoService := service.NewSubstituicaoService(substituicaoRepo)
@@ -161,6 +165,13 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 				r.Get("/{id}", usuarioHandler.GetByID)
 				r.Put("/{id}", usuarioHandler.Update)
 				r.Delete("/{id}", usuarioHandler.Delete)
+
+				r.Route("/{id}/senhas", func(r chi.Router) {
+					r.Get("/", senhaVigiaHandler.List)
+					r.Post("/", senhaVigiaHandler.Create)
+					r.Put("/{senhaId}", senhaVigiaHandler.Update)
+					r.Delete("/{senhaId}", senhaVigiaHandler.Delete)
+				})
 			})
 
 			r.Route("/alertas", func(r chi.Router) {

@@ -245,6 +245,7 @@ func (h *AlertaHandler) UpdateEscalonamento(w http.ResponseWriter, r *http.Reque
 // @Tags         config
 // @Param        id path string true "ID da configuracao (uuid)"
 // @Success      204 "sem conteudo"
+// @Failure      409 {object} map[string]string
 // @Failure      500 {object} map[string]string
 // @Router       /config/escalonamento/{id} [delete]
 func (h *AlertaHandler) DeleteEscalonamento(w http.ResponseWriter, r *http.Request) {
@@ -252,6 +253,10 @@ func (h *AlertaHandler) DeleteEscalonamento(w http.ResponseWriter, r *http.Reque
 	configID := chi.URLParam(r, "id")
 
 	if err := h.alertaService.DeleteEscalonamento(r.Context(), empresaID, configID); err != nil {
+		if errors.Is(err, service.ErrNivelEscalonamentoEmUso) {
+			writeError(w, http.StatusConflict, "nivel de escalonamento em uso por uma senha de vigia")
+			return
+		}
 		slog.Error("delete escalonamento failed", "error", err)
 		writeError(w, http.StatusInternalServerError, "erro ao deletar configuracao")
 		return

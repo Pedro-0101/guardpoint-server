@@ -22,26 +22,26 @@ func NewCheckinRepository(db *pgxpool.Pool) *CheckinRepository {
 
 func (r *CheckinRepository) Create(ctx context.Context, c *model.Checkin) error {
 	query := `
-		INSERT INTO checkins (turno_id, empresa_id, latitude, longitude, timestamp_criacao, tipo_senha, flag_geofence, origem_rede, cliente_checkin_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO checkins (turno_id, empresa_id, latitude, longitude, timestamp_criacao, evento, tipo_senha, senha_vigia_id, flag_geofence, origem_rede, cliente_checkin_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id, timestamp_recebimento, created_at
 	`
 	return r.db.QueryRow(ctx, query,
 		c.TurnoID, c.EmpresaID, c.Latitude, c.Longitude,
-		c.TimestampCriacao, c.TipoSenha, c.FlagGeofence, c.OrigemRede, c.ClienteCheckinID,
+		c.TimestampCriacao, c.Evento, c.TipoSenha, c.SenhaVigiaID, c.FlagGeofence, c.OrigemRede, c.ClienteCheckinID,
 	).Scan(&c.ID, &c.TimestampRecebimento, &c.CreatedAt)
 }
 
 func (r *CheckinRepository) CreateIdempotent(ctx context.Context, c *model.Checkin) (bool, error) {
 	query := `
-		INSERT INTO checkins (turno_id, empresa_id, latitude, longitude, timestamp_criacao, tipo_senha, flag_geofence, origem_rede, cliente_checkin_id)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+		INSERT INTO checkins (turno_id, empresa_id, latitude, longitude, timestamp_criacao, evento, tipo_senha, senha_vigia_id, flag_geofence, origem_rede, cliente_checkin_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		ON CONFLICT ON CONSTRAINT uq_checkins_cliente DO NOTHING
 		RETURNING id, timestamp_recebimento, created_at
 	`
 	err := r.db.QueryRow(ctx, query,
 		c.TurnoID, c.EmpresaID, c.Latitude, c.Longitude,
-		c.TimestampCriacao, c.TipoSenha, c.FlagGeofence, c.OrigemRede, c.ClienteCheckinID,
+		c.TimestampCriacao, c.Evento, c.TipoSenha, c.SenhaVigiaID, c.FlagGeofence, c.OrigemRede, c.ClienteCheckinID,
 	).Scan(&c.ID, &c.TimestampRecebimento, &c.CreatedAt)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -55,7 +55,7 @@ func (r *CheckinRepository) CreateIdempotent(ctx context.Context, c *model.Check
 func (r *CheckinRepository) FindUltimoByTurno(ctx context.Context, turnoID uuid.UUID) (*model.Checkin, error) {
 	query := `
 		SELECT id, turno_id, empresa_id, latitude, longitude, timestamp_criacao,
-		       timestamp_recebimento, tipo_senha, flag_geofence, origem_rede, cliente_checkin_id, created_at
+		       timestamp_recebimento, evento, tipo_senha, senha_vigia_id, flag_geofence, origem_rede, cliente_checkin_id, created_at
 		FROM checkins
 		WHERE turno_id = $1
 		ORDER BY timestamp_criacao DESC
@@ -64,7 +64,7 @@ func (r *CheckinRepository) FindUltimoByTurno(ctx context.Context, turnoID uuid.
 	var c model.Checkin
 	err := r.db.QueryRow(ctx, query, turnoID).Scan(
 		&c.ID, &c.TurnoID, &c.EmpresaID, &c.Latitude, &c.Longitude,
-		&c.TimestampCriacao, &c.TimestampRecebimento, &c.TipoSenha,
+		&c.TimestampCriacao, &c.TimestampRecebimento, &c.Evento, &c.TipoSenha, &c.SenhaVigiaID,
 		&c.FlagGeofence, &c.OrigemRede, &c.ClienteCheckinID, &c.CreatedAt,
 	)
 	if err != nil {
@@ -89,7 +89,7 @@ func (r *CheckinRepository) CountByTurnoHoje(ctx context.Context, turnoID uuid.U
 func (r *CheckinRepository) ListByTurno(ctx context.Context, turnoID uuid.UUID) ([]model.Checkin, error) {
 	query := `
 		SELECT id, turno_id, empresa_id, latitude, longitude, timestamp_criacao,
-		       timestamp_recebimento, tipo_senha, flag_geofence, origem_rede, cliente_checkin_id, created_at
+		       timestamp_recebimento, evento, tipo_senha, senha_vigia_id, flag_geofence, origem_rede, cliente_checkin_id, created_at
 		FROM checkins
 		WHERE turno_id = $1
 		ORDER BY timestamp_criacao ASC
@@ -105,7 +105,7 @@ func (r *CheckinRepository) ListByTurno(ctx context.Context, turnoID uuid.UUID) 
 		var c model.Checkin
 		if err := rows.Scan(
 			&c.ID, &c.TurnoID, &c.EmpresaID, &c.Latitude, &c.Longitude,
-			&c.TimestampCriacao, &c.TimestampRecebimento, &c.TipoSenha,
+			&c.TimestampCriacao, &c.TimestampRecebimento, &c.Evento, &c.TipoSenha, &c.SenhaVigiaID,
 			&c.FlagGeofence, &c.OrigemRede, &c.ClienteCheckinID, &c.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan checkin: %w", err)

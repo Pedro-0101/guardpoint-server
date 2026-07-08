@@ -4,10 +4,12 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 
 	"github.com/guardpoint/guardpoint-server/internal/model"
 	"github.com/guardpoint/guardpoint-server/internal/repository"
@@ -20,9 +22,14 @@ var (
 	ErrConfigEscalonamentoDuplicado = errors.New("nivel de escalonamento ja existe para esta empresa")
 	ErrUsuarioNaoPertenceAEmpresa   = errors.New("usuario nao pertence a empresa")
 	ErrTipoEmergenciaInvalido       = errors.New("tipo de alerta de emergencia invalido")
+	ErrNivelEscalonamentoEmUso      = errors.New("nivel de escalonamento em uso por uma senha de vigia")
 )
 
-var tiposEmergencia = []string{"coacao", "sabotagem", "no_show"}
+// codigoPgViolacaoFK e o codigo de erro do Postgres para violacao de foreign
+// key (foreign_key_violation).
+const codigoPgViolacaoFK = "23503"
+
+var tiposEmergencia = []string{"sabotagem", "no_show"}
 
 type AlertaService struct {
 	alertaRepo           *repository.AlertaRepository
@@ -89,6 +96,34 @@ func (s *AlertaService) CreateAlertaImediato(ctx context.Context, empresaID, tur
 		return nil, fmt.Errorf("resolver destinatarios: %w", err)
 	}
 
+	return s.criarAlerta(ctx, empresaID, turnoID, tipo, nivel, mensagem, usuarioIDs)
+}
+
+// CreateAlertaPorSenha cria um alerta imediato (sem dedupe, mesmo padrao de
+// CreateAlertaImediato) cujos destinatarios vem do nivel de escalonamento vinculado
+// ao PIN: nivel especifico (senha.NivelEscalonamentoID) ou nivel maximo dinamico da
+// empresa (NivelEscalonamentoID == nil), sempre resolvido em runtime no momento do
+// disparo -- nunca fixado na criacao do PIN.
+func (s *AlertaService) CreateAlertaPorSenha(ctx context.Context, empresaID, turnoID uuid.UUID, tipo string, senha *model.SenhaVigia, mensagem string) (*model.Alerta, error) {
+	var cfg *model.ConfigEscalonamento
+	var err error
+	if senha.NivelEscalonamentoID != nil {
+		cfg, err = s.configRepo.FindByID(ctx, *senha.NivelEscalonamentoID, empresaID)
+	} else {
+		cfg, err = s.configRepo.FindMaiorNivel(ctx, empresaID)
+	}
+	if err != nil {
+		return nil, fmt.Errorf("resolver nivel da senha: %w", err)
+	}
+	var nivel int
+	var usuarioIDs []uuid.UUID
+	if cfg != nil {
+		nivel = cfg.Nivel
+		usuarioIDs = cfg.UsuarioIDs
+	} else {
+		slog.Error("empresa sem nivel de escalonamento configurado; alerta de senha criado sem destinatarios",
+			"empresa_id", empresaID, "turno_id", turnoID)
+	}
 	return s.criarAlerta(ctx, empresaID, turnoID, tipo, nivel, mensagem, usuarioIDs)
 }
 
@@ -338,7 +373,14 @@ func (s *AlertaService) DeleteEscalonamento(ctx context.Context, empresaID, conf
 	if err != nil {
 		return fmt.Errorf("config_id invalido: %w", err)
 	}
-	return s.configRepo.Delete(ctx, parsedConfigID, parsedEmpresaID)
+	if err := s.configRepo.Delete(ctx, parsedConfigID, parsedEmpresaID); err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) && pgErr.Code == codigoPgViolacaoFK {
+			return ErrNivelEscalonamentoEmUso
+		}
+		return err
+	}
+	return nil
 }
 
 func (s *AlertaService) ReplaceEscalonamento(ctx context.Context, empresaID string, reqs []model.CreateConfigEscalonamentoRequest) ([]model.ConfigEscalonamento, error) {

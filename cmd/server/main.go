@@ -30,6 +30,7 @@ import (
 	"github.com/guardpoint/guardpoint-server/internal/db"
 	"github.com/guardpoint/guardpoint-server/internal/repository"
 	"github.com/guardpoint/guardpoint-server/internal/seed"
+	"github.com/guardpoint/guardpoint-server/internal/service"
 )
 
 func main() {
@@ -59,7 +60,9 @@ func main() {
 	if cfg.Env == "development" {
 		empresaRepo := repository.NewEmpresaRepository(pool)
 		userRepo := repository.NewUserRepository(pool)
-		if err := seed.Run(ctx, empresaRepo, userRepo); err != nil {
+		configEscalonamentoRepo := repository.NewConfigEscalonamentoRepository(pool)
+		empresaService := service.NewEmpresaService(empresaRepo, configEscalonamentoRepo)
+		if err := seed.Run(ctx, empresaRepo, userRepo, empresaService); err != nil {
 			slog.Error("seed failed", "error", err)
 			os.Exit(1)
 		}

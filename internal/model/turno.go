@@ -35,9 +35,12 @@ type TurnoDetalhe struct {
 }
 
 type IniciarTurnoRequest struct {
-	PostoID      string `json:"posto_id" validate:"required,uuid"`
-	DeviceID     string `json:"device_id" validate:"required"`
-	IntervaloMin int    `json:"intervalo_min" validate:"omitempty,min=1,max=120"`
+	PostoID      string  `json:"posto_id" validate:"required,uuid"`
+	DeviceID     string  `json:"device_id" validate:"required"`
+	IntervaloMin int     `json:"intervalo_min" validate:"omitempty,min=1,max=120"`
+	Latitude     float64 `json:"latitude" validate:"required,latitude"`
+	Longitude    float64 `json:"longitude" validate:"required,longitude"`
+	Senha        string  `json:"senha" validate:"required,numeric,min=4,max=6"`
 }
 
 type CheckinRequest struct {
@@ -45,7 +48,7 @@ type CheckinRequest struct {
 	DeviceID         string  `json:"device_id" validate:"required"`
 	Latitude         float64 `json:"latitude" validate:"required,latitude"`
 	Longitude        float64 `json:"longitude" validate:"required,longitude"`
-	TipoSenha        string  `json:"tipo_senha" validate:"required,oneof=padrao coacao finalizacao sabotagem"`
+	Senha            string  `json:"senha" validate:"required,numeric,min=4,max=6"`
 	Timestamp        string  `json:"timestamp" validate:"required"`
 	ClienteCheckinID string  `json:"cliente_checkin_id" validate:"omitempty,uuid"`
 }
@@ -55,6 +58,7 @@ type FinalizarTurnoRequest struct {
 	DeviceID  string  `json:"device_id" validate:"required"`
 	Latitude  float64 `json:"latitude" validate:"required,latitude"`
 	Longitude float64 `json:"longitude" validate:"required,longitude"`
+	Senha     string  `json:"senha" validate:"required,numeric,min=4,max=6"`
 	Timestamp string  `json:"timestamp" validate:"required"`
 }
 

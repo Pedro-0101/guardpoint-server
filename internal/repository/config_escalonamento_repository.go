@@ -135,6 +135,54 @@ func (r *ConfigEscalonamentoRepository) FindByEmpresaENivel(ctx context.Context,
 	return &c, nil
 }
 
+// FindByID busca um nivel de escalonamento especifico pertencente a empresa.
+func (r *ConfigEscalonamentoRepository) FindByID(ctx context.Context, id, empresaID uuid.UUID) (*model.ConfigEscalonamento, error) {
+	var c model.ConfigEscalonamento
+	err := r.db.QueryRow(ctx, `
+		SELECT id, empresa_id, nivel, atraso_minutos, created_at
+		FROM config_escalonamento
+		WHERE id = $1 AND empresa_id = $2
+	`, id, empresaID).Scan(&c.ID, &c.EmpresaID, &c.Nivel, &c.AtrasoMinutos, &c.CreatedAt)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, nil
+		}
+		return nil, fmt.Errorf("buscar config escalonamento: %w", err)
+	}
+
+	rows, err := r.db.Query(ctx, `SELECT usuario_id FROM config_escalonamento_destinatarios WHERE config_escalonamento_id = $1`, c.ID)
+	if err != nil {
+		return nil, fmt.Errorf("listar destinatarios: %w", err)
+	}
+	defer rows.Close()
+	for rows.Next() {
+		var usuarioID uuid.UUID
+		if err := rows.Scan(&usuarioID); err != nil {
+			return nil, fmt.Errorf("scan destinatario: %w", err)
+		}
+		c.UsuarioIDs = append(c.UsuarioIDs, usuarioID)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return &c, nil
+}
+
+// FindMaiorNivel retorna a config do MAIOR nivel configurado para a empresa no
+// momento da chamada (resolucao em runtime, nao cacheada). Retorna (nil, nil) se a
+// empresa nao tem nenhum nivel de escalonamento configurado.
+func (r *ConfigEscalonamentoRepository) FindMaiorNivel(ctx context.Context, empresaID uuid.UUID) (*model.ConfigEscalonamento, error) {
+	var maiorNivel *int
+	err := r.db.QueryRow(ctx, `SELECT MAX(nivel) FROM config_escalonamento WHERE empresa_id = $1`, empresaID).Scan(&maiorNivel)
+	if err != nil {
+		return nil, fmt.Errorf("buscar maior nivel de escalonamento: %w", err)
+	}
+	if maiorNivel == nil {
+		return nil, nil
+	}
+	return r.FindByEmpresaENivel(ctx, empresaID, *maiorNivel)
+}
+
 func (r *ConfigEscalonamentoRepository) Update(ctx context.Context, id, empresaID uuid.UUID, c *model.ConfigEscalonamento) error {
 	tx, err := r.db.Begin(ctx)
 	if err != nil {

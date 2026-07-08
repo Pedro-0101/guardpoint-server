@@ -157,6 +157,14 @@ const (
 	postoLon = -46.6333
 )
 
+// Codigos de PIN fixos usados em toda a suite de integracao. novoCenario ja
+// cadastra esses dois PINs obrigatorios (ok/emergencia) para c.vigia antes de
+// qualquer chamada a iniciarTurno/checkinBody.
+const (
+	SenhaOK         = "1234"
+	SenhaEmergencia = "9999"
+)
+
 func novoCenario(t *testing.T) *cenario {
 	t.Helper()
 	e := newEnv(t)
@@ -175,6 +183,11 @@ func novoCenario(t *testing.T) *cenario {
 		deviceID:   "device-vigia-a-01",
 	}
 
+	// PINs obrigatorios do vigia de teste, cadastrados antes de qualquer
+	// iniciarTurno/checkinBody usar seus codigos.
+	c.criarSenhaVigia(c.vigia.ID, "ok", SenhaOK, nil, nil)
+	c.criarSenhaVigia(c.vigia.ID, "emergencia", SenhaEmergencia, nil, nil)
+
 	e.reqJSON(http.MethodPost, "/api/v1/postos", c.adminToken, map[string]any{
 		"nome": "Posto Central", "latitude": postoLat, "longitude": postoLon, "raio_m": 100,
 	}, http.StatusCreated, &c.posto)
@@ -183,6 +196,27 @@ func novoCenario(t *testing.T) *cenario {
 	c.criarEscala(c.vigia.ID, c.posto.ID, time.Now(), 60)
 
 	return c
+}
+
+// criarSenhaVigia cadastra um PIN para o vigia via POST /usuarios/{id}/senhas
+// (rota admin-only). descricao so e obrigatoria para tipo "customizada";
+// nivelID so pode ser setado para "customizada" (nil = nivel maximo dinamico,
+// resolvido em runtime no momento do disparo do alerta).
+func (c *cenario) criarSenhaVigia(usuarioID uuid.UUID, tipo, codigo string, descricao *string, nivelID *uuid.UUID) model.SenhaVigia {
+	c.e.t.Helper()
+	body := map[string]any{
+		"tipo":   tipo,
+		"codigo": codigo,
+	}
+	if descricao != nil {
+		body["descricao"] = *descricao
+	}
+	if nivelID != nil {
+		body["nivel_escalonamento_id"] = nivelID.String()
+	}
+	var senha model.SenhaVigia
+	c.e.reqJSON(http.MethodPost, "/api/v1/usuarios/"+usuarioID.String()+"/senhas", c.adminToken, body, http.StatusCreated, &senha)
+	return senha
 }
 
 func (c *cenario) registrarBiometria(deviceID string) string {
@@ -218,18 +252,40 @@ func (c *cenario) iniciarTurno() model.Turno {
 	var turno model.Turno
 	c.e.reqJSON(http.MethodPost, "/api/v1/turnos/iniciar", c.vigiaToken, map[string]any{
 		"posto_id": c.posto.ID.String(), "device_id": c.deviceID, "intervalo_min": 30,
+		"latitude": postoLat, "longitude": postoLon, "senha": SenhaOK,
 	}, http.StatusCreated, &turno)
 	return turno
 }
 
-func (c *cenario) checkinBody(turnoID uuid.UUID, tipo string, ts time.Time) map[string]any {
+// checkinBody monta o corpo de um checkin/iniciar/finalizar de turno. senha e
+// o codigo do PIN cadastrado (ex.: SenhaOK, SenhaEmergencia, ou o codigo de
+// uma senha customizada) -- nao mais um enum fixo de "tipo_senha".
+func (c *cenario) checkinBody(turnoID uuid.UUID, senha string, ts time.Time) map[string]any {
 	return map[string]any{
-		"turno_id":   turnoID.String(),
-		"device_id":  c.deviceID,
-		"latitude":   postoLat,
-		"longitude":  postoLon,
-		"tipo_senha": tipo,
-		"timestamp":  ts.UTC().Format(time.RFC3339),
+		"turno_id":  turnoID.String(),
+		"device_id": c.deviceID,
+		"latitude":  postoLat,
+		"longitude": postoLon,
+		"senha":     senha,
+		"timestamp": ts.UTC().Format(time.RFC3339),
+	}
+}
+
+// backdatarCheckinInicio move o timestamp_criacao do checkin de evento
+// "inicio" (gravado automaticamente por iniciarTurno) para o passado, simulando
+// um turno que comecou ha `atras` sem nenhuma outra atividade desde entao. Usado
+// pelos testes de atraso/timeout, que dependiam de conseguir "fabricar" o
+// ultimo check-in via checkinBody com timestamp passado -- isso deixou de
+// funcionar porque iniciarTurno agora sempre grava um checkin de inicio com
+// timestamp real (mais recente que qualquer timestamp passado enviado depois),
+// entao getUltimoCheckin (ORDER BY timestamp_criacao DESC) passou a enxergar o
+// checkin de inicio como o mais recente.
+func (c *cenario) backdatarCheckinInicio(turnoID uuid.UUID, atras time.Duration) {
+	c.e.t.Helper()
+	if _, err := c.e.pool.Exec(context.Background(),
+		`UPDATE checkins SET timestamp_criacao = $1 WHERE turno_id = $2 AND evento = 'inicio'`,
+		time.Now().Add(-atras), turnoID); err != nil {
+		c.e.t.Fatalf("backdatar checkin de inicio: %v", err)
 	}
 }
 

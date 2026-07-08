@@ -65,12 +65,12 @@ func TestConfigEscalonamentoDestinatarios(t *testing.T) {
 func TestConfigAlertaEmergencia(t *testing.T) {
 	c := novoCenario(t)
 
-	t.Run("GET inicial retorna os 3 tipos vazios", func(t *testing.T) {
+	t.Run("GET inicial retorna os 2 tipos vazios", func(t *testing.T) {
 		var configs []model.ConfigAlertaEmergencia
 		c.e.reqJSON(http.MethodGet, "/api/v1/config/alertas-emergencia", c.adminToken, nil, http.StatusOK, &configs)
 
-		if len(configs) != 3 {
-			t.Fatalf("configs = %d, esperado 3 (coacao, sabotagem, no_show)", len(configs))
+		if len(configs) != 2 {
+			t.Fatalf("configs = %d, esperado 2 (sabotagem, no_show)", len(configs))
 		}
 		for _, cfg := range configs {
 			if len(cfg.UsuarioIDs) != 0 {
@@ -79,17 +79,28 @@ func TestConfigAlertaEmergencia(t *testing.T) {
 		}
 	})
 
-	t.Run("PUT define destinatarios de coacao", func(t *testing.T) {
+	t.Run("PUT define destinatarios de sabotagem", func(t *testing.T) {
 		gerente := c.e.criarUsuario(c.empresa.ID, "Gerente Emergencia", "gerente.emerg@a.com", "senha123", "admin", true)
 
 		var config model.ConfigAlertaEmergencia
-		c.e.reqJSON(http.MethodPut, "/api/v1/config/alertas-emergencia/coacao", c.adminToken, map[string]any{
+		c.e.reqJSON(http.MethodPut, "/api/v1/config/alertas-emergencia/sabotagem", c.adminToken, map[string]any{
 			"usuario_ids": []string{gerente.ID.String()},
 		}, http.StatusOK, &config)
 
 		if len(config.UsuarioIDs) != 1 || config.UsuarioIDs[0] != gerente.ID {
 			t.Fatalf("usuario_ids = %v, esperado [%s]", config.UsuarioIDs, gerente.ID)
 		}
+	})
+
+	// coacao deixou de ser um tipo de alerta de emergencia com config propria
+	// (Task 6): alertas de senha de emergencia agora usam o mecanismo de PIN
+	// (CreateAlertaPorSenha, destinatarios por nivel de escalonamento), nao
+	// mais config_alerta_emergencia.
+	t.Run("PUT com tipo coacao retorna 400 (nao e mais um tipo valido)", func(t *testing.T) {
+		outro := c.e.criarUsuario(c.empresa.ID, "Outro Coacao", "outro.coacao@a.com", "senha123", "admin", true)
+		c.e.reqJSON(http.MethodPut, "/api/v1/config/alertas-emergencia/coacao", c.adminToken, map[string]any{
+			"usuario_ids": []string{outro.ID.String()},
+		}, http.StatusBadRequest, nil)
 	})
 
 	t.Run("PUT com tipo invalido retorna 400", func(t *testing.T) {
@@ -100,30 +111,154 @@ func TestConfigAlertaEmergencia(t *testing.T) {
 	})
 }
 
-// Alerta imediato (coacao) deve enfileirar PendingAlert com os usuario_ids
-// configurados especificamente para o tipo "coacao", nao os do escalonamento.
-func TestAlertaImediatoUsaDestinatariosPorTipo(t *testing.T) {
+// Alerta de senha de emergencia (PIN "emergencia") deve enfileirar PendingAlert
+// com os usuario_ids do nivel de escalonamento MAXIMO da empresa, ja que a senha
+// "emergencia" nunca tem nivel_escalonamento_id fixo (e sempre resolvido
+// dinamicamente por CreateAlertaPorSenha -- Task 6/7). Isto substitui o antigo
+// TestAlertaImediatoUsaDestinatariosPorTipo, cuja premissa (config_alerta_emergencia
+// por tipo "coacao") nao existe mais.
+func TestAlertaSenhaEmergenciaUsaNivelMaximoDeEscalonamento(t *testing.T) {
 	c := novoCenario(t)
 	turno := c.iniciarTurno()
 
-	gerente := c.e.criarUsuario(c.empresa.ID, "Gerente Coacao", "gerente.coacao@a.com", "senha123", "admin", true)
-	c.e.reqJSON(http.MethodPut, "/api/v1/config/alertas-emergencia/coacao", c.adminToken, map[string]any{
-		"usuario_ids": []string{gerente.ID.String()},
+	supervisor := c.e.criarUsuario(c.empresa.ID, "Supervisor N1", "sup.n1.emerg@a.com", "senha123", "supervisor", true)
+	diretor := c.e.criarUsuario(c.empresa.ID, "Diretor N2", "diretor.n2.emerg@a.com", "senha123", "admin", true)
+	c.e.reqJSON(http.MethodPut, "/api/v1/config/escalonamento", c.adminToken, []map[string]any{
+		{"nivel": 1, "atraso_minutos": 5, "usuario_ids": []string{supervisor.ID.String()}},
+		{"nivel": 2, "atraso_minutos": 15, "usuario_ids": []string{diretor.ID.String()}},
 	}, http.StatusOK, nil)
 
 	c.e.reqJSON(http.MethodPost, "/api/v1/turnos/checkin", c.vigiaToken,
-		c.checkinBody(turno.ID, "coacao", time.Now()), http.StatusOK, nil)
+		c.checkinBody(turno.ID, SenhaEmergencia, time.Now()), http.StatusOK, nil)
 
 	select {
 	case pending := <-c.e.app.AlertaService.AlertChannel():
-		if pending.Alerta.Tipo != "coacao" {
-			t.Fatalf("tipo do alerta = %s, esperado coacao", pending.Alerta.Tipo)
+		if pending.Alerta.Tipo != "senha_emergencia" {
+			t.Fatalf("tipo do alerta = %s, esperado senha_emergencia", pending.Alerta.Tipo)
 		}
-		if len(pending.UsuarioIDs) != 1 || pending.UsuarioIDs[0] != gerente.ID {
-			t.Fatalf("usuario_ids = %v, esperado [%s]", pending.UsuarioIDs, gerente.ID)
+		// nivel maximo (2, diretor) deve ser o destinatario, nao o nivel 1 (supervisor)
+		if len(pending.UsuarioIDs) != 1 || pending.UsuarioIDs[0] != diretor.ID {
+			t.Fatalf("usuario_ids = %v, esperado [%s] (nivel maximo)", pending.UsuarioIDs, diretor.ID)
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("nenhum PendingAlert recebido no canal em 2s")
+	}
+}
+
+// PIN customizado vinculado a um nivel de escalonamento ESPECIFICO deve
+// notificar apenas os destinatarios daquele nivel, mesmo quando um nivel
+// diferente (maior) existe e seria escolhido pela resolucao dinamica default.
+func TestAlertaSenhaCustomizadaUsaNivelEspecificoNaoOMaximo(t *testing.T) {
+	c := novoCenario(t)
+	turno := c.iniciarTurno()
+
+	nivel1User := c.e.criarUsuario(c.empresa.ID, "Nivel1 User", "nivel1.custom@a.com", "senha123", "supervisor", true)
+	nivelMaxUser := c.e.criarUsuario(c.empresa.ID, "NivelMax User", "nivelmax.custom@a.com", "senha123", "admin", true)
+
+	var nivel1, nivelMax model.ConfigEscalonamento
+	c.e.reqJSON(http.MethodPost, "/api/v1/config/escalonamento", c.adminToken, map[string]any{
+		"nivel": 1, "atraso_minutos": 5, "usuario_ids": []string{nivel1User.ID.String()},
+	}, http.StatusCreated, &nivel1)
+	c.e.reqJSON(http.MethodPost, "/api/v1/config/escalonamento", c.adminToken, map[string]any{
+		"nivel": 2, "atraso_minutos": 15, "usuario_ids": []string{nivelMaxUser.ID.String()},
+	}, http.StatusCreated, &nivelMax)
+
+	desc := "Suspeita de invasao"
+	senhaCustom := c.criarSenhaVigia(c.vigia.ID, "customizada", "5555", &desc, &nivel1.ID)
+
+	c.e.reqJSON(http.MethodPost, "/api/v1/turnos/checkin", c.vigiaToken,
+		c.checkinBody(turno.ID, senhaCustom.Codigo, time.Now()), http.StatusOK, nil)
+
+	select {
+	case pending := <-c.e.app.AlertaService.AlertChannel():
+		if pending.Alerta.Tipo != "senha_customizada" {
+			t.Fatalf("tipo do alerta = %s, esperado senha_customizada", pending.Alerta.Tipo)
+		}
+		if len(pending.UsuarioIDs) != 1 || pending.UsuarioIDs[0] != nivel1User.ID {
+			t.Fatalf("usuario_ids = %v, esperado [%s] (nivel especifico do PIN, nao o maximo)", pending.UsuarioIDs, nivel1User.ID)
+		}
+	case <-time.After(2 * time.Second):
+		t.Fatal("nenhum PendingAlert recebido no canal em 2s")
+	}
+
+	det := c.getTurno(turno.ID)
+	if det.Status != "critico" {
+		t.Errorf("status do turno apos senha customizada = %q, esperado critico", det.Status)
+	}
+}
+
+// Vigia sem nenhum PIN cadastrado: iniciar/checkin/finalizar devem prosseguir
+// normalmente (o vigia continua trabalhando mesmo sem PINs configurados pelo
+// admin), sem gerar nenhum alerta e sem marcar o turno como critico.
+func TestTurnoSemPinsConfigurados(t *testing.T) {
+	c := novoCenario(t)
+
+	// vigem novo, sem nenhuma senha cadastrada (novoCenario so cadastra ok/emergencia
+	// para c.vigia, nao para usuarios criados a parte)
+	vigiaSemPin := c.e.criarUsuario(c.empresa.ID, "Vigia Sem Pin", "sempin@a.com", "senha123", "vigia", true)
+	tokenSemPin := c.e.login(vigiaSemPin.Email, "senha123").AccessToken
+	deviceSemPin := "device-sem-pin-01"
+
+	var reg model.BiometricRegisterResponse
+	c.e.reqJSON(http.MethodPost, "/api/v1/auth/biometric/register", tokenSemPin,
+		map[string]string{"device_id": deviceSemPin}, http.StatusCreated, &reg)
+
+	c.criarEscala(vigiaSemPin.ID, c.posto.ID, time.Now(), 60)
+
+	var turno model.Turno
+	c.e.reqJSON(http.MethodPost, "/api/v1/turnos/iniciar", tokenSemPin, map[string]any{
+		"posto_id": c.posto.ID.String(), "device_id": deviceSemPin, "intervalo_min": 30,
+		"latitude": postoLat, "longitude": postoLon, "senha": "0000",
+	}, http.StatusCreated, &turno)
+	if turno.Status != "em_andamento" {
+		t.Fatalf("status apos iniciar sem pin = %q, esperado em_andamento", turno.Status)
+	}
+
+	var checkinResp model.CheckinResponse
+	c.e.reqJSON(http.MethodPost, "/api/v1/turnos/checkin", tokenSemPin, map[string]any{
+		"turno_id": turno.ID.String(), "device_id": deviceSemPin,
+		"latitude": postoLat, "longitude": postoLon, "senha": "0000",
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+	}, http.StatusOK, &checkinResp)
+	if checkinResp.Status != "em_andamento" {
+		t.Errorf("status apos checkin sem pin = %q, esperado em_andamento", checkinResp.Status)
+	}
+
+	var fin model.Turno
+	c.e.reqJSON(http.MethodPost, "/api/v1/turnos/finalizar", tokenSemPin, map[string]any{
+		"turno_id": turno.ID.String(), "device_id": deviceSemPin,
+		"latitude": postoLat, "longitude": postoLon, "senha": "0000",
+		"timestamp": time.Now().UTC().Format(time.RFC3339),
+	}, http.StatusOK, &fin)
+	if fin.Status != "finalizado" {
+		t.Errorf("status apos finalizar sem pin = %q, esperado finalizado", fin.Status)
+	}
+
+	select {
+	case pending := <-c.e.app.AlertaService.AlertChannel():
+		t.Fatalf("alerta inesperado gerado para vigia sem PINs: %+v", pending.Alerta)
+	case <-time.After(300 * time.Millisecond):
+		// esperado: nenhum alerta em fila
+	}
+}
+
+// Nao e possivel deletar um nivel de escalonamento referenciado pelo
+// nivel_escalonamento_id de um PIN customizado (FK protege a integridade da
+// resolucao de destinatarios em runtime).
+func TestDeleteEscalonamentoEmUsoPorSenhaCustomizadaRetorna409(t *testing.T) {
+	c := novoCenario(t)
+
+	var nivel model.ConfigEscalonamento
+	c.e.reqJSON(http.MethodPost, "/api/v1/config/escalonamento", c.adminToken, map[string]any{
+		"nivel": 1, "atraso_minutos": 5, "usuario_ids": []string{c.admin.ID.String()},
+	}, http.StatusCreated, &nivel)
+
+	desc := "Pin vinculado ao nivel"
+	c.criarSenhaVigia(c.vigia.ID, "customizada", "7777", &desc, &nivel.ID)
+
+	status, _ := c.e.request(http.MethodDelete, "/api/v1/config/escalonamento/"+nivel.ID.String(), c.adminToken, nil)
+	if status != http.StatusConflict {
+		t.Fatalf("status = %d, esperado 409 (nivel em uso por senha customizada)", status)
 	}
 }
 
@@ -138,9 +273,9 @@ func TestAlertaAtrasoResolvidoNoCheckin(t *testing.T) {
 		{"nivel": 1, "atraso_minutos": 5, "usuario_ids": []string{supervisor.ID.String()}},
 	}, http.StatusOK, nil)
 
-	// primeiro checkin ha 50 min; intervalo de 30 min => atraso de ~20 min, dispara nivel 1
-	c.e.reqJSON(http.MethodPost, "/api/v1/turnos/checkin", c.vigiaToken,
-		c.checkinBody(turno.ID, "padrao", time.Now().Add(-50*time.Minute)), http.StatusOK, nil)
+	// turno comecou ha 50 min sem nenhuma atividade desde entao; intervalo de 30
+	// min => atraso de ~20 min, dispara nivel 1
+	c.backdatarCheckinInicio(turno.ID, 50*time.Minute)
 
 	c.e.app.TimeoutChecker.CheckOnce(t.Context())
 
@@ -158,7 +293,7 @@ func TestAlertaAtrasoResolvidoNoCheckin(t *testing.T) {
 
 	// vigia finalmente da checkin em dia
 	c.e.reqJSON(http.MethodPost, "/api/v1/turnos/checkin", c.vigiaToken,
-		c.checkinBody(turno.ID, "padrao", time.Now()), http.StatusOK, nil)
+		c.checkinBody(turno.ID, SenhaOK, time.Now()), http.StatusOK, nil)
 
 	c.e.reqJSON(http.MethodGet, "/api/v1/alertas?tipo=atraso_n1&status=aberto", c.adminToken, nil, http.StatusOK, &abertos)
 	if abertos.Total != 0 {

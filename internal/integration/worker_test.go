@@ -27,9 +27,9 @@ func TestTimeoutCheckerAtrasos(t *testing.T) {
 		{"nivel": 3, "atraso_minutos": 60, "usuario_ids": []string{diretor.ID.String()}},
 	}, http.StatusOK, nil)
 
-	// ultimo check-in ha 50 min; intervalo de 30 min => atraso de ~20 min
-	c.e.reqJSON(http.MethodPost, "/api/v1/turnos/checkin", c.vigiaToken,
-		c.checkinBody(turno.ID, "padrao", time.Now().Add(-50*time.Minute)), http.StatusOK, nil)
+	// turno comecou ha 50 min sem nenhuma atividade desde entao; intervalo de 30
+	// min => atraso de ~20 min
+	c.backdatarCheckinInicio(turno.ID, 50*time.Minute)
 
 	c.e.app.TimeoutChecker.CheckOnce(t.Context())
 

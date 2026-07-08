@@ -1,0 +1,2 @@
+-- Rollback intencionalmente no-op: nao e seguro apagar niveis de escalonamento
+-- que o admin possa ter reconfigurado manualmente apos o deploy desta migration.
