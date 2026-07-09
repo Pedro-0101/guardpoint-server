@@ -15,11 +15,14 @@ import (
 )
 
 var (
-	ErrAlertaNaoEncontrado        = errors.New("alerta nao encontrado")
-	ErrAlertaTransicaoInvalida    = errors.New("transicao de status do alerta invalida")
-	ErrUsuarioNaoPertenceAEmpresa = errors.New("usuario nao pertence a empresa")
-	ErrUsuarioNaoAdmin            = errors.New("apenas administradores podem ser destinatarios de alertas")
-	ErrTipoEmergenciaInvalido     = errors.New("tipo de alerta de emergencia invalido")
+	ErrAlertaNaoEncontrado                = errors.New("alerta nao encontrado")
+	ErrAlertaTransicaoInvalida            = errors.New("transicao de status do alerta invalida")
+	ErrUsuarioNaoPertenceAEmpresa         = errors.New("usuario nao pertence a empresa")
+	ErrUsuarioNaoAdminOuSupervisor        = errors.New("apenas administradores ou supervisores podem ser destinatarios de alertas")
+	ErrTipoEmergenciaInvalido             = errors.New("tipo de alerta de emergencia invalido")
+	ErrEscalonamentoNaoEncontrado         = errors.New("config escalonamento nao encontrada")
+	ErrEscalonamentoSistemaNaoEditavel    = errors.New("config escalonamento do sistema nao pode ser alterada")
+	ErrEscalonamentoSistemaNaoExcluivel   = errors.New("config escalonamento do sistema nao pode ser excluida")
 )
 
 var tiposEmergencia = []string{"sabotagem", "no_show"}
@@ -119,14 +122,22 @@ func (s *AlertaService) criarAlerta(ctx context.Context, empresaID, turnoID uuid
 }
 
 func (s *AlertaService) destinatariosPadrao(ctx context.Context, empresaID uuid.UUID) ([]uuid.UUID, error) {
-	cfg, err := s.configRepo.FindByEmpresa(ctx, empresaID)
+	configs, err := s.configRepo.ListByEmpresa(ctx, empresaID)
 	if err != nil {
 		return nil, err
 	}
-	if cfg == nil {
-		return nil, nil
+
+	visto := make(map[uuid.UUID]bool)
+	var todos []uuid.UUID
+	for _, cfg := range configs {
+		for _, uid := range cfg.UsuarioIDs {
+			if !visto[uid] {
+				visto[uid] = true
+				todos = append(todos, uid)
+			}
+		}
 	}
-	return cfg.UsuarioIDs, nil
+	return todos, nil
 }
 
 func (s *AlertaService) destinatariosPorTipoEmergencia(ctx context.Context, empresaID uuid.UUID, tipo string) ([]uuid.UUID, error) {
@@ -252,7 +263,34 @@ func (s *AlertaService) GetEscalonamento(ctx context.Context, empresaID string) 
 	return s.configRepo.FindByEmpresa(ctx, parsedEmpresaID)
 }
 
-func (s *AlertaService) SaveEscalonamento(ctx context.Context, empresaID string, req model.CreateConfigEscalonamentoRequest) (*model.ConfigEscalonamento, error) {
+func (s *AlertaService) ListEscalonamentos(ctx context.Context, empresaID string) ([]model.ConfigEscalonamento, error) {
+	parsedEmpresaID, err := uuid.Parse(empresaID)
+	if err != nil {
+		return nil, fmt.Errorf("empresa_id invalido: %w", err)
+	}
+	return s.configRepo.ListByEmpresa(ctx, parsedEmpresaID)
+}
+
+func (s *AlertaService) GetEscalonamentoByID(ctx context.Context, empresaID, configID string) (*model.ConfigEscalonamento, error) {
+	parsedEmpresaID, err := uuid.Parse(empresaID)
+	if err != nil {
+		return nil, fmt.Errorf("empresa_id invalido: %w", err)
+	}
+	parsedConfigID, err := uuid.Parse(configID)
+	if err != nil {
+		return nil, fmt.Errorf("config_id invalido: %w", err)
+	}
+	cfg, err := s.configRepo.FindByIDEmpresa(ctx, parsedConfigID, parsedEmpresaID)
+	if err != nil {
+		return nil, err
+	}
+	if cfg == nil {
+		return nil, ErrEscalonamentoNaoEncontrado
+	}
+	return cfg, nil
+}
+
+func (s *AlertaService) CreateEscalonamento(ctx context.Context, empresaID string, req model.CreateConfigEscalonamentoRequest) (*model.ConfigEscalonamento, error) {
 	parsedEmpresaID, err := uuid.Parse(empresaID)
 	if err != nil {
 		return nil, fmt.Errorf("empresa_id invalido: %w", err)
@@ -266,13 +304,107 @@ func (s *AlertaService) SaveEscalonamento(ctx context.Context, empresaID string,
 		EmpresaID:     parsedEmpresaID,
 		AtrasoMinutos: req.AtrasoMinutos,
 		Descricao:     req.Descricao,
+		Sistema:       false,
 		UsuarioIDs:    req.UsuarioIDs,
 	}
 
-	if err := s.configRepo.Upsert(ctx, c); err != nil {
-		return nil, fmt.Errorf("salvar config escalonamento: %w", err)
+	if err := s.configRepo.Create(ctx, c); err != nil {
+		return nil, fmt.Errorf("criar config escalonamento: %w", err)
 	}
 	return c, nil
+}
+
+func (s *AlertaService) UpdateEscalonamento(ctx context.Context, empresaID, configID string, req model.UpdateConfigEscalonamentoRequest) (*model.ConfigEscalonamento, error) {
+	parsedEmpresaID, err := uuid.Parse(empresaID)
+	if err != nil {
+		return nil, fmt.Errorf("empresa_id invalido: %w", err)
+	}
+	parsedConfigID, err := uuid.Parse(configID)
+	if err != nil {
+		return nil, fmt.Errorf("config_id invalido: %w", err)
+	}
+
+	existing, err := s.configRepo.FindByIDEmpresa(ctx, parsedConfigID, parsedEmpresaID)
+	if err != nil {
+		return nil, err
+	}
+	if existing == nil {
+		return nil, ErrEscalonamentoNaoEncontrado
+	}
+	if existing.Sistema {
+		return nil, ErrEscalonamentoSistemaNaoEditavel
+	}
+
+	if err := s.validarUsuariosDaEmpresa(ctx, parsedEmpresaID, req.UsuarioIDs); err != nil {
+		return nil, err
+	}
+
+	c := &model.ConfigEscalonamento{
+		ID:            parsedConfigID,
+		EmpresaID:     parsedEmpresaID,
+		AtrasoMinutos: req.AtrasoMinutos,
+		Descricao:     req.Descricao,
+		UsuarioIDs:    req.UsuarioIDs,
+	}
+
+	if err := s.configRepo.Update(ctx, c); err != nil {
+		return nil, fmt.Errorf("atualizar config escalonamento: %w", err)
+	}
+	return c, nil
+}
+
+func (s *AlertaService) UpdateEscalonamentoUsuarios(ctx context.Context, empresaID, configID string, req model.UpdateConfigEscalonamentoUsuariosRequest) (*model.ConfigEscalonamento, error) {
+	parsedEmpresaID, err := uuid.Parse(empresaID)
+	if err != nil {
+		return nil, fmt.Errorf("empresa_id invalido: %w", err)
+	}
+	parsedConfigID, err := uuid.Parse(configID)
+	if err != nil {
+		return nil, fmt.Errorf("config_id invalido: %w", err)
+	}
+
+	existing, err := s.configRepo.FindByIDEmpresa(ctx, parsedConfigID, parsedEmpresaID)
+	if err != nil {
+		return nil, err
+	}
+	if existing == nil {
+		return nil, ErrEscalonamentoNaoEncontrado
+	}
+
+	if err := s.validarUsuariosDaEmpresa(ctx, parsedEmpresaID, req.UsuarioIDs); err != nil {
+		return nil, err
+	}
+
+	if err := s.configRepo.UpdateUsuarios(ctx, parsedConfigID, req.UsuarioIDs); err != nil {
+		return nil, fmt.Errorf("atualizar destinatarios: %w", err)
+	}
+
+	existing.UsuarioIDs = req.UsuarioIDs
+	return existing, nil
+}
+
+func (s *AlertaService) DeleteEscalonamento(ctx context.Context, empresaID, configID string) error {
+	parsedEmpresaID, err := uuid.Parse(empresaID)
+	if err != nil {
+		return fmt.Errorf("empresa_id invalido: %w", err)
+	}
+	parsedConfigID, err := uuid.Parse(configID)
+	if err != nil {
+		return fmt.Errorf("config_id invalido: %w", err)
+	}
+
+	existing, err := s.configRepo.FindByIDEmpresa(ctx, parsedConfigID, parsedEmpresaID)
+	if err != nil {
+		return err
+	}
+	if existing == nil {
+		return ErrEscalonamentoNaoEncontrado
+	}
+	if existing.Sistema {
+		return ErrEscalonamentoSistemaNaoExcluivel
+	}
+
+	return s.configRepo.DeleteByID(ctx, parsedConfigID, parsedEmpresaID)
 }
 
 func (s *AlertaService) GetAlertasEmergencia(ctx context.Context, empresaID string) ([]model.ConfigAlertaEmergencia, error) {
@@ -349,8 +481,8 @@ func (s *AlertaService) validarUsuariosDaEmpresa(ctx context.Context, empresaID 
 			}
 			return fmt.Errorf("verificar usuario %s: %w", usuarioID, err)
 		}
-		if user.Role != "admin" {
-			return fmt.Errorf("%w: %s", ErrUsuarioNaoAdmin, usuarioID)
+		if user.Role != "admin" && user.Role != "supervisor" {
+			return fmt.Errorf("%w: %s", ErrUsuarioNaoAdminOuSupervisor, usuarioID)
 		}
 	}
 	return nil

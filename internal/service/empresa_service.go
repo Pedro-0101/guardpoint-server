@@ -38,7 +38,8 @@ func (s *EmpresaService) ProvisionarPadrao(ctx context.Context, empresaID, admin
 	cfg := &model.ConfigEscalonamento{
 		EmpresaID:     empresaID,
 		AtrasoMinutos: 0,
-		Descricao:     "Emergencia nao especificada",
+		Descricao:     "Emergencia nao justificada",
+		Sistema:       true,
 		UsuarioIDs:    []uuid.UUID{adminID},
 	}
 	return s.configEscalonamentoRepo.Create(ctx, cfg)

@@ -604,12 +604,101 @@ const docTemplate = `{
                 "tags": [
                     "config"
                 ],
-                "summary": "Retorna a configuracao de escalonamento de alertas (somente admin)",
+                "summary": "Lista todas as configs de escalonamento da empresa (somente admin)",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.ConfigEscalonamento"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "post": {
+                "tags": [
+                    "config"
+                ],
+                "summary": "Cria uma nova config de escalonamento (somente admin)",
+                "parameters": [
+                    {
+                        "description": "Dados da configuracao",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.CreateConfigEscalonamentoRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "$ref": "#/definitions/model.ConfigEscalonamento"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/config/escalonamento/{id}": {
+            "get": {
+                "tags": [
+                    "config"
+                ],
+                "summary": "Retorna uma config de escalonamento por ID (somente admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da config (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/model.ConfigEscalonamento"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
                         }
                     },
                     "500": {
@@ -627,15 +716,22 @@ const docTemplate = `{
                 "tags": [
                     "config"
                 ],
-                "summary": "Salva a configuracao de escalonamento de alertas (somente admin)",
+                "summary": "Atualiza uma config de escalonamento (somente admin, apenas sistema=false)",
                 "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da config (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
                     {
                         "description": "Dados da configuracao",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.CreateConfigEscalonamentoRequest"
+                            "$ref": "#/definitions/model.UpdateConfigEscalonamentoRequest"
                         }
                     }
                 ],
@@ -648,6 +744,129 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            },
+            "delete": {
+                "tags": [
+                    "config"
+                ],
+                "summary": "Exclui uma config de escalonamento (somente admin, apenas sistema=false)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da config (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/config/escalonamento/{id}/usuarios": {
+            "put": {
+                "tags": [
+                    "config"
+                ],
+                "summary": "Atualiza apenas os destinatarios de uma config de escalonamento (somente admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID da config (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Lista de usuarios",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.UpdateConfigEscalonamentoUsuariosRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.ConfigEscalonamento"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2726,6 +2945,9 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "sistema": {
+                    "type": "boolean"
+                },
                 "usuario_ids": {
                     "type": "array",
                     "items": {
@@ -2881,7 +3103,7 @@ const docTemplate = `{
                 "codigo": {
                     "type": "string",
                     "maxLength": 6,
-                    "minLength": 4
+                    "minLength": 2
                 },
                 "descricao": {
                     "type": "string",
@@ -3582,6 +3804,45 @@ const docTemplate = `{
                 }
             }
         },
+        "model.UpdateConfigEscalonamentoRequest": {
+            "type": "object",
+            "required": [
+                "atraso_minutos",
+                "usuario_ids"
+            ],
+            "properties": {
+                "atraso_minutos": {
+                    "type": "integer",
+                    "maximum": 1440,
+                    "minimum": 1
+                },
+                "descricao": {
+                    "type": "string"
+                },
+                "usuario_ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
+        "model.UpdateConfigEscalonamentoUsuariosRequest": {
+            "type": "object",
+            "required": [
+                "usuario_ids"
+            ],
+            "properties": {
+                "usuario_ids": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
+                }
+            }
+        },
         "model.UpdateEmpresaRequest": {
             "type": "object",
             "required": [
@@ -3662,7 +3923,7 @@ const docTemplate = `{
                 "codigo": {
                     "type": "string",
                     "maxLength": 6,
-                    "minLength": 4
+                    "minLength": 2
                 },
                 "descricao": {
                     "type": "string",

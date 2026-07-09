@@ -23,6 +23,7 @@ type ConfigEscalonamento struct {
 	EmpresaID     uuid.UUID   `json:"empresa_id"`
 	AtrasoMinutos int         `json:"atraso_minutos"`
 	Descricao     string      `json:"descricao"`
+	Sistema       bool        `json:"sistema"`
 	UsuarioIDs    []uuid.UUID `json:"usuario_ids"`
 	CreatedAt     time.Time   `json:"created_at"`
 }
@@ -73,6 +74,10 @@ type UpdateConfigEscalonamentoRequest struct {
 	AtrasoMinutos int         `json:"atraso_minutos" validate:"required,min=1,max=1440"`
 	Descricao     string      `json:"descricao"`
 	UsuarioIDs    []uuid.UUID `json:"usuario_ids" validate:"required,min=1"`
+}
+
+type UpdateConfigEscalonamentoUsuariosRequest struct {
+	UsuarioIDs []uuid.UUID `json:"usuario_ids" validate:"required,min=1"`
 }
 
 type UpdateConfigAlertaEmergenciaRequest struct {

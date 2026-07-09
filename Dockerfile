@@ -24,6 +24,7 @@ WORKDIR /app
 
 COPY --from=builder --chown=app:app /app/bin/server .
 COPY --from=builder --chown=app:app /app/migrations ./migrations
+COPY --from=builder --chown=app:app /app/docs ./docs
 
 USER app
 

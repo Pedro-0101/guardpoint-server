@@ -180,6 +180,8 @@ definitions:
         type: string
       id:
         type: string
+      sistema:
+        type: boolean
       usuario_ids:
         items:
           type: string
@@ -287,7 +289,7 @@ definitions:
     properties:
       codigo:
         maxLength: 6
-        minLength: 4
+        minLength: 2
         type: string
       descricao:
         maxLength: 255
@@ -771,6 +773,33 @@ definitions:
     required:
     - usuario_ids
     type: object
+  model.UpdateConfigEscalonamentoRequest:
+    properties:
+      atraso_minutos:
+        maximum: 1440
+        minimum: 1
+        type: integer
+      descricao:
+        type: string
+      usuario_ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - atraso_minutos
+    - usuario_ids
+    type: object
+  model.UpdateConfigEscalonamentoUsuariosRequest:
+    properties:
+      usuario_ids:
+        items:
+          type: string
+        minItems: 1
+        type: array
+    required:
+    - usuario_ids
+    type: object
   model.UpdateEmpresaRequest:
     properties:
       alerta_sonoro:
@@ -827,7 +856,7 @@ definitions:
     properties:
       codigo:
         maxLength: 6
-        minLength: 4
+        minLength: 2
         type: string
       descricao:
         maxLength: 255
@@ -1309,17 +1338,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.ConfigEscalonamento'
+            items:
+              $ref: '#/definitions/model.ConfigEscalonamento'
+            type: array
         "500":
           description: Internal Server Error
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Retorna a configuracao de escalonamento de alertas (somente admin)
+      summary: Lista todas as configs de escalonamento da empresa (somente admin)
       tags:
       - config
-    put:
+    post:
       parameters:
       - description: Dados da configuracao
         in: body
@@ -1328,8 +1359,8 @@ paths:
         schema:
           $ref: '#/definitions/model.CreateConfigEscalonamentoRequest'
       responses:
-        "200":
-          description: OK
+        "201":
+          description: Created
           schema:
             $ref: '#/definitions/model.ConfigEscalonamento'
         "400":
@@ -1344,7 +1375,150 @@ paths:
             additionalProperties:
               type: string
             type: object
-      summary: Salva a configuracao de escalonamento de alertas (somente admin)
+      summary: Cria uma nova config de escalonamento (somente admin)
+      tags:
+      - config
+  /config/escalonamento/{id}:
+    delete:
+      parameters:
+      - description: ID da config (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Exclui uma config de escalonamento (somente admin, apenas sistema=false)
+      tags:
+      - config
+    get:
+      parameters:
+      - description: ID da config (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ConfigEscalonamento'
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Retorna uma config de escalonamento por ID (somente admin)
+      tags:
+      - config
+    put:
+      parameters:
+      - description: ID da config (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Dados da configuracao
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateConfigEscalonamentoRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ConfigEscalonamento'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Atualiza uma config de escalonamento (somente admin, apenas sistema=false)
+      tags:
+      - config
+  /config/escalonamento/{id}/usuarios:
+    put:
+      parameters:
+      - description: ID da config (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Lista de usuarios
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/model.UpdateConfigEscalonamentoUsuariosRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.ConfigEscalonamento'
+        "400":
+          description: Bad Request
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "404":
+          description: Not Found
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Atualiza apenas os destinatarios de uma config de escalonamento (somente
+        admin)
       tags:
       - config
   /dashboard/summary:

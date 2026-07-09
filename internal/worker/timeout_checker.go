@@ -120,12 +120,19 @@ func (w *TimeoutChecker) processTurno(ctx context.Context, t turnoAtivoInfo) {
 
 	atrasoMinutos := int(elapsed.Minutes()) - t.IntervaloMin
 
-	cfg, err := w.configRepo.FindByEmpresa(ctx, t.EmpresaID)
-	if err != nil || cfg == nil {
+	configs, err := w.configRepo.ListByEmpresa(ctx, t.EmpresaID)
+	if err != nil || len(configs) == 0 {
 		return
 	}
 
-	if atrasoMinutos >= cfg.AtrasoMinutos {
+	var menorAtraso int
+	for i, cfg := range configs {
+		if i == 0 || cfg.AtrasoMinutos < menorAtraso {
+			menorAtraso = cfg.AtrasoMinutos
+		}
+	}
+
+	if atrasoMinutos >= menorAtraso {
 		mensagem := fmt.Sprintf(
 			"Atraso de %d minutos detectado no turno.",
 			atrasoMinutos,
