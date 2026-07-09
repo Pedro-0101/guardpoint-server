@@ -120,32 +120,28 @@ func (w *TimeoutChecker) processTurno(ctx context.Context, t turnoAtivoInfo) {
 
 	atrasoMinutos := int(elapsed.Minutes()) - t.IntervaloMin
 
-	configs, err := w.configRepo.FindByEmpresa(ctx, t.EmpresaID)
-	if err != nil || len(configs) == 0 {
+	cfg, err := w.configRepo.FindByEmpresa(ctx, t.EmpresaID)
+	if err != nil || cfg == nil {
 		return
 	}
 
-	for _, cfg := range configs {
-		if atrasoMinutos >= cfg.AtrasoMinutos {
-			mensagem := fmt.Sprintf(
-				"Atraso de %d minutos detectado no turno. Nivel %d de escalonamento.",
-				atrasoMinutos, cfg.Nivel,
-			)
+	if atrasoMinutos >= cfg.AtrasoMinutos {
+		mensagem := fmt.Sprintf(
+			"Atraso de %d minutos detectado no turno.",
+			atrasoMinutos,
+		)
 
-			tipo := fmt.Sprintf("atraso_n%d", cfg.Nivel)
-			_, err := w.alertaSvc.CreateAlerta(ctx, t.EmpresaID, t.ID, tipo, cfg.Nivel, mensagem)
-			if err != nil {
-				slog.Error("timeout checker: criar alerta", "error", err, "turno_id", t.ID)
-				continue
-			}
-
-			slog.Info("timeout checker: alerta gerado",
-				"turno_id", t.ID.String(),
-				"tipo", tipo,
-				"nivel", cfg.Nivel,
-				"atraso_minutos", atrasoMinutos,
-			)
+		_, err := w.alertaSvc.CreateAlerta(ctx, t.EmpresaID, t.ID, "atraso", mensagem)
+		if err != nil {
+			slog.Error("timeout checker: criar alerta", "error", err, "turno_id", t.ID)
+			return
 		}
+
+		slog.Info("timeout checker: alerta gerado",
+			"turno_id", t.ID.String(),
+			"tipo", "atraso",
+			"atraso_minutos", atrasoMinutos,
+		)
 	}
 }
 
@@ -218,7 +214,7 @@ func (w *TimeoutChecker) checkNoShow(ctx context.Context) {
 			now.Format("15:04"), tolerancia, e.horaInicio, e.usuarioID.String(),
 		)
 
-		_, err = w.alertaSvc.CreateAlertaImediato(ctx, e.empresaID, uuid.Nil, "no_show", 2, mensagem)
+		_, err = w.alertaSvc.CreateAlertaImediato(ctx, e.empresaID, uuid.Nil, "no_show", mensagem)
 		if err != nil {
 			slog.Error("timeout checker: criar alerta no-show", "error", err, "usuario_id", e.usuarioID)
 			continue

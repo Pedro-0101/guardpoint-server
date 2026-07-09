@@ -138,7 +138,7 @@ func (r *AlertaRepository) CountAbertos(ctx context.Context, empresaID uuid.UUID
 
 func (r *AlertaRepository) ListRecentes(ctx context.Context, empresaID uuid.UUID, limit int) ([]model.AlertaRecente, error) {
 	query := `
-		SELECT id, tipo, turno_id, nivel, COALESCE(mensagem, ''), created_at
+		SELECT id, tipo, turno_id, COALESCE(mensagem, ''), created_at
 		FROM alertas
 		WHERE empresa_id = $1 AND status = 'aberto'
 		ORDER BY created_at DESC
@@ -156,7 +156,7 @@ func (r *AlertaRepository) ListRecentes(ctx context.Context, empresaID uuid.UUID
 		var id uuid.UUID
 		var turnoID *uuid.UUID
 		var createdAt time.Time
-		if err := rows.Scan(&id, &ar.Tipo, &turnoID, &ar.Nivel, &ar.Mensagem, &createdAt); err != nil {
+		if err := rows.Scan(&id, &ar.Tipo, &turnoID, &ar.Mensagem, &createdAt); err != nil {
 			return nil, fmt.Errorf("scan alerta recente: %w", err)
 		}
 		ar.ID = id.String()

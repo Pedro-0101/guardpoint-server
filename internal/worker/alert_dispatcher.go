@@ -35,7 +35,6 @@ func (w *AlertDispatcher) dispatch(_ context.Context, alert *model.PendingAlert)
 	slog.Info("alert dispatcher: stub notificacao",
 		"alerta_id", alert.Alerta.ID.String(),
 		"tipo", alert.Alerta.Tipo,
-		"nivel", alert.Alerta.Nivel,
 		"usuario_ids", alert.UsuarioIDs,
 	)
 }

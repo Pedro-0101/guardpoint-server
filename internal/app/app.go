@@ -69,7 +69,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 	syncReconciler := worker.NewSyncReconciler(alertaRepo, checkinRepo, turnoRepo, hub)
 	turnoHandler := handler.NewTurnoHandler(turnoService, syncReconciler)
 
-	senhaVigiaService := service.NewSenhaVigiaService(senhaVigiaRepo, userRepo, configEscalonamentoRepo)
+	senhaVigiaService := service.NewSenhaVigiaService(senhaVigiaRepo, userRepo)
 	senhaVigiaHandler := handler.NewSenhaVigiaHandler(senhaVigiaService)
 
 	usuarioService := service.NewUsuarioService(userRepo)
@@ -186,9 +186,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 				r.Use(handler.RequireRole("admin"))
 				r.Get("/escalonamento", alertaHandler.GetEscalonamento)
 				r.Put("/escalonamento", alertaHandler.PutEscalonamento)
-				r.Post("/escalonamento", alertaHandler.CreateEscalonamento)
-				r.Put("/escalonamento/{id}", alertaHandler.UpdateEscalonamento)
-				r.Delete("/escalonamento/{id}", alertaHandler.DeleteEscalonamento)
 				r.Get("/alertas-emergencia", alertaHandler.GetAlertasEmergencia)
 				r.Put("/alertas-emergencia/{tipo}", alertaHandler.PutAlertaEmergencia)
 			})

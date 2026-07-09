@@ -144,37 +144,33 @@ func (h *AlertaHandler) Estatisticas(w http.ResponseWriter, r *http.Request) {
 }
 
 // GetEscalonamento godoc
-// @Summary      Lista a configuracao de escalonamento de alertas (somente admin)
+// @Summary      Retorna a configuracao de escalonamento de alertas (somente admin)
 // @Tags         config
-// @Success      200 {array} model.ConfigEscalonamento
+// @Success      200 {object} model.ConfigEscalonamento
 // @Failure      500 {object} map[string]string
 // @Router       /config/escalonamento [get]
 func (h *AlertaHandler) GetEscalonamento(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 
-	configs, err := h.alertaService.GetEscalonamento(r.Context(), empresaID)
+	config, err := h.alertaService.GetEscalonamento(r.Context(), empresaID)
 	if err != nil {
 		slog.Error("get escalonamento failed", "error", err)
 		writeError(w, http.StatusInternalServerError, "erro ao carregar configuracao")
 		return
 	}
 
-	if configs == nil {
-		configs = []model.ConfigEscalonamento{}
-	}
-
-	writeJSON(w, http.StatusOK, configs)
+	writeJSON(w, http.StatusOK, config)
 }
 
-// CreateEscalonamento godoc
-// @Summary      Cria um nivel de escalonamento de alertas (somente admin)
+// PutEscalonamento godoc
+// @Summary      Salva a configuracao de escalonamento de alertas (somente admin)
 // @Tags         config
-// @Param        request body model.CreateConfigEscalonamentoRequest true "Dados do nivel"
-// @Success      201 {object} model.ConfigEscalonamento
+// @Param        request body model.CreateConfigEscalonamentoRequest true "Dados da configuracao"
+// @Success      200 {object} model.ConfigEscalonamento
 // @Failure      400 {object} map[string]string
 // @Failure      500 {object} map[string]string
-// @Router       /config/escalonamento [post]
-func (h *AlertaHandler) CreateEscalonamento(w http.ResponseWriter, r *http.Request) {
+// @Router       /config/escalonamento [put]
+func (h *AlertaHandler) PutEscalonamento(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
 
 	var req model.CreateConfigEscalonamentoRequest
@@ -188,129 +184,7 @@ func (h *AlertaHandler) CreateEscalonamento(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	config, err := h.alertaService.CreateEscalonamento(r.Context(), empresaID, req)
-	if err != nil {
-		if errors.Is(err, service.ErrUsuarioNaoPertenceAEmpresa) {
-			writeError(w, http.StatusBadRequest, "usuario_id invalido para esta empresa")
-			return
-		}
-		if errors.Is(err, service.ErrUsuarioNaoAdmin) {
-			writeError(w, http.StatusBadRequest, "apenas administradores podem ser destinatarios de alertas")
-			return
-		}
-		slog.Error("create escalonamento failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "erro ao criar configuracao")
-		return
-	}
-
-	writeJSON(w, http.StatusCreated, config)
-}
-
-// UpdateEscalonamento godoc
-// @Summary      Atualiza um nivel de escalonamento de alertas (somente admin)
-// @Tags         config
-// @Param        id path string true "ID da configuracao (uuid)"
-// @Param        request body model.UpdateConfigEscalonamentoRequest true "Campos a atualizar"
-// @Success      200 {object} model.ConfigEscalonamento
-// @Failure      400 {object} map[string]string
-// @Failure      500 {object} map[string]string
-// @Router       /config/escalonamento/{id} [put]
-func (h *AlertaHandler) UpdateEscalonamento(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
-	configID := chi.URLParam(r, "id")
-
-	var req model.UpdateConfigEscalonamentoRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "json invalido")
-		return
-	}
-
-	if err := h.validate.Struct(req); err != nil {
-		writeValidationError(w, err)
-		return
-	}
-
-	config, err := h.alertaService.UpdateEscalonamento(r.Context(), empresaID, configID, req)
-	if err != nil {
-		if errors.Is(err, service.ErrUsuarioNaoPertenceAEmpresa) {
-			writeError(w, http.StatusBadRequest, "usuario_id invalido para esta empresa")
-			return
-		}
-		if errors.Is(err, service.ErrUsuarioNaoAdmin) {
-			writeError(w, http.StatusBadRequest, "apenas administradores podem ser destinatarios de alertas")
-			return
-		}
-		if errors.Is(err, service.ErrNivelEscalonamentoSistemaSomenteDestinatarios) {
-			writeError(w, http.StatusBadRequest, "escalonamento padrao do sistema: apenas os destinatarios podem ser alterados")
-			return
-		}
-		slog.Error("update escalonamento failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "erro ao atualizar configuracao")
-		return
-	}
-
-	writeJSON(w, http.StatusOK, config)
-}
-
-// DeleteEscalonamento godoc
-// @Summary      Remove um nivel de escalonamento de alertas (somente admin)
-// @Tags         config
-// @Param        id path string true "ID da configuracao (uuid)"
-// @Success      204 "sem conteudo"
-// @Failure      409 {object} map[string]string
-// @Failure      500 {object} map[string]string
-// @Router       /config/escalonamento/{id} [delete]
-func (h *AlertaHandler) DeleteEscalonamento(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
-	configID := chi.URLParam(r, "id")
-
-	if err := h.alertaService.DeleteEscalonamento(r.Context(), empresaID, configID); err != nil {
-		if errors.Is(err, service.ErrNivelEscalonamentoEmUso) {
-			writeError(w, http.StatusConflict, "nivel de escalonamento em uso por uma senha de vigia")
-			return
-		}
-		if errors.Is(err, service.ErrNivelEscalonamentoSistema) {
-			writeError(w, http.StatusConflict, "nivel de escalonamento padrao do sistema nao pode ser removido")
-			return
-		}
-		slog.Error("delete escalonamento failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "erro ao deletar configuracao")
-		return
-	}
-
-	w.WriteHeader(http.StatusNoContent)
-}
-
-// PutEscalonamento godoc
-// @Summary      Substitui todos os niveis de escalonamento de alertas (somente admin)
-// @Tags         config
-// @Param        request body []model.CreateConfigEscalonamentoRequest true "Lista completa de niveis"
-// @Success      200 {array} model.ConfigEscalonamento
-// @Failure      400 {object} map[string]string
-// @Failure      500 {object} map[string]string
-// @Router       /config/escalonamento [put]
-func (h *AlertaHandler) PutEscalonamento(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
-
-	var reqs []model.CreateConfigEscalonamentoRequest
-	if err := json.NewDecoder(r.Body).Decode(&reqs); err != nil {
-		writeError(w, http.StatusBadRequest, "json invalido")
-		return
-	}
-
-	if len(reqs) == 0 {
-		writeError(w, http.StatusBadRequest, "array vazio")
-		return
-	}
-
-	for i := range reqs {
-		if err := h.validate.Struct(reqs[i]); err != nil {
-			writeValidationError(w, err)
-			return
-		}
-	}
-
-	configs, err := h.alertaService.ReplaceEscalonamento(r.Context(), empresaID, reqs)
+	config, err := h.alertaService.SaveEscalonamento(r.Context(), empresaID, req)
 	if err != nil {
 		if errors.Is(err, service.ErrUsuarioNaoPertenceAEmpresa) {
 			writeError(w, http.StatusBadRequest, "usuario_id invalido para esta empresa")
@@ -325,7 +199,7 @@ func (h *AlertaHandler) PutEscalonamento(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	writeJSON(w, http.StatusOK, configs)
+	writeJSON(w, http.StatusOK, config)
 }
 
 // GetAlertasEmergencia godoc

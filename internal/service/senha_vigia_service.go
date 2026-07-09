@@ -14,19 +14,13 @@ import (
 )
 
 var (
-	ErrSenhaNaoEncontrada              = errors.New("senha nao encontrada")
-	ErrSenhaCodigoDuplicado            = errors.New("codigo ja usado por outra senha deste vigia")
-	ErrSenhaTipoJaExiste               = errors.New("vigia ja possui uma senha deste tipo")
-	ErrSenhaObrigatoriaNaoRemovivel    = errors.New("senha obrigatoria (ok/emergencia) nao pode ser removida")
-	ErrSenhaCampoNaoEditavelParaTipo   = errors.New("campo nao editavel para este tipo de senha")
-	ErrNivelEscalonamentoNaoEncontrado = errors.New("nivel de escalonamento nao encontrado")
-	ErrNivelInvalidoParaTipo           = errors.New("nivel de escalonamento nao pode ser definido para senha ok")
-	ErrNivelObrigatorioParaTipo        = errors.New("nivel de escalonamento obrigatorio para este tipo de senha")
-	ErrNivelEscalonamentoJaVinculado   = errors.New("nivel de escalonamento ja vinculado a outra senha deste vigia")
-	ErrNivelEmergenciaInvalido         = errors.New("senha de emergencia deve usar o nivel de escalonamento padrao de emergencia")
+	ErrSenhaNaoEncontrada           = errors.New("senha nao encontrada")
+	ErrSenhaCodigoDuplicado         = errors.New("codigo ja usado por outra senha deste vigia")
+	ErrSenhaTipoJaExiste            = errors.New("vigia ja possui uma senha deste tipo")
+	ErrSenhaObrigatoriaNaoRemovivel = errors.New("senha obrigatoria (ok/emergencia) nao pode ser removida")
+	ErrSenhaCampoNaoEditavelParaTipo = errors.New("campo nao editavel para este tipo de senha")
 
 	// ErrUsuarioNaoPertenceAEmpresa ja e declarado em alerta_service.go -- reaproveitado
-	// aqui, nao redeclarado, para nao duplicar sentinela no mesmo pacote.
 )
 
 const (
@@ -36,17 +30,15 @@ const (
 )
 
 type SenhaVigiaService struct {
-	senhaRepo  *repository.SenhaVigiaRepository
-	userRepo   *repository.UserRepository
-	configRepo *repository.ConfigEscalonamentoRepository
+	senhaRepo *repository.SenhaVigiaRepository
+	userRepo  *repository.UserRepository
 }
 
 func NewSenhaVigiaService(
 	senhaRepo *repository.SenhaVigiaRepository,
 	userRepo *repository.UserRepository,
-	configRepo *repository.ConfigEscalonamentoRepository,
 ) *SenhaVigiaService {
-	return &SenhaVigiaService{senhaRepo: senhaRepo, userRepo: userRepo, configRepo: configRepo}
+	return &SenhaVigiaService{senhaRepo: senhaRepo, userRepo: userRepo}
 }
 
 func (s *SenhaVigiaService) List(ctx context.Context, empresaID, usuarioID uuid.UUID) ([]model.SenhaVigia, error) {
@@ -58,11 +50,6 @@ func (s *SenhaVigiaService) List(ctx context.Context, empresaID, usuarioID uuid.
 
 func (s *SenhaVigiaService) Create(ctx context.Context, empresaID, usuarioID uuid.UUID, req model.CreateSenhaVigiaRequest) (*model.SenhaVigia, error) {
 	if err := s.validarUsuarioDaEmpresa(ctx, empresaID, usuarioID); err != nil {
-		return nil, err
-	}
-
-	nivelID, err := s.resolverNivelCreate(ctx, empresaID, req.Tipo, req.NivelEscalonamentoID)
-	if err != nil {
 		return nil, err
 	}
 
@@ -84,19 +71,12 @@ func (s *SenhaVigiaService) Create(ctx context.Context, empresaID, usuarioID uui
 		return nil, ErrSenhaCodigoDuplicado
 	}
 
-	if nivelID != nil {
-		if err := s.validarUnicidadeNivel(existentes, usuarioID, *nivelID, uuid.Nil); err != nil {
-			return nil, err
-		}
-	}
-
 	senha := &model.SenhaVigia{
-		EmpresaID:            empresaID,
-		UsuarioID:            usuarioID,
-		Tipo:                 req.Tipo,
-		Codigo:               req.Codigo,
-		Descricao:            req.Descricao,
-		NivelEscalonamentoID: nivelID,
+		EmpresaID: empresaID,
+		UsuarioID: usuarioID,
+		Tipo:      req.Tipo,
+		Codigo:    req.Codigo,
+		Descricao: req.Descricao,
 	}
 	if err := s.senhaRepo.Create(ctx, senha); err != nil {
 		return nil, err
@@ -114,34 +94,13 @@ func (s *SenhaVigiaService) Update(ctx context.Context, empresaID, usuarioID, se
 	}
 
 	switch existing.Tipo {
-	case tipoSenhaOK:
-		if req.Descricao != nil || req.NivelEscalonamentoID != nil {
-			return nil, ErrSenhaCampoNaoEditavelParaTipo
-		}
-	case tipoSenhaEmergencia:
-		if req.Descricao != nil || req.NivelEscalonamentoID != nil {
+	case tipoSenhaOK, tipoSenhaEmergencia:
+		if req.Descricao != nil {
 			return nil, ErrSenhaCampoNaoEditavelParaTipo
 		}
 	case tipoSenhaCustomizada:
 		if req.Descricao != nil {
 			existing.Descricao = req.Descricao
-		}
-		if req.NivelEscalonamentoID != nil {
-			parsed, cfg, err := s.buscarNivelEscalonamento(ctx, empresaID, *req.NivelEscalonamentoID)
-			if err != nil {
-				return nil, err
-			}
-			if cfg == nil {
-				return nil, ErrNivelEscalonamentoNaoEncontrado
-			}
-			outras, err := s.senhaRepo.ListByUsuario(ctx, empresaID, usuarioID)
-			if err != nil {
-				return nil, err
-			}
-			if err := s.validarUnicidadeNivel(outras, usuarioID, parsed, senhaID); err != nil {
-				return nil, err
-			}
-			existing.NivelEscalonamentoID = &parsed
 		}
 	}
 
@@ -182,69 +141,6 @@ func (s *SenhaVigiaService) validarUsuarioDaEmpresa(ctx context.Context, empresa
 			return ErrUsuarioNaoPertenceAEmpresa
 		}
 		return fmt.Errorf("verificar usuario %s: %w", usuarioID, err)
-	}
-	return nil
-}
-
-func (s *SenhaVigiaService) buscarNivelEscalonamento(ctx context.Context, empresaID uuid.UUID, nivelEscalonamentoID string) (uuid.UUID, *model.ConfigEscalonamento, error) {
-	parsed, err := uuid.Parse(nivelEscalonamentoID)
-	if err != nil {
-		return uuid.Nil, nil, fmt.Errorf("nivel_escalonamento_id invalido: %w", err)
-	}
-	cfg, err := s.configRepo.FindByID(ctx, parsed, empresaID)
-	if err != nil {
-		return uuid.Nil, nil, err
-	}
-	return parsed, cfg, nil
-}
-
-func (s *SenhaVigiaService) resolverNivelCreate(ctx context.Context, empresaID uuid.UUID, tipo string, nivelEscalonamentoID *string) (*uuid.UUID, error) {
-	switch tipo {
-	case tipoSenhaOK:
-		if nivelEscalonamentoID != nil {
-			return nil, ErrNivelInvalidoParaTipo
-		}
-		return nil, nil
-	case tipoSenhaEmergencia:
-		if nivelEscalonamentoID == nil {
-			return nil, ErrNivelObrigatorioParaTipo
-		}
-		parsed, cfg, err := s.buscarNivelEscalonamento(ctx, empresaID, *nivelEscalonamentoID)
-		if err != nil {
-			return nil, err
-		}
-		if cfg == nil {
-			return nil, ErrNivelEscalonamentoNaoEncontrado
-		}
-		if !cfg.Sistema {
-			return nil, ErrNivelEmergenciaInvalido
-		}
-		return &parsed, nil
-	case tipoSenhaCustomizada:
-		if nivelEscalonamentoID == nil {
-			return nil, ErrNivelObrigatorioParaTipo
-		}
-		parsed, cfg, err := s.buscarNivelEscalonamento(ctx, empresaID, *nivelEscalonamentoID)
-		if err != nil {
-			return nil, err
-		}
-		if cfg == nil {
-			return nil, ErrNivelEscalonamentoNaoEncontrado
-		}
-		return &parsed, nil
-	default:
-		return nil, fmt.Errorf("tipo de senha invalido: %s", tipo)
-	}
-}
-
-func (s *SenhaVigiaService) validarUnicidadeNivel(existentes []model.SenhaVigia, usuarioID, nivelID, ignorarID uuid.UUID) error {
-	for _, sv := range existentes {
-		if sv.ID == ignorarID {
-			continue
-		}
-		if sv.NivelEscalonamentoID != nil && *sv.NivelEscalonamentoID == nivelID {
-			return ErrNivelEscalonamentoJaVinculado
-		}
 	}
 	return nil
 }

@@ -604,15 +604,12 @@ const docTemplate = `{
                 "tags": [
                     "config"
                 ],
-                "summary": "Lista a configuracao de escalonamento de alertas (somente admin)",
+                "summary": "Retorna a configuracao de escalonamento de alertas (somente admin)",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.ConfigEscalonamento"
-                            }
+                            "$ref": "#/definitions/model.ConfigEscalonamento"
                         }
                     },
                     "500": {
@@ -630,59 +627,10 @@ const docTemplate = `{
                 "tags": [
                     "config"
                 ],
-                "summary": "Substitui todos os niveis de escalonamento de alertas (somente admin)",
+                "summary": "Salva a configuracao de escalonamento de alertas (somente admin)",
                 "parameters": [
                     {
-                        "description": "Lista completa de niveis",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.CreateConfigEscalonamentoRequest"
-                            }
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.ConfigEscalonamento"
-                            }
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "post": {
-                "tags": [
-                    "config"
-                ],
-                "summary": "Cria um nivel de escalonamento de alertas (somente admin)",
-                "parameters": [
-                    {
-                        "description": "Dados do nivel",
+                        "description": "Dados da configuracao",
                         "name": "request",
                         "in": "body",
                         "required": true,
@@ -692,58 +640,6 @@ const docTemplate = `{
                     }
                 ],
                 "responses": {
-                    "201": {
-                        "description": "Created",
-                        "schema": {
-                            "$ref": "#/definitions/model.ConfigEscalonamento"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/config/escalonamento/{id}": {
-            "put": {
-                "tags": [
-                    "config"
-                ],
-                "summary": "Atualiza um nivel de escalonamento de alertas (somente admin)",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID da configuracao (uuid)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Campos a atualizar",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/model.UpdateConfigEscalonamentoRequest"
-                        }
-                    }
-                ],
-                "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
@@ -752,44 +648,6 @@ const docTemplate = `{
                     },
                     "400": {
                         "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            },
-            "delete": {
-                "tags": [
-                    "config"
-                ],
-                "summary": "Remove um nivel de escalonamento de alertas (somente admin)",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "ID da configuracao (uuid)",
-                        "name": "id",
-                        "in": "path",
-                        "required": true
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "description": "sem conteudo"
-                    },
-                    "409": {
-                        "description": "Conflict",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -2661,9 +2519,6 @@ const docTemplate = `{
                 "mensagem": {
                     "type": "string"
                 },
-                "nivel": {
-                    "type": "integer"
-                },
                 "tipo": {
                     "type": "string"
                 },
@@ -2871,12 +2726,6 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
-                "nivel": {
-                    "type": "integer"
-                },
-                "sistema": {
-                    "type": "boolean"
-                },
                 "usuario_ids": {
                     "type": "array",
                     "items": {
@@ -2889,7 +2738,6 @@ const docTemplate = `{
             "type": "object",
             "required": [
                 "atraso_minutos",
-                "nivel",
                 "usuario_ids"
             ],
             "properties": {
@@ -2900,11 +2748,6 @@ const docTemplate = `{
                 },
                 "descricao": {
                     "type": "string"
-                },
-                "nivel": {
-                    "type": "integer",
-                    "maximum": 5,
-                    "minimum": 1
                 },
                 "usuario_ids": {
                     "type": "array",
@@ -3043,10 +2886,6 @@ const docTemplate = `{
                 "descricao": {
                     "type": "string",
                     "maxLength": 255
-                },
-                "nivel_escalonamento_id": {
-                    "description": "obrigatorio para emergencia/customizada (validado no service)",
-                    "type": "string"
                 },
                 "tipo": {
                     "type": "string",
@@ -3529,10 +3368,6 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
-                "nivel_escalonamento_id": {
-                    "description": "NULL apenas para tipo \"ok\"; obrigatorio para emergencia/customizada",
-                    "type": "string"
-                },
                 "tipo": {
                     "description": "ok | emergencia | customizada",
                     "type": "string"
@@ -3747,30 +3582,6 @@ const docTemplate = `{
                 }
             }
         },
-        "model.UpdateConfigEscalonamentoRequest": {
-            "type": "object",
-            "required": [
-                "atraso_minutos",
-                "usuario_ids"
-            ],
-            "properties": {
-                "atraso_minutos": {
-                    "type": "integer",
-                    "maximum": 1440,
-                    "minimum": 1
-                },
-                "descricao": {
-                    "type": "string"
-                },
-                "usuario_ids": {
-                    "type": "array",
-                    "minItems": 1,
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            }
-        },
         "model.UpdateEmpresaRequest": {
             "type": "object",
             "required": [
@@ -3856,10 +3667,6 @@ const docTemplate = `{
                 "descricao": {
                     "type": "string",
                     "maxLength": 255
-                },
-                "nivel_escalonamento_id": {
-                    "description": "somente customizada pode alterar",
-                    "type": "string"
                 }
             }
         },

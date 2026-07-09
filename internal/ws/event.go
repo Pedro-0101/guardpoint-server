@@ -34,7 +34,6 @@ type NewAlertPayload struct {
 	AlertaID string `json:"alerta_id"`
 	Tipo     string `json:"tipo"`
 	TurnoID  string `json:"turno_id"`
-	Nivel    int    `json:"nivel"`
 }
 
 type SyncResolvedPayload struct {
@@ -67,14 +66,13 @@ func NewStatusChangeEvent(turnoID, status string) Event {
 	}
 }
 
-func NewAlertEvent(alertaID, tipo, turnoID string, nivel int) Event {
+func NewAlertEvent(alertaID, tipo, turnoID string) Event {
 	return Event{
 		Type: EventNewAlert,
 		Payload: NewAlertPayload{
 			AlertaID: alertaID,
 			Tipo:     tipo,
 			TurnoID:  turnoID,
-			Nivel:    nivel,
 		},
 	}
 }

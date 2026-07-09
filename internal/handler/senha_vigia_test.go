@@ -22,10 +22,8 @@ func TestWriteSenhaError(t *testing.T) {
 		{"senha nao encontrada → 404", service.ErrSenhaNaoEncontrada, http.StatusNotFound, `{"error":"senha nao encontrada"}`},
 		{"codigo duplicado → 400", service.ErrSenhaCodigoDuplicado, http.StatusBadRequest, `{"error":"codigo ja usado por outra senha deste vigia"}`},
 		{"tipo ja existe → 400", service.ErrSenhaTipoJaExiste, http.StatusBadRequest, `{"error":"vigia ja possui uma senha deste tipo"}`},
-		{"nivel invalido para tipo → 400", service.ErrNivelInvalidoParaTipo, http.StatusBadRequest, `{"error":"nivel de escalonamento nao pode ser definido para este tipo de senha"}`},
 		{"campo nao editavel → 400", service.ErrSenhaCampoNaoEditavelParaTipo, http.StatusBadRequest, `{"error":"campo nao editavel para este tipo de senha"}`},
 		{"senha obrigatoria nao removivel → 409", service.ErrSenhaObrigatoriaNaoRemovivel, http.StatusConflict, `{"error":"senha obrigatoria nao pode ser removida"}`},
-		{"nivel escalonamento nao encontrado → 400", service.ErrNivelEscalonamentoNaoEncontrado, http.StatusBadRequest, `{"error":"nivel de escalonamento nao encontrado"}`},
 		{"erro desconhecido → false", errors.New("erro qualquer"), 0, ""},
 	}
 
@@ -61,10 +59,8 @@ func TestWriteSenhaError_CobreTodosSentinela(t *testing.T) {
 		service.ErrSenhaNaoEncontrada,
 		service.ErrSenhaCodigoDuplicado,
 		service.ErrSenhaTipoJaExiste,
-		service.ErrNivelInvalidoParaTipo,
 		service.ErrSenhaCampoNaoEditavelParaTipo,
 		service.ErrSenhaObrigatoriaNaoRemovivel,
-		service.ErrNivelEscalonamentoNaoEncontrado,
 	}
 
 	for _, err := range erros {

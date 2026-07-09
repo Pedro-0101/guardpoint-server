@@ -10,7 +10,6 @@ type AlertaRecente struct {
 	ID        string `json:"id"`
 	Tipo      string `json:"tipo"`
 	TurnoID   string `json:"turno_id"`
-	Nivel     int    `json:"nivel"`
 	Mensagem  string `json:"mensagem"`
 	CreatedAt string `json:"created_at"`
 }
