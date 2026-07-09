@@ -112,6 +112,17 @@ type HistoricoFilter struct {
 	Offset     int    `json:"offset"`
 }
 
+type TurnoListResponse struct {
+	Data  []TurnoDetalhe `json:"data"`
+	Total int            `json:"total"`
+}
+
+type LoteCheckinResponse struct {
+	Recebidos   int              `json:"recebidos"`
+	Processados int              `json:"processados"`
+	Checkins    []CheckinResponse `json:"checkins"`
+}
+
 type TurnoFilter struct {
 	Status     []string `json:"status"`
 	DataInicio string   `json:"data_inicio"`

@@ -31,7 +31,7 @@ func NewSubstituicaoHandler(service *service.SubstituicaoService) *SubstituicaoH
 // @Tags         substituicoes
 // @Param        request body model.CreateSubstituicaoRequest true "Dados da substituicao"
 // @Success      201 {object} model.Substituicao
-// @Failure      400 {object} map[string]string
+// @Failure      400 {object} model.ErrorResponse
 // @Router       /substituicoes [post]
 func (h *SubstituicaoHandler) Create(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -68,7 +68,7 @@ func (h *SubstituicaoHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Tags         substituicoes
 // @Param        id path string true "ID da substituicao (uuid)"
 // @Success      200 {object} model.Substituicao
-// @Failure      404 {object} map[string]string
+// @Failure      404 {object} model.ErrorResponse
 // @Router       /substituicoes/{id} [get]
 func (h *SubstituicaoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -103,7 +103,7 @@ func (h *SubstituicaoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 // @Param        ativos query string false "Filtra por ativo (true/false)"
 // @Param        limit query int false "Limite de itens (max 100)"
 // @Param        offset query int false "Offset da paginacao"
-// @Success      200 {object} map[string]interface{}
+// @Success      200 {object} model.SubstituicaoListResponse
 // @Router       /substituicoes [get]
 func (h *SubstituicaoHandler) List(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -157,7 +157,7 @@ func (h *SubstituicaoHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Param        id path string true "ID da substituicao (uuid)"
 // @Param        request body model.UpdateSubstituicaoRequest true "Campos a atualizar"
 // @Success      200 {object} model.Substituicao
-// @Failure      404 {object} map[string]string
+// @Failure      404 {object} model.ErrorResponse
 // @Router       /substituicoes/{id} [put]
 func (h *SubstituicaoHandler) Update(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -203,8 +203,8 @@ func (h *SubstituicaoHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Summary      Desativa uma substituicao (admin/supervisor)
 // @Tags         substituicoes
 // @Param        id path string true "ID da substituicao (uuid)"
-// @Success      200 {object} map[string]string
-// @Failure      404 {object} map[string]string
+// @Success      200 {object} model.MessageResponse
+// @Failure      404 {object} model.ErrorResponse
 // @Router       /substituicoes/{id} [delete]
 func (h *SubstituicaoHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())

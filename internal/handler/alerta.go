@@ -33,8 +33,8 @@ func NewAlertaHandler(alertaService *service.AlertaService) *AlertaHandler {
 // @Param        turno_id query string false "ID do turno (uuid)"
 // @Param        limit query int false "Limite de itens (max 100)"
 // @Param        offset query int false "Offset da paginacao"
-// @Success      200 {object} map[string]interface{}
-// @Failure      500 {object} map[string]string
+// @Success      200 {object} model.AlertaListResponse
+// @Failure      500 {object} model.ErrorResponse
 // @Router       /alertas [get]
 func (h *AlertaHandler) List(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -70,9 +70,9 @@ func (h *AlertaHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Summary      Reconhece um alerta aberto (admin/supervisor)
 // @Tags         alertas
 // @Param        id path string true "ID do alerta (uuid)"
-// @Success      200 {object} map[string]string
-// @Failure      404 {object} map[string]string
-// @Failure      409 {object} map[string]string
+// @Success      200 {object} model.StatusResponse
+// @Failure      404 {object} model.ErrorResponse
+// @Failure      409 {object} model.ErrorResponse
 // @Router       /alertas/{id}/reconhecer [put]
 func (h *AlertaHandler) Reconhecer(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -99,9 +99,9 @@ func (h *AlertaHandler) Reconhecer(w http.ResponseWriter, r *http.Request) {
 // @Summary      Encerra um alerta (admin/supervisor)
 // @Tags         alertas
 // @Param        id path string true "ID do alerta (uuid)"
-// @Success      200 {object} map[string]string
-// @Failure      404 {object} map[string]string
-// @Failure      409 {object} map[string]string
+// @Success      200 {object} model.StatusResponse
+// @Failure      404 {object} model.ErrorResponse
+// @Failure      409 {object} model.ErrorResponse
 // @Router       /alertas/{id}/encerrar [put]
 func (h *AlertaHandler) Encerrar(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -128,7 +128,7 @@ func (h *AlertaHandler) Encerrar(w http.ResponseWriter, r *http.Request) {
 // @Summary      Estatisticas agregadas de alertas (admin/supervisor)
 // @Tags         alertas
 // @Success      200 {object} model.AlertStatistics
-// @Failure      500 {object} map[string]string
+// @Failure      500 {object} model.ErrorResponse
 // @Router       /alertas/estatisticas [get]
 func (h *AlertaHandler) Estatisticas(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -147,7 +147,7 @@ func (h *AlertaHandler) Estatisticas(w http.ResponseWriter, r *http.Request) {
 // @Summary      Lista todas as configs de escalonamento da empresa (somente admin)
 // @Tags         config
 // @Success      200 {array} model.ConfigEscalonamento
-// @Failure      500 {object} map[string]string
+// @Failure      500 {object} model.ErrorResponse
 // @Router       /config/escalonamento [get]
 func (h *AlertaHandler) ListEscalonamentos(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -167,8 +167,8 @@ func (h *AlertaHandler) ListEscalonamentos(w http.ResponseWriter, r *http.Reques
 // @Tags         config
 // @Param        request body model.CreateConfigEscalonamentoRequest true "Dados da configuracao"
 // @Success      201 {object} model.ConfigEscalonamento
-// @Failure      400 {object} map[string]string
-// @Failure      500 {object} map[string]string
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      500 {object} model.ErrorResponse
 // @Router       /config/escalonamento [post]
 func (h *AlertaHandler) CreateEscalonamento(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -207,8 +207,8 @@ func (h *AlertaHandler) CreateEscalonamento(w http.ResponseWriter, r *http.Reque
 // @Tags         config
 // @Param        id path string true "ID da config (uuid)"
 // @Success      200 {object} model.ConfigEscalonamento
-// @Failure      404 {object} map[string]string
-// @Failure      500 {object} map[string]string
+// @Failure      404 {object} model.ErrorResponse
+// @Failure      500 {object} model.ErrorResponse
 // @Router       /config/escalonamento/{id} [get]
 func (h *AlertaHandler) GetEscalonamento(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -234,9 +234,9 @@ func (h *AlertaHandler) GetEscalonamento(w http.ResponseWriter, r *http.Request)
 // @Param        id path string true "ID da config (uuid)"
 // @Param        request body model.UpdateConfigEscalonamentoRequest true "Dados da configuracao"
 // @Success      200 {object} model.ConfigEscalonamento
-// @Failure      400 {object} map[string]string
-// @Failure      404 {object} map[string]string
-// @Failure      500 {object} map[string]string
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      404 {object} model.ErrorResponse
+// @Failure      500 {object} model.ErrorResponse
 // @Router       /config/escalonamento/{id} [put]
 func (h *AlertaHandler) UpdateEscalonamento(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -285,9 +285,9 @@ func (h *AlertaHandler) UpdateEscalonamento(w http.ResponseWriter, r *http.Reque
 // @Param        id path string true "ID da config (uuid)"
 // @Param        request body model.UpdateConfigEscalonamentoUsuariosRequest true "Lista de usuarios"
 // @Success      200 {object} model.ConfigEscalonamento
-// @Failure      400 {object} map[string]string
-// @Failure      404 {object} map[string]string
-// @Failure      500 {object} map[string]string
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      404 {object} model.ErrorResponse
+// @Failure      500 {object} model.ErrorResponse
 // @Router       /config/escalonamento/{id}/usuarios [put]
 func (h *AlertaHandler) UpdateEscalonamentoUsuarios(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -330,10 +330,10 @@ func (h *AlertaHandler) UpdateEscalonamentoUsuarios(w http.ResponseWriter, r *ht
 // @Summary      Exclui uma config de escalonamento (somente admin, apenas sistema=false)
 // @Tags         config
 // @Param        id path string true "ID da config (uuid)"
-// @Success      200 {object} map[string]string
-// @Failure      400 {object} map[string]string
-// @Failure      404 {object} map[string]string
-// @Failure      500 {object} map[string]string
+// @Success      200 {object} model.StatusResponse
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      404 {object} model.ErrorResponse
+// @Failure      500 {object} model.ErrorResponse
 // @Router       /config/escalonamento/{id} [delete]
 func (h *AlertaHandler) DeleteEscalonamento(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())

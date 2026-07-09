@@ -31,7 +31,7 @@ func NewPostoHandler(postoService *service.PostoService) *PostoHandler {
 // @Tags         postos
 // @Param        request body model.CreatePostoRequest true "Dados do posto"
 // @Success      201 {object} model.Posto
-// @Failure      400 {object} map[string]string
+// @Failure      400 {object} model.ErrorResponse
 // @Router       /postos [post]
 func (h *PostoHandler) Create(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -80,8 +80,8 @@ func (h *PostoHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Tags         postos
 // @Param        id path string true "ID do posto (uuid)"
 // @Success      200 {object} model.Posto
-// @Failure      400 {object} map[string]string
-// @Failure      404 {object} map[string]string
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      404 {object} model.ErrorResponse
 // @Router       /postos/{id} [get]
 func (h *PostoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -112,7 +112,7 @@ func (h *PostoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 // @Tags         postos
 // @Param        ativos query string false "Filtra somente postos ativos (true/false)"
 // @Success      200 {array} model.Posto
-// @Failure      400 {object} map[string]string
+// @Failure      400 {object} model.ErrorResponse
 // @Router       /postos [get]
 func (h *PostoHandler) List(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -145,8 +145,8 @@ func (h *PostoHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Param        id path string true "ID do posto (uuid)"
 // @Param        request body model.UpdatePostoRequest true "Campos a atualizar"
 // @Success      200 {object} model.Posto
-// @Failure      400 {object} map[string]string
-// @Failure      404 {object} map[string]string
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      404 {object} model.ErrorResponse
 // @Router       /postos/{id} [put]
 func (h *PostoHandler) Update(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -209,9 +209,9 @@ func (h *PostoHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Summary      Desativa um posto
 // @Tags         postos
 // @Param        id path string true "ID do posto (uuid)"
-// @Success      200 {object} map[string]string
-// @Failure      400 {object} map[string]string
-// @Failure      500 {object} map[string]string
+// @Success      200 {object} model.MessageResponse
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      500 {object} model.ErrorResponse
 // @Router       /postos/{id} [delete]
 func (h *PostoHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())

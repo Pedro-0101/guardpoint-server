@@ -66,6 +66,11 @@ type UpdateEscalaRequest struct {
 	Ativo           *bool   `json:"ativo"`
 }
 
+type EscalaListResponse struct {
+	Data  []Escala `json:"data"`
+	Total int      `json:"total"`
+}
+
 type EscalaFilter struct {
 	UsuarioID string
 	PostoID   string

@@ -19,6 +19,36 @@ definitions:
       total_reconhecidos:
         type: integer
     type: object
+  model.Alerta:
+    properties:
+      created_at:
+        type: string
+      empresa_id:
+        type: string
+      id:
+        type: string
+      mensagem:
+        type: string
+      nivel:
+        type: integer
+      resolvido_em:
+        type: string
+      status:
+        type: string
+      tipo:
+        type: string
+      turno_id:
+        type: string
+    type: object
+  model.AlertaListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.Alerta'
+        type: array
+      total:
+        type: integer
+    type: object
   model.AlertaPorHora:
     properties:
       hora:
@@ -399,6 +429,11 @@ definitions:
       updated_at:
         type: string
     type: object
+  model.ErrorResponse:
+    properties:
+      error:
+        type: string
+    type: object
   model.Escala:
     properties:
       ativo:
@@ -429,6 +464,15 @@ definitions:
         type: string
       usuario_nome:
         type: string
+    type: object
+  model.EscalaListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.Escala'
+        type: array
+      total:
+        type: integer
     type: object
   model.FinalizarTurnoRequest:
     properties:
@@ -500,6 +544,22 @@ definitions:
         type: string
       usuario:
         $ref: '#/definitions/model.User'
+    type: object
+  model.LoteCheckinResponse:
+    properties:
+      checkins:
+        items:
+          $ref: '#/definitions/model.CheckinResponse'
+        type: array
+      processados:
+        type: integer
+      recebidos:
+        type: integer
+    type: object
+  model.MessageResponse:
+    properties:
+      message:
+        type: string
     type: object
   model.Posto:
     properties:
@@ -625,6 +685,11 @@ definitions:
       usuario_id:
         type: string
     type: object
+  model.StatusResponse:
+    properties:
+      status:
+        type: string
+    type: object
   model.Substituicao:
     properties:
       ativo:
@@ -657,6 +722,15 @@ definitions:
         type: string
       usuario_nome:
         type: string
+    type: object
+  model.SubstituicaoListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.Substituicao'
+        type: array
+      total:
+        type: integer
     type: object
   model.Turno:
     properties:
@@ -735,6 +809,15 @@ definitions:
         type: string
       usuario_nome:
         type: string
+    type: object
+  model.TurnoListResponse:
+    properties:
+      data:
+        items:
+          $ref: '#/definitions/model.TurnoDetalhe'
+        type: array
+      total:
+        type: integer
     type: object
   model.TurnoPorPosto:
     properties:
@@ -962,14 +1045,11 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.AlertaListResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Lista alertas com filtros e paginacao (admin/supervisor)
       tags:
       - alertas
@@ -985,21 +1065,15 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.StatusResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Encerra um alerta (admin/supervisor)
       tags:
       - alertas
@@ -1015,21 +1089,15 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.StatusResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Reconhece um alerta aberto (admin/supervisor)
       tags:
       - alertas
@@ -1043,9 +1111,7 @@ paths:
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Estatisticas agregadas de alertas (admin/supervisor)
       tags:
       - alertas
@@ -1066,15 +1132,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       security: []
       summary: Login via dispositivo biometrico registrado
       tags:
@@ -1096,15 +1158,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Registra um dispositivo biometrico para o usuario autenticado
       tags:
       - auth
@@ -1125,21 +1183,15 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       security: []
       summary: Login por email e senha
       tags:
@@ -1150,15 +1202,11 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.MessageResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Encerra a sessao do dispositivo atual
       tags:
       - auth
@@ -1179,15 +1227,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       security: []
       summary: Renova o access token a partir do refresh token
       tags:
@@ -1209,21 +1253,15 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Cria um novo usuario (somente admin)
       tags:
       - auth
@@ -1242,20 +1280,15 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.LoteCheckinResponse'
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Processa um lote de check-ins offline (ate 500 por requisicao)
       tags:
       - turnos
@@ -1271,9 +1304,7 @@ paths:
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Lista todas as configs de escalonamento da empresa (somente admin)
       tags:
       - config
@@ -1293,15 +1324,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Cria uma nova config de escalonamento (somente admin)
       tags:
       - config
@@ -1317,27 +1344,19 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.StatusResponse'
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Exclui uma config de escalonamento (somente admin, apenas sistema=false)
       tags:
       - config
@@ -1356,15 +1375,11 @@ paths:
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Retorna uma config de escalonamento por ID (somente admin)
       tags:
       - config
@@ -1389,21 +1404,15 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Atualiza uma config de escalonamento (somente admin, apenas sistema=false)
       tags:
       - config
@@ -1429,21 +1438,15 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Atualiza apenas os destinatarios de uma config de escalonamento (somente
         admin)
       tags:
@@ -1458,9 +1461,7 @@ paths:
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Resumo do dashboard da empresa
       tags:
       - dashboard
@@ -1474,15 +1475,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Retorna os dados/configuracoes da empresa do usuario logado (somente
         admin)
       tags:
@@ -1503,15 +1500,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Atualiza nome e preferencias da empresa do usuario logado (somente
         admin)
       tags:
@@ -1543,20 +1536,15 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.EscalaListResponse'
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Lista escalas com filtros e paginacao (admin/supervisor)
       tags:
       - escalas
@@ -1576,15 +1564,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Cria uma escala semanal (admin/supervisor)
       tags:
       - escalas
@@ -1600,27 +1584,19 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Desativa uma escala (admin/supervisor)
       tags:
       - escalas
@@ -1639,15 +1615,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Busca uma escala pelo ID (admin/supervisor)
       tags:
       - escalas
@@ -1672,21 +1644,15 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Atualiza uma escala (admin/supervisor)
       tags:
       - escalas
@@ -1707,15 +1673,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Cria escalas em lote (ate 7 dias) para um usuario/posto (admin/supervisor)
       tags:
       - escalas
@@ -1735,15 +1697,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Substitui todas as escalas de um usuario+posto (admin/supervisor)
       tags:
       - escalas
@@ -1764,9 +1722,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Lista os postos da empresa
       tags:
       - postos
@@ -1786,9 +1742,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Cria um posto
       tags:
       - postos
@@ -1804,21 +1758,15 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Desativa um posto
       tags:
       - postos
@@ -1837,15 +1785,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Busca um posto pelo ID
       tags:
       - postos
@@ -1870,15 +1814,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Atualiza um posto
       tags:
       - postos
@@ -1913,8 +1853,7 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.SubstituicaoListResponse'
       summary: Lista substituicoes com filtros e paginacao (admin/supervisor)
       tags:
       - substituicoes
@@ -1934,9 +1873,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Cria uma substituicao de vigia (admin/supervisor)
       tags:
       - substituicoes
@@ -1952,15 +1889,11 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.MessageResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Desativa uma substituicao (admin/supervisor)
       tags:
       - substituicoes
@@ -1979,9 +1912,7 @@ paths:
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Busca uma substituicao pelo ID (admin/supervisor)
       tags:
       - substituicoes
@@ -2006,9 +1937,7 @@ paths:
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Atualiza uma substituicao (admin/supervisor)
       tags:
       - substituicoes
@@ -2059,17 +1988,13 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties: true
-            type: object
+            $ref: '#/definitions/model.TurnoListResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Lista turnos com filtros unificados, ordenacao e paginacao
       tags:
-      - turnos
       - turnos
   /turnos/{id}:
     get:
@@ -2087,9 +2012,7 @@ paths:
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Busca o detalhe de um turno pelo ID
       tags:
       - turnos
@@ -2109,76 +2032,13 @@ paths:
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Revoga a sessao do dispositivo de um turno, gerando PIN de resgate
       tags:
-      - turnos
-  /turnos/ativos:
-    get:
-      description: |-
-        Para vigias, retorna apenas os turnos do proprio usuario autenticado.
-        Admin e supervisores podem filtrar por qualquer usuario/posto.
-      parameters:
-      - description: Status (agendado,em_andamento,pausado,critico,finalizado) - multiplos
-          separados por virgula
-        in: query
-        name: status
-        type: string
-      - description: Data inicial (YYYY-MM-DD)
-        in: query
-        name: data_inicio
-        type: string
-      - description: Data final (YYYY-MM-DD)
-        in: query
-        name: data_fim
-        type: string
-      - description: ID(s) do(s) vigia(s) (uuid) - multiplos separados por virgula
-        in: query
-        name: usuario_id
-        type: string
-      - description: ID(s) do(s) posto(s) (uuid) - multiplos separados por virgula
-        in: query
-        name: posto_id
-        type: string
-      - description: Campo de ordenacao (inicio_previsto, created_at, status)
-        in: query
-        name: sort_by
-        type: string
-      - description: Direcao (asc, desc)
-        in: query
-        name: sort_order
-        type: string
-      - description: Limite (max 100)
-        in: query
-        name: limit
-        type: integer
-      - description: Offset
-        in: query
-        name: offset
-        type: integer
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Lista turnos com filtros unificados, ordenacao e paginacao
-      tags:
-      - turnos
       - turnos
   /turnos/checkin:
     post:
@@ -2197,27 +2057,19 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Registra um check-in de turno
       tags:
       - turnos
@@ -2238,27 +2090,19 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Finaliza um turno em andamento
       tags:
       - turnos
@@ -2279,27 +2123,19 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Inicia um turno no posto informado
       tags:
       - turnos
@@ -2320,21 +2156,15 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Reassocia um turno revogado a um novo dispositivo via PIN
       tags:
       - turnos
@@ -2355,27 +2185,19 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Registra uma sabotagem durante um turno
       tags:
       - turnos
@@ -2389,9 +2211,7 @@ paths:
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Status do turno ativo do usuario autenticado
       tags:
       - turnos
@@ -2407,9 +2227,7 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Lista os usuarios da empresa (somente admin)
       tags:
       - usuarios
@@ -2429,15 +2247,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Cria um usuario (somente admin)
       tags:
       - usuarios
@@ -2453,21 +2267,15 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Desativa um usuario (somente admin)
       tags:
       - usuarios
@@ -2486,15 +2294,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Busca um usuario pelo ID (somente admin)
       tags:
       - usuarios
@@ -2519,15 +2323,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Atualiza um usuario (somente admin)
       tags:
       - usuarios
@@ -2549,15 +2349,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Lista as senhas cadastradas para um vigia
       tags:
       - usuarios
@@ -2582,15 +2378,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Cria uma senha para um vigia (somente admin)
       tags:
       - usuarios
@@ -2611,27 +2403,19 @@ paths:
         "200":
           description: OK
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Remove uma senha customizada de um vigia (somente admin)
       tags:
       - usuarios
@@ -2661,15 +2445,11 @@ paths:
         "400":
           description: Bad Request
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            additionalProperties:
-              type: string
-            type: object
+            $ref: '#/definitions/model.ErrorResponse'
       summary: Atualiza uma senha de um vigia (somente admin)
       tags:
       - usuarios

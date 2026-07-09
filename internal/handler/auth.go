@@ -30,9 +30,9 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 // @Security
 // @Param        request body model.LoginRequest true "Credenciais"
 // @Success      200 {object} model.LoginResponse
-// @Failure      400 {object} map[string]string
-// @Failure      401 {object} map[string]string
-// @Failure      403 {object} map[string]string
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      401 {object} model.ErrorResponse
+// @Failure      403 {object} model.ErrorResponse
 // @Router       /auth/login [post]
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req model.LoginRequest
@@ -69,9 +69,9 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 // @Tags         auth
 // @Param        request body model.RegisterRequest true "Dados do usuario"
 // @Success      201 {object} model.User
-// @Failure      400 {object} map[string]string
-// @Failure      401 {object} map[string]string
-// @Failure      409 {object} map[string]string
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      401 {object} model.ErrorResponse
+// @Failure      409 {object} model.ErrorResponse
 // @Router       /auth/register [post]
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -111,8 +111,8 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 // @Security
 // @Param        request body model.RefreshRequest true "Refresh token"
 // @Success      200 {object} model.LoginResponse
-// @Failure      400 {object} map[string]string
-// @Failure      401 {object} map[string]string
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      401 {object} model.ErrorResponse
 // @Router       /auth/refresh [post]
 func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 	var req model.RefreshRequest
@@ -139,8 +139,8 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 // Logout godoc
 // @Summary      Encerra a sessao do dispositivo atual
 // @Tags         auth
-// @Success      200 {object} map[string]string
-// @Failure      500 {object} map[string]string
+// @Success      200 {object} model.MessageResponse
+// @Failure      500 {object} model.ErrorResponse
 // @Router       /auth/logout [post]
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -165,8 +165,8 @@ func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 // @Security
 // @Param        request body model.BiometricLoginRequest true "Credenciais do dispositivo"
 // @Success      200 {object} model.LoginResponse
-// @Failure      400 {object} map[string]string
-// @Failure      401 {object} map[string]string
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      401 {object} model.ErrorResponse
 // @Router       /auth/biometric/login [post]
 func (h *AuthHandler) BiometricLogin(w http.ResponseWriter, r *http.Request) {
 	var req model.BiometricLoginRequest
@@ -195,8 +195,8 @@ func (h *AuthHandler) BiometricLogin(w http.ResponseWriter, r *http.Request) {
 // @Tags         auth
 // @Param        request body model.BiometricRegisterRequest true "Dados do dispositivo"
 // @Success      201 {object} model.BiometricRegisterResponse
-// @Failure      400 {object} map[string]string
-// @Failure      401 {object} map[string]string
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      401 {object} model.ErrorResponse
 // @Router       /auth/biometric/register [post]
 func (h *AuthHandler) BiometricRegister(w http.ResponseWriter, r *http.Request) {
 	userID := GetUserID(r.Context())

@@ -25,8 +25,8 @@ func NewEmpresaHandler(empresaService *service.EmpresaService) *EmpresaHandler {
 // @Summary      Retorna os dados/configuracoes da empresa do usuario logado (somente admin)
 // @Tags         empresa
 // @Success      200 {object} model.Empresa
-// @Failure      400 {object} map[string]string
-// @Failure      500 {object} map[string]string
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      500 {object} model.ErrorResponse
 // @Router       /empresa [get]
 func (h *EmpresaHandler) Get(w http.ResponseWriter, r *http.Request) {
 	empresaID, err := uuid.Parse(GetEmpresaID(r.Context()))
@@ -50,8 +50,8 @@ func (h *EmpresaHandler) Get(w http.ResponseWriter, r *http.Request) {
 // @Tags         empresa
 // @Param        request body model.UpdateEmpresaRequest true "Campos a atualizar"
 // @Success      200 {object} model.Empresa
-// @Failure      400 {object} map[string]string
-// @Failure      500 {object} map[string]string
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      500 {object} model.ErrorResponse
 // @Router       /empresa [put]
 func (h *EmpresaHandler) Update(w http.ResponseWriter, r *http.Request) {
 	empresaID, err := uuid.Parse(GetEmpresaID(r.Context()))

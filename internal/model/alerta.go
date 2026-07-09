@@ -29,6 +29,11 @@ type ConfigEscalonamento struct {
 	CreatedAt     time.Time   `json:"created_at"`
 }
 
+type AlertaListResponse struct {
+	Data  []Alerta `json:"data"`
+	Total int      `json:"total"`
+}
+
 type AlertaFilter struct {
 	Status  string `json:"status"`
 	Tipo    string `json:"tipo"`

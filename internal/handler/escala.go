@@ -31,8 +31,8 @@ func NewEscalaHandler(escalaService *service.EscalaService) *EscalaHandler {
 // @Tags         escalas
 // @Param        request body model.CreateEscalaRequest true "Dados da escala"
 // @Success      201 {object} model.Escala
-// @Failure      400 {object} map[string]string
-// @Failure      500 {object} map[string]string
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      500 {object} model.ErrorResponse
 // @Router       /escalas [post]
 func (h *EscalaHandler) Create(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -69,8 +69,8 @@ func (h *EscalaHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Tags         escalas
 // @Param        request body model.CreateEscalaLoteRequest true "Dados do lote"
 // @Success      201 {object} model.CreateEscalaLoteResponse
-// @Failure      400 {object} map[string]string
-// @Failure      500 {object} map[string]string
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      500 {object} model.ErrorResponse
 // @Router       /escalas/lote [post]
 func (h *EscalaHandler) CreateLote(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -107,8 +107,8 @@ func (h *EscalaHandler) CreateLote(w http.ResponseWriter, r *http.Request) {
 // @Tags         escalas
 // @Param        request body model.CreateEscalaLoteRequest true "Dados do lote"
 // @Success      200 {object} model.CreateEscalaLoteResponse
-// @Failure      400 {object} map[string]string
-// @Failure      500 {object} map[string]string
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      500 {object} model.ErrorResponse
 // @Router       /escalas/lote [put]
 func (h *EscalaHandler) ReplaceLote(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -145,8 +145,8 @@ func (h *EscalaHandler) ReplaceLote(w http.ResponseWriter, r *http.Request) {
 // @Tags         escalas
 // @Param        id path string true "ID da escala (uuid)"
 // @Success      200 {object} model.Escala
-// @Failure      400 {object} map[string]string
-// @Failure      404 {object} map[string]string
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      404 {object} model.ErrorResponse
 // @Router       /escalas/{id} [get]
 func (h *EscalaHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -180,9 +180,9 @@ func (h *EscalaHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 // @Param        ativos query string false "Filtra por ativo (true/false)"
 // @Param        limit query int false "Limite de itens (max 100)"
 // @Param        offset query int false "Offset da paginacao"
-// @Success      200 {object} map[string]interface{}
-// @Failure      400 {object} map[string]string
-// @Failure      500 {object} map[string]string
+// @Success      200 {object} model.EscalaListResponse
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      500 {object} model.ErrorResponse
 // @Router       /escalas [get]
 func (h *EscalaHandler) List(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -235,9 +235,9 @@ func (h *EscalaHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Param        id path string true "ID da escala (uuid)"
 // @Param        request body model.UpdateEscalaRequest true "Campos a atualizar"
 // @Success      200 {object} model.Escala
-// @Failure      400 {object} map[string]string
-// @Failure      404 {object} map[string]string
-// @Failure      500 {object} map[string]string
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      404 {object} model.ErrorResponse
+// @Failure      500 {object} model.ErrorResponse
 // @Router       /escalas/{id} [put]
 func (h *EscalaHandler) Update(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -283,10 +283,10 @@ func (h *EscalaHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Summary      Desativa uma escala (admin/supervisor)
 // @Tags         escalas
 // @Param        id path string true "ID da escala (uuid)"
-// @Success      200 {object} map[string]string
-// @Failure      400 {object} map[string]string
-// @Failure      404 {object} map[string]string
-// @Failure      500 {object} map[string]string
+// @Success      200 {object} model.MessageResponse
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      404 {object} model.ErrorResponse
+// @Failure      500 {object} model.ErrorResponse
 // @Router       /escalas/{id} [delete]
 func (h *EscalaHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())

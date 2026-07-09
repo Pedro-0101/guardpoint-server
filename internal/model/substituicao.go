@@ -48,6 +48,11 @@ type UpdateSubstituicaoRequest struct {
 	Ativo         *bool   `json:"ativo"`
 }
 
+type SubstituicaoListResponse struct {
+	Data  []Substituicao `json:"data"`
+	Total int            `json:"total"`
+}
+
 type SubstituicaoFilter struct {
 	UsuarioID string
 	PostoID   string

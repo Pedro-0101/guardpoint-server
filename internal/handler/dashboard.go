@@ -21,7 +21,7 @@ func NewDashboardHandler(dashboardService *service.DashboardService) *DashboardH
 // @Summary      Resumo do dashboard da empresa
 // @Tags         dashboard
 // @Success      200 {object} model.DashboardSummary
-// @Failure      500 {object} map[string]string
+// @Failure      500 {object} model.ErrorResponse
 // @Router       /dashboard/summary [get]
 func (h *DashboardHandler) Summary(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())

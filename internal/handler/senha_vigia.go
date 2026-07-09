@@ -31,8 +31,8 @@ func NewSenhaVigiaHandler(s *service.SenhaVigiaService) *SenhaVigiaHandler {
 // @Tags         usuarios
 // @Param        id path string true "ID do usuario/vigia (uuid)"
 // @Success      200 {array} model.SenhaVigia
-// @Failure      400 {object} map[string]string
-// @Failure      404 {object} map[string]string
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      404 {object} model.ErrorResponse
 // @Router       /usuarios/{id}/senhas [get]
 func (h *SenhaVigiaHandler) List(w http.ResponseWriter, r *http.Request) {
 	role := GetRole(r.Context())
@@ -81,8 +81,8 @@ func (h *SenhaVigiaHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Param        id path string true "ID do usuario/vigia (uuid)"
 // @Param        request body model.CreateSenhaVigiaRequest true "Dados da senha"
 // @Success      201 {object} model.SenhaVigia
-// @Failure      400 {object} map[string]string
-// @Failure      404 {object} map[string]string
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      404 {object} model.ErrorResponse
 // @Router       /usuarios/{id}/senhas [post]
 func (h *SenhaVigiaHandler) Create(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -130,8 +130,8 @@ func (h *SenhaVigiaHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Param        senhaId path string true "ID da senha (uuid)"
 // @Param        request body model.UpdateSenhaVigiaRequest true "Campos a atualizar"
 // @Success      200 {object} model.SenhaVigia
-// @Failure      400 {object} map[string]string
-// @Failure      404 {object} map[string]string
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      404 {object} model.ErrorResponse
 // @Router       /usuarios/{id}/senhas/{senhaId} [put]
 func (h *SenhaVigiaHandler) Update(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
@@ -183,10 +183,10 @@ func (h *SenhaVigiaHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Tags         usuarios
 // @Param        id path string true "ID do usuario/vigia (uuid)"
 // @Param        senhaId path string true "ID da senha (uuid)"
-// @Success      200 {object} map[string]string
-// @Failure      400 {object} map[string]string
-// @Failure      404 {object} map[string]string
-// @Failure      409 {object} map[string]string
+// @Success      200 {object} model.MessageResponse
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      404 {object} model.ErrorResponse
+// @Failure      409 {object} model.ErrorResponse
 // @Router       /usuarios/{id}/senhas/{senhaId} [delete]
 func (h *SenhaVigiaHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
