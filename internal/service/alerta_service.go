@@ -15,47 +15,41 @@ import (
 )
 
 var (
-	ErrAlertaNaoEncontrado                = errors.New("alerta nao encontrado")
-	ErrAlertaTransicaoInvalida            = errors.New("transicao de status do alerta invalida")
-	ErrUsuarioNaoPertenceAEmpresa         = errors.New("usuario nao pertence a empresa")
-	ErrUsuarioNaoAdminOuSupervisor        = errors.New("apenas administradores ou supervisores podem ser destinatarios de alertas")
-	ErrTipoEmergenciaInvalido             = errors.New("tipo de alerta de emergencia invalido")
-	ErrEscalonamentoNaoEncontrado         = errors.New("config escalonamento nao encontrada")
-	ErrEscalonamentoSistemaNaoEditavel    = errors.New("config escalonamento do sistema nao pode ser alterada")
-	ErrEscalonamentoSistemaNaoExcluivel   = errors.New("config escalonamento do sistema nao pode ser excluida")
+	ErrAlertaNaoEncontrado             = errors.New("alerta nao encontrado")
+	ErrAlertaTransicaoInvalida         = errors.New("transicao de status do alerta invalida")
+	ErrUsuarioNaoPertenceAEmpresa      = errors.New("usuario nao pertence a empresa")
+	ErrUsuarioNaoAdminOuSupervisor     = errors.New("apenas administradores ou supervisores podem ser destinatarios de alertas")
+	ErrEscalonamentoNaoEncontrado      = errors.New("config escalonamento nao encontrada")
+	ErrEscalonamentoSistemaNaoEditavel = errors.New("config escalonamento do sistema nao pode ser alterada")
+	ErrEscalonamentoSistemaNaoExcluivel = errors.New("config escalonamento do sistema nao pode ser excluida")
 )
 
-var tiposEmergencia = []string{"sabotagem", "no_show"}
-
 type AlertaService struct {
-	alertaRepo           *repository.AlertaRepository
-	configRepo           *repository.ConfigEscalonamentoRepository
-	configEmergenciaRepo *repository.ConfigAlertaEmergenciaRepository
-	turnoRepo            *repository.TurnoRepository
-	checkinRepo          *repository.CheckinRepository
-	userRepo             *repository.UserRepository
-	alertChannel         chan *model.PendingAlert
-	hub                  *ws.Hub
+	alertaRepo   *repository.AlertaRepository
+	configRepo   *repository.ConfigEscalonamentoRepository
+	turnoRepo    *repository.TurnoRepository
+	checkinRepo  *repository.CheckinRepository
+	userRepo     *repository.UserRepository
+	alertChannel chan *model.PendingAlert
+	hub          *ws.Hub
 }
 
 func NewAlertaService(
 	alertaRepo *repository.AlertaRepository,
 	configRepo *repository.ConfigEscalonamentoRepository,
-	configEmergenciaRepo *repository.ConfigAlertaEmergenciaRepository,
 	turnoRepo *repository.TurnoRepository,
 	checkinRepo *repository.CheckinRepository,
 	userRepo *repository.UserRepository,
 	hub *ws.Hub,
 ) *AlertaService {
 	return &AlertaService{
-		alertaRepo:           alertaRepo,
-		configRepo:           configRepo,
-		configEmergenciaRepo: configEmergenciaRepo,
-		turnoRepo:            turnoRepo,
-		checkinRepo:          checkinRepo,
-		userRepo:             userRepo,
-		alertChannel:         make(chan *model.PendingAlert, 100),
-		hub:                  hub,
+		alertaRepo:   alertaRepo,
+		configRepo:   configRepo,
+		turnoRepo:    turnoRepo,
+		checkinRepo:  checkinRepo,
+		userRepo:     userRepo,
+		alertChannel: make(chan *model.PendingAlert, 100),
+		hub:          hub,
 	}
 }
 
@@ -80,10 +74,23 @@ func (s *AlertaService) CreateAlerta(ctx context.Context, empresaID, turnoID uui
 	return s.criarAlerta(ctx, empresaID, turnoID, tipo, mensagem, usuarioIDs)
 }
 
-func (s *AlertaService) CreateAlertaImediato(ctx context.Context, empresaID, turnoID uuid.UUID, tipo string, mensagem string) (*model.Alerta, error) {
-	usuarioIDs, err := s.destinatariosPorTipoEmergencia(ctx, empresaID, tipo)
-	if err != nil {
-		return nil, fmt.Errorf("resolver destinatarios: %w", err)
+func (s *AlertaService) CreateAlertaImediato(ctx context.Context, empresaID, turnoID uuid.UUID, tipo string, mensagem string, nivelEscalonamentoID *uuid.UUID) (*model.Alerta, error) {
+	var usuarioIDs []uuid.UUID
+	var err error
+
+	if nivelEscalonamentoID != nil {
+		cfg, cfgErr := s.configRepo.FindByIDEmpresa(ctx, *nivelEscalonamentoID, empresaID)
+		if cfgErr != nil {
+			return nil, fmt.Errorf("resolver destinatarios do nivel: %w", cfgErr)
+		}
+		if cfg != nil {
+			usuarioIDs = cfg.UsuarioIDs
+		}
+	} else {
+		usuarioIDs, err = s.destinatariosPadrao(ctx, empresaID)
+		if err != nil {
+			return nil, fmt.Errorf("resolver destinatarios: %w", err)
+		}
 	}
 
 	return s.criarAlerta(ctx, empresaID, turnoID, tipo, mensagem, usuarioIDs)
@@ -138,17 +145,6 @@ func (s *AlertaService) destinatariosPadrao(ctx context.Context, empresaID uuid.
 		}
 	}
 	return todos, nil
-}
-
-func (s *AlertaService) destinatariosPorTipoEmergencia(ctx context.Context, empresaID uuid.UUID, tipo string) ([]uuid.UUID, error) {
-	cfg, err := s.configEmergenciaRepo.FindByEmpresaETipo(ctx, empresaID, tipo)
-	if err != nil {
-		return nil, err
-	}
-	if cfg == nil {
-		return nil, nil
-	}
-	return cfg.UsuarioIDs, nil
 }
 
 func (s *AlertaService) ResolverAlertasAtraso(ctx context.Context, turnoID uuid.UUID) error {
@@ -405,71 +401,6 @@ func (s *AlertaService) DeleteEscalonamento(ctx context.Context, empresaID, conf
 	}
 
 	return s.configRepo.DeleteByID(ctx, parsedConfigID, parsedEmpresaID)
-}
-
-func (s *AlertaService) GetAlertasEmergencia(ctx context.Context, empresaID string) ([]model.ConfigAlertaEmergencia, error) {
-	parsedEmpresaID, err := uuid.Parse(empresaID)
-	if err != nil {
-		return nil, fmt.Errorf("empresa_id invalido: %w", err)
-	}
-
-	existentes, err := s.configEmergenciaRepo.FindByEmpresa(ctx, parsedEmpresaID)
-	if err != nil {
-		return nil, fmt.Errorf("listar config alerta emergencia: %w", err)
-	}
-
-	porTipo := make(map[string]model.ConfigAlertaEmergencia, len(existentes))
-	for _, c := range existentes {
-		porTipo[c.Tipo] = c
-	}
-
-	resultado := make([]model.ConfigAlertaEmergencia, 0, len(tiposEmergencia))
-	for _, tipo := range tiposEmergencia {
-		if c, ok := porTipo[tipo]; ok {
-			resultado = append(resultado, c)
-			continue
-		}
-		resultado = append(resultado, model.ConfigAlertaEmergencia{
-			EmpresaID:  parsedEmpresaID,
-			Tipo:       tipo,
-			UsuarioIDs: []uuid.UUID{},
-		})
-	}
-	return resultado, nil
-}
-
-func (s *AlertaService) UpdateAlertaEmergencia(ctx context.Context, empresaID, tipo string, req model.UpdateConfigAlertaEmergenciaRequest) (*model.ConfigAlertaEmergencia, error) {
-	if !tipoEmergenciaValido(tipo) {
-		return nil, ErrTipoEmergenciaInvalido
-	}
-
-	parsedEmpresaID, err := uuid.Parse(empresaID)
-	if err != nil {
-		return nil, fmt.Errorf("empresa_id invalido: %w", err)
-	}
-
-	if err := s.validarUsuariosDaEmpresa(ctx, parsedEmpresaID, req.UsuarioIDs); err != nil {
-		return nil, err
-	}
-
-	c := &model.ConfigAlertaEmergencia{
-		EmpresaID:  parsedEmpresaID,
-		Tipo:       tipo,
-		UsuarioIDs: req.UsuarioIDs,
-	}
-	if err := s.configEmergenciaRepo.Upsert(ctx, c); err != nil {
-		return nil, fmt.Errorf("atualizar config alerta emergencia: %w", err)
-	}
-	return c, nil
-}
-
-func tipoEmergenciaValido(tipo string) bool {
-	for _, t := range tiposEmergencia {
-		if t == tipo {
-			return true
-		}
-	}
-	return false
 }
 
 func (s *AlertaService) validarUsuariosDaEmpresa(ctx context.Context, empresaID uuid.UUID, usuarioIDs []uuid.UUID) error {

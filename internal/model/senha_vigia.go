@@ -7,20 +7,23 @@ import (
 )
 
 type SenhaVigia struct {
-	ID        uuid.UUID `json:"id"`
-	EmpresaID uuid.UUID `json:"empresa_id"`
-	UsuarioID uuid.UUID `json:"usuario_id"`
-	Tipo      string    `json:"tipo"` // ok | emergencia | customizada
-	Codigo    string    `json:"codigo"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
+	ID                    uuid.UUID  `json:"id"`
+	EmpresaID             uuid.UUID  `json:"empresa_id"`
+	UsuarioID             uuid.UUID  `json:"usuario_id"`
+	Tipo                  string     `json:"tipo"` // ok | emergencia | customizada
+	Codigo                string     `json:"codigo"`
+	NivelEscalonamentoID  *uuid.UUID `json:"nivel_escalonamento_id,omitempty"`
+	CreatedAt             time.Time  `json:"created_at"`
+	UpdatedAt             time.Time  `json:"updated_at"`
 }
 
 type CreateSenhaVigiaRequest struct {
-	Tipo   string `json:"tipo" validate:"required,oneof=ok emergencia customizada"`
-	Codigo string `json:"codigo" validate:"required,numeric,min=2,max=6"`
+	Tipo                  string     `json:"tipo" validate:"required,oneof=ok emergencia customizada"`
+	Codigo                string     `json:"codigo" validate:"required,numeric,min=2,max=6"`
+	NivelEscalonamentoID  *uuid.UUID `json:"nivel_escalonamento_id,omitempty"`
 }
 
 type UpdateSenhaVigiaRequest struct {
-	Codigo *string `json:"codigo" validate:"omitempty,numeric,min=2,max=6"`
+	Codigo                *string    `json:"codigo" validate:"omitempty,numeric,min=2,max=6"`
+	NivelEscalonamentoID  *uuid.UUID `json:"nivel_escalonamento_id,omitempty"`
 }

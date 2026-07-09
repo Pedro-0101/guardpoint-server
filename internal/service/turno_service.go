@@ -122,7 +122,7 @@ func (s *TurnoService) aplicarConsequenciaSenha(ctx context.Context, empresaIDSt
 		mensagem = "Senha customizada detectada"
 	}
 
-	if _, err := s.alertaService.CreateAlertaImediato(ctx, empresaID, turnoID, tipoAlerta, mensagem); err != nil {
+	if _, err := s.alertaService.CreateAlertaImediato(ctx, empresaID, turnoID, tipoAlerta, mensagem, senha.NivelEscalonamentoID); err != nil {
 		slog.Error("criar alerta de senha", "error", err, "turno_id", turnoID)
 	}
 	s.hub.Broadcast(empresaIDStr, ws.NewStatusChangeEvent(turnoID.String(), "critico"))
@@ -765,7 +765,7 @@ func (s *TurnoService) Sabotagem(ctx context.Context, userID, empresaID string, 
 
 	s.emitirGPSUpdate(empresaID, req.TurnoID, req.Latitude, req.Longitude, timestampCriacao, flagGeofence)
 
-	alerta, err := s.alertaService.CreateAlertaImediato(ctx, parsedEmpresaID, parsedTurnoID, "sabotagem", "Sabotagem reportada pelo vigia. Motivo: "+req.Motivo)
+	alerta, err := s.alertaService.CreateAlertaImediato(ctx, parsedEmpresaID, parsedTurnoID, "sabotagem", "Sabotagem reportada pelo vigia. Motivo: "+req.Motivo, nil)
 	alertaID := ""
 	if err == nil && alerta != nil {
 		alertaID = alerta.ID.String()

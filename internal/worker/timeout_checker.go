@@ -126,13 +126,17 @@ func (w *TimeoutChecker) processTurno(ctx context.Context, t turnoAtivoInfo) {
 	}
 
 	var menorAtraso int
-	for i, cfg := range configs {
-		if i == 0 || cfg.AtrasoMinutos < menorAtraso {
-			menorAtraso = cfg.AtrasoMinutos
+	hasAtraso := false
+	for _, cfg := range configs {
+		if cfg.AtrasoMinutos > 0 {
+			if !hasAtraso || cfg.AtrasoMinutos < menorAtraso {
+				menorAtraso = cfg.AtrasoMinutos
+				hasAtraso = true
+			}
 		}
 	}
 
-	if atrasoMinutos >= menorAtraso {
+	if hasAtraso && atrasoMinutos >= menorAtraso {
 		mensagem := fmt.Sprintf(
 			"Atraso de %d minutos detectado no turno.",
 			atrasoMinutos,
@@ -221,7 +225,7 @@ func (w *TimeoutChecker) checkNoShow(ctx context.Context) {
 			now.Format("15:04"), tolerancia, e.horaInicio, e.usuarioID.String(),
 		)
 
-		_, err = w.alertaSvc.CreateAlertaImediato(ctx, e.empresaID, uuid.Nil, "no_show", mensagem)
+		_, err = w.alertaSvc.CreateAlertaImediato(ctx, e.empresaID, uuid.Nil, "no_show", mensagem, nil)
 		if err != nil {
 			slog.Error("timeout checker: criar alerta no-show", "error", err, "usuario_id", e.usuarioID)
 			continue

@@ -52,7 +52,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 	checkinRepo := repository.NewCheckinRepository(pool)
 	alertaRepo := repository.NewAlertaRepository(pool)
 	configEscalonamentoRepo := repository.NewConfigEscalonamentoRepository(pool)
-	configAlertaEmergenciaRepo := repository.NewConfigAlertaEmergenciaRepository(pool)
 	escalaRepo := repository.NewEscalaRepository(pool)
 	substituicaoRepo := repository.NewSubstituicaoRepository(pool)
 	senhaVigiaRepo := repository.NewSenhaVigiaRepository(pool)
@@ -63,13 +62,13 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 	postoService := service.NewPostoService(postoRepo)
 	postoHandler := handler.NewPostoHandler(postoService)
 
-	alertaService := service.NewAlertaService(alertaRepo, configEscalonamentoRepo, configAlertaEmergenciaRepo, turnoRepo, checkinRepo, userRepo, hub)
+	alertaService := service.NewAlertaService(alertaRepo, configEscalonamentoRepo, turnoRepo, checkinRepo, userRepo, hub)
 
 	turnoService := service.NewTurnoService(turnoRepo, checkinRepo, postoRepo, userRepo, sessaoDispositivoRepo, escalaRepo, substituicaoRepo, senhaVigiaRepo, alertaService, hub)
 	syncReconciler := worker.NewSyncReconciler(alertaRepo, checkinRepo, turnoRepo, hub)
 	turnoHandler := handler.NewTurnoHandler(turnoService, syncReconciler)
 
-	senhaVigiaService := service.NewSenhaVigiaService(senhaVigiaRepo, userRepo)
+	senhaVigiaService := service.NewSenhaVigiaService(senhaVigiaRepo, userRepo, configEscalonamentoRepo)
 	senhaVigiaHandler := handler.NewSenhaVigiaHandler(senhaVigiaService)
 
 	usuarioService := service.NewUsuarioService(userRepo)
@@ -203,8 +202,6 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 					r.Put("/{id}/usuarios", alertaHandler.UpdateEscalonamentoUsuarios)
 					r.Delete("/{id}", alertaHandler.DeleteEscalonamento)
 				})
-				r.Get("/alertas-emergencia", alertaHandler.GetAlertasEmergencia)
-				r.Put("/alertas-emergencia/{tipo}", alertaHandler.PutAlertaEmergencia)
 			})
 
 			r.Route("/escalas", func(r chi.Router) {

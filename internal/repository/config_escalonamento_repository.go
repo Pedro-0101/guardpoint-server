@@ -46,12 +46,13 @@ func (r *ConfigEscalonamentoRepository) Create(ctx context.Context, c *model.Con
 func (r *ConfigEscalonamentoRepository) FindByEmpresa(ctx context.Context, empresaID uuid.UUID) (*model.ConfigEscalonamento, error) {
 	var c model.ConfigEscalonamento
 	err := r.db.QueryRow(ctx, `
-		SELECT id, empresa_id, atraso_minutos, descricao, sistema, created_at
-		FROM config_escalonamento
-		WHERE empresa_id = $1
-		ORDER BY created_at ASC
+		SELECT ce.id, ce.empresa_id, ce.atraso_minutos, ce.descricao, ce.sistema, ce.created_at,
+		       EXISTS(SELECT 1 FROM senhas_vigia sv WHERE sv.nivel_escalonamento_id = ce.id) AS em_uso
+		FROM config_escalonamento ce
+		WHERE ce.empresa_id = $1
+		ORDER BY ce.created_at ASC
 		LIMIT 1
-	`, empresaID).Scan(&c.ID, &c.EmpresaID, &c.AtrasoMinutos, &c.Descricao, &c.Sistema, &c.CreatedAt)
+	`, empresaID).Scan(&c.ID, &c.EmpresaID, &c.AtrasoMinutos, &c.Descricao, &c.Sistema, &c.CreatedAt, &c.EmUso)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -66,10 +67,11 @@ func (r *ConfigEscalonamentoRepository) FindByEmpresa(ctx context.Context, empre
 func (r *ConfigEscalonamentoRepository) FindByIDEmpresa(ctx context.Context, id, empresaID uuid.UUID) (*model.ConfigEscalonamento, error) {
 	var c model.ConfigEscalonamento
 	err := r.db.QueryRow(ctx, `
-		SELECT id, empresa_id, atraso_minutos, descricao, sistema, created_at
-		FROM config_escalonamento
-		WHERE id = $1 AND empresa_id = $2
-	`, id, empresaID).Scan(&c.ID, &c.EmpresaID, &c.AtrasoMinutos, &c.Descricao, &c.Sistema, &c.CreatedAt)
+		SELECT ce.id, ce.empresa_id, ce.atraso_minutos, ce.descricao, ce.sistema, ce.created_at,
+		       EXISTS(SELECT 1 FROM senhas_vigia sv WHERE sv.nivel_escalonamento_id = ce.id) AS em_uso
+		FROM config_escalonamento ce
+		WHERE ce.id = $1 AND ce.empresa_id = $2
+	`, id, empresaID).Scan(&c.ID, &c.EmpresaID, &c.AtrasoMinutos, &c.Descricao, &c.Sistema, &c.CreatedAt, &c.EmUso)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return nil, nil
@@ -83,10 +85,11 @@ func (r *ConfigEscalonamentoRepository) FindByIDEmpresa(ctx context.Context, id,
 
 func (r *ConfigEscalonamentoRepository) ListByEmpresa(ctx context.Context, empresaID uuid.UUID) ([]model.ConfigEscalonamento, error) {
 	rows, err := r.db.Query(ctx, `
-		SELECT id, empresa_id, atraso_minutos, descricao, sistema, created_at
-		FROM config_escalonamento
-		WHERE empresa_id = $1
-		ORDER BY created_at ASC
+		SELECT ce.id, ce.empresa_id, ce.atraso_minutos, ce.descricao, ce.sistema, ce.created_at,
+		       EXISTS(SELECT 1 FROM senhas_vigia sv WHERE sv.nivel_escalonamento_id = ce.id) AS em_uso
+		FROM config_escalonamento ce
+		WHERE ce.empresa_id = $1
+		ORDER BY ce.created_at ASC
 	`, empresaID)
 	if err != nil {
 		return nil, fmt.Errorf("listar configs escalonamento: %w", err)
@@ -96,7 +99,7 @@ func (r *ConfigEscalonamentoRepository) ListByEmpresa(ctx context.Context, empre
 	var configs []model.ConfigEscalonamento
 	for rows.Next() {
 		var c model.ConfigEscalonamento
-		if err := rows.Scan(&c.ID, &c.EmpresaID, &c.AtrasoMinutos, &c.Descricao, &c.Sistema, &c.CreatedAt); err != nil {
+		if err := rows.Scan(&c.ID, &c.EmpresaID, &c.AtrasoMinutos, &c.Descricao, &c.Sistema, &c.CreatedAt, &c.EmUso); err != nil {
 			return nil, fmt.Errorf("scan config escalonamento: %w", err)
 		}
 		c.UsuarioIDs = r.listarDestinatarios(ctx, c.ID)

@@ -24,18 +24,9 @@ type ConfigEscalonamento struct {
 	AtrasoMinutos int         `json:"atraso_minutos"`
 	Descricao     string      `json:"descricao"`
 	Sistema       bool        `json:"sistema"`
+	EmUso         bool        `json:"em_uso"`
 	UsuarioIDs    []uuid.UUID `json:"usuario_ids"`
 	CreatedAt     time.Time   `json:"created_at"`
-}
-
-// ConfigAlertaEmergencia define quais usuarios recebem um tipo especifico de
-// alerta de emergencia (coacao, sabotagem, no_show).
-type ConfigAlertaEmergencia struct {
-	ID         uuid.UUID   `json:"id"`
-	EmpresaID  uuid.UUID   `json:"empresa_id"`
-	Tipo       string      `json:"tipo"`
-	UsuarioIDs []uuid.UUID `json:"usuario_ids"`
-	CreatedAt  time.Time   `json:"created_at"`
 }
 
 type AlertaFilter struct {
@@ -65,22 +56,18 @@ type AlertaPorHora struct {
 }
 
 type CreateConfigEscalonamentoRequest struct {
-	AtrasoMinutos int         `json:"atraso_minutos" validate:"required,min=1,max=1440"`
+	AtrasoMinutos int         `json:"atraso_minutos" validate:"min=0,max=1440"`
 	Descricao     string      `json:"descricao"`
 	UsuarioIDs    []uuid.UUID `json:"usuario_ids" validate:"required,min=1"`
 }
 
 type UpdateConfigEscalonamentoRequest struct {
-	AtrasoMinutos int         `json:"atraso_minutos" validate:"required,min=1,max=1440"`
+	AtrasoMinutos int         `json:"atraso_minutos" validate:"min=0,max=1440"`
 	Descricao     string      `json:"descricao"`
 	UsuarioIDs    []uuid.UUID `json:"usuario_ids" validate:"required,min=1"`
 }
 
 type UpdateConfigEscalonamentoUsuariosRequest struct {
-	UsuarioIDs []uuid.UUID `json:"usuario_ids" validate:"required,min=1"`
-}
-
-type UpdateConfigAlertaEmergenciaRequest struct {
 	UsuarioIDs []uuid.UUID `json:"usuario_ids" validate:"required,min=1"`
 }
 

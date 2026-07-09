@@ -519,86 +519,6 @@ const docTemplate = `{
                 }
             }
         },
-        "/config/alertas-emergencia": {
-            "get": {
-                "tags": [
-                    "config"
-                ],
-                "summary": "Lista os destinatarios configurados por tipo de alerta de emergencia (somente admin)",
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.ConfigAlertaEmergencia"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/config/alertas-emergencia/{tipo}": {
-            "put": {
-                "tags": [
-                    "config"
-                ],
-                "summary": "Define os destinatarios de um tipo de alerta de emergencia (somente admin)",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Tipo de emergencia (sabotagem, no_show)",
-                        "name": "tipo",
-                        "in": "path",
-                        "required": true
-                    },
-                    {
-                        "description": "Lista de usuarios destinatarios",
-                        "name": "request",
-                        "in": "body",
-                        "required": true,
-                        "schema": {
-                            "$ref": "#/definitions/model.UpdateConfigAlertaEmergenciaRequest"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "$ref": "#/definitions/model.ConfigAlertaEmergencia"
-                        }
-                    },
-                    "400": {
-                        "description": "Bad Request",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
         "/config/escalonamento": {
             "get": {
                 "tags": [
@@ -2466,7 +2386,7 @@ const docTemplate = `{
                 "tags": [
                     "usuarios"
                 ],
-                "summary": "Lista as senhas cadastradas para um vigia (somente admin)",
+                "summary": "Lista as senhas cadastradas para um vigia",
                 "parameters": [
                     {
                         "type": "string",
@@ -2904,29 +2824,6 @@ const docTemplate = `{
                 }
             }
         },
-        "model.ConfigAlertaEmergencia": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string"
-                },
-                "empresa_id": {
-                    "type": "string"
-                },
-                "id": {
-                    "type": "string"
-                },
-                "tipo": {
-                    "type": "string"
-                },
-                "usuario_ids": {
-                    "type": "array",
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            }
-        },
         "model.ConfigEscalonamento": {
             "type": "object",
             "properties": {
@@ -2938,6 +2835,9 @@ const docTemplate = `{
                 },
                 "descricao": {
                     "type": "string"
+                },
+                "em_uso": {
+                    "type": "boolean"
                 },
                 "empresa_id": {
                     "type": "string"
@@ -2959,14 +2859,13 @@ const docTemplate = `{
         "model.CreateConfigEscalonamentoRequest": {
             "type": "object",
             "required": [
-                "atraso_minutos",
                 "usuario_ids"
             ],
             "properties": {
                 "atraso_minutos": {
                     "type": "integer",
                     "maximum": 1440,
-                    "minimum": 1
+                    "minimum": 0
                 },
                 "descricao": {
                     "type": "string"
@@ -3104,6 +3003,9 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 6,
                     "minLength": 2
+                },
+                "nivel_escalonamento_id": {
+                    "type": "string"
                 },
                 "tipo": {
                     "type": "string",
@@ -3583,6 +3485,9 @@ const docTemplate = `{
                 "id": {
                     "type": "string"
                 },
+                "nivel_escalonamento_id": {
+                    "type": "string"
+                },
                 "tipo": {
                     "description": "ok | emergencia | customizada",
                     "type": "string"
@@ -3782,32 +3687,16 @@ const docTemplate = `{
                 }
             }
         },
-        "model.UpdateConfigAlertaEmergenciaRequest": {
-            "type": "object",
-            "required": [
-                "usuario_ids"
-            ],
-            "properties": {
-                "usuario_ids": {
-                    "type": "array",
-                    "minItems": 1,
-                    "items": {
-                        "type": "string"
-                    }
-                }
-            }
-        },
         "model.UpdateConfigEscalonamentoRequest": {
             "type": "object",
             "required": [
-                "atraso_minutos",
                 "usuario_ids"
             ],
             "properties": {
                 "atraso_minutos": {
                     "type": "integer",
                     "maximum": 1440,
-                    "minimum": 1
+                    "minimum": 0
                 },
                 "descricao": {
                     "type": "string"
@@ -3917,6 +3806,9 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 6,
                     "minLength": 2
+                },
+                "nivel_escalonamento_id": {
+                    "type": "string"
                 }
             }
         },

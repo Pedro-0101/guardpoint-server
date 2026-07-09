@@ -153,21 +153,6 @@ definitions:
       status:
         type: string
     type: object
-  model.ConfigAlertaEmergencia:
-    properties:
-      created_at:
-        type: string
-      empresa_id:
-        type: string
-      id:
-        type: string
-      tipo:
-        type: string
-      usuario_ids:
-        items:
-          type: string
-        type: array
-    type: object
   model.ConfigEscalonamento:
     properties:
       atraso_minutos:
@@ -176,6 +161,8 @@ definitions:
         type: string
       descricao:
         type: string
+      em_uso:
+        type: boolean
       empresa_id:
         type: string
       id:
@@ -191,7 +178,7 @@ definitions:
     properties:
       atraso_minutos:
         maximum: 1440
-        minimum: 1
+        minimum: 0
         type: integer
       descricao:
         type: string
@@ -201,7 +188,6 @@ definitions:
         minItems: 1
         type: array
     required:
-    - atraso_minutos
     - usuario_ids
     type: object
   model.CreateEscalaLoteRequest:
@@ -290,6 +276,8 @@ definitions:
       codigo:
         maxLength: 6
         minLength: 2
+        type: string
+      nivel_escalonamento_id:
         type: string
       tipo:
         enum:
@@ -627,6 +615,8 @@ definitions:
         type: string
       id:
         type: string
+      nivel_escalonamento_id:
+        type: string
       tipo:
         description: ok | emergencia | customizada
         type: string
@@ -758,21 +748,11 @@ definitions:
       ultimo_checkin:
         $ref: '#/definitions/model.Checkin'
     type: object
-  model.UpdateConfigAlertaEmergenciaRequest:
-    properties:
-      usuario_ids:
-        items:
-          type: string
-        minItems: 1
-        type: array
-    required:
-    - usuario_ids
-    type: object
   model.UpdateConfigEscalonamentoRequest:
     properties:
       atraso_minutos:
         maximum: 1440
-        minimum: 1
+        minimum: 0
         type: integer
       descricao:
         type: string
@@ -782,7 +762,6 @@ definitions:
         minItems: 1
         type: array
     required:
-    - atraso_minutos
     - usuario_ids
     type: object
   model.UpdateConfigEscalonamentoUsuariosRequest:
@@ -852,6 +831,8 @@ definitions:
       codigo:
         maxLength: 6
         minLength: 2
+        type: string
+      nivel_escalonamento_id:
         type: string
     type: object
   model.UpdateSubstituicaoRequest:
@@ -1270,60 +1251,6 @@ paths:
       summary: Processa um lote de check-ins offline (ate 500 por requisicao)
       tags:
       - turnos
-  /config/alertas-emergencia:
-    get:
-      responses:
-        "200":
-          description: OK
-          schema:
-            items:
-              $ref: '#/definitions/model.ConfigAlertaEmergencia'
-            type: array
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Lista os destinatarios configurados por tipo de alerta de emergencia
-        (somente admin)
-      tags:
-      - config
-  /config/alertas-emergencia/{tipo}:
-    put:
-      parameters:
-      - description: Tipo de emergencia (sabotagem, no_show)
-        in: path
-        name: tipo
-        required: true
-        type: string
-      - description: Lista de usuarios destinatarios
-        in: body
-        name: request
-        required: true
-        schema:
-          $ref: '#/definitions/model.UpdateConfigAlertaEmergenciaRequest'
-      responses:
-        "200":
-          description: OK
-          schema:
-            $ref: '#/definitions/model.ConfigAlertaEmergencia'
-        "400":
-          description: Bad Request
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Define os destinatarios de um tipo de alerta de emergencia (somente
-        admin)
-      tags:
-      - config
   /config/escalonamento:
     get:
       responses:
@@ -2569,7 +2496,7 @@ paths:
             additionalProperties:
               type: string
             type: object
-      summary: Lista as senhas cadastradas para um vigia (somente admin)
+      summary: Lista as senhas cadastradas para um vigia
       tags:
       - usuarios
     post:

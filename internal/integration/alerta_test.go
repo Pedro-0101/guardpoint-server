@@ -61,71 +61,19 @@ func TestConfigEscalonamentoDestinatarios(t *testing.T) {
 	})
 }
 
-// Configuracao de destinatarios por tipo de alerta de emergencia.
-func TestConfigAlertaEmergencia(t *testing.T) {
-	c := novoCenario(t)
-
-	t.Run("GET inicial retorna os 2 tipos vazios", func(t *testing.T) {
-		var configs []model.ConfigAlertaEmergencia
-		c.e.reqJSON(http.MethodGet, "/api/v1/config/alertas-emergencia", c.adminToken, nil, http.StatusOK, &configs)
-
-		if len(configs) != 2 {
-			t.Fatalf("configs = %d, esperado 2 (sabotagem, no_show)", len(configs))
-		}
-		for _, cfg := range configs {
-			if len(cfg.UsuarioIDs) != 0 {
-				t.Errorf("tipo %s: usuario_ids = %v, esperado vazio", cfg.Tipo, cfg.UsuarioIDs)
-			}
-		}
-	})
-
-	t.Run("PUT define destinatarios de sabotagem", func(t *testing.T) {
-		gerente := c.e.criarUsuario(c.empresa.ID, "Gerente Emergencia", "gerente.emerg@a.com", "senha123", "admin", true)
-
-		var config model.ConfigAlertaEmergencia
-		c.e.reqJSON(http.MethodPut, "/api/v1/config/alertas-emergencia/sabotagem", c.adminToken, map[string]any{
-			"usuario_ids": []string{gerente.ID.String()},
-		}, http.StatusOK, &config)
-
-		if len(config.UsuarioIDs) != 1 || config.UsuarioIDs[0] != gerente.ID {
-			t.Fatalf("usuario_ids = %v, esperado [%s]", config.UsuarioIDs, gerente.ID)
-		}
-	})
-
-	// coacao deixou de ser um tipo de alerta de emergencia com config propria
-	// (Task 6): alertas de senha de emergencia agora usam o mecanismo de PIN
-	// (CreateAlertaPorSenha, destinatarios por nivel de escalonamento), nao
-	// mais config_alerta_emergencia.
-	t.Run("PUT com tipo coacao retorna 400 (nao e mais um tipo valido)", func(t *testing.T) {
-		outro := c.e.criarUsuario(c.empresa.ID, "Outro Coacao", "outro.coacao@a.com", "senha123", "admin", true)
-		c.e.reqJSON(http.MethodPut, "/api/v1/config/alertas-emergencia/coacao", c.adminToken, map[string]any{
-			"usuario_ids": []string{outro.ID.String()},
-		}, http.StatusBadRequest, nil)
-	})
-
-	t.Run("PUT com tipo invalido retorna 400", func(t *testing.T) {
-		outro := c.e.criarUsuario(c.empresa.ID, "Outro", "outro.tipo@a.com", "senha123", "admin", true)
-		c.e.reqJSON(http.MethodPut, "/api/v1/config/alertas-emergencia/tipo_invalido", c.adminToken, map[string]any{
-			"usuario_ids": []string{outro.ID.String()},
-		}, http.StatusBadRequest, nil)
-	})
-}
-
 // Alerta de senha de emergencia (PIN "emergencia") deve enfileirar PendingAlert
-// com os usuario_ids do nivel de escalonamento MAXIMO da empresa, ja que a senha
-// "emergencia" nunca tem nivel_escalonamento_id fixo (e sempre resolvido
-// dinamicamente por CreateAlertaPorSenha -- Task 6/7). Isto substitui o antigo
-// TestAlertaImediatoUsaDestinatariosPorTipo, cuja premissa (config_alerta_emergencia
-// por tipo "coacao") nao existe mais.
-func TestAlertaSenhaEmergenciaUsaNivelMaximoDeEscalonamento(t *testing.T) {
+// com os usuario_ids do nivel de escalonamento padrao do sistema (sistema=true)
+// ao qual a senha de emergencia esta vinculada. Diferente da senha customizada,
+// a senha de emergencia sempre aponta para o escalonamento padrao criado pelo
+// ProvisionarPadrao.
+func TestAlertaSenhaEmergenciaUsaNivelPadraoDoSistema(t *testing.T) {
 	c := novoCenario(t)
 	turno := c.iniciarTurno()
 
 	supervisor := c.e.criarUsuario(c.empresa.ID, "Supervisor N1", "sup.n1.emerg@a.com", "senha123", "supervisor", true)
-	diretor := c.e.criarUsuario(c.empresa.ID, "Diretor N2", "diretor.n2.emerg@a.com", "senha123", "admin", true)
+	c.e.criarUsuario(c.empresa.ID, "Diretor N2", "diretor.n2.emerg@a.com", "senha123", "admin", true)
 	c.e.reqJSON(http.MethodPut, "/api/v1/config/escalonamento", c.adminToken, []map[string]any{
 		{"nivel": 1, "atraso_minutos": 5, "usuario_ids": []string{supervisor.ID.String()}},
-		{"nivel": 2, "atraso_minutos": 15, "usuario_ids": []string{diretor.ID.String()}},
 	}, http.StatusOK, nil)
 
 	c.e.reqJSON(http.MethodPost, "/api/v1/turnos/checkin", c.vigiaToken,
@@ -136,9 +84,8 @@ func TestAlertaSenhaEmergenciaUsaNivelMaximoDeEscalonamento(t *testing.T) {
 		if pending.Alerta.Tipo != "senha_emergencia" {
 			t.Fatalf("tipo do alerta = %s, esperado senha_emergencia", pending.Alerta.Tipo)
 		}
-		// nivel maximo (2, diretor) deve ser o destinatario, nao o nivel 1 (supervisor)
-		if len(pending.UsuarioIDs) != 1 || pending.UsuarioIDs[0] != diretor.ID {
-			t.Fatalf("usuario_ids = %v, esperado [%s] (nivel maximo)", pending.UsuarioIDs, diretor.ID)
+		if len(pending.UsuarioIDs) != 1 || pending.UsuarioIDs[0] != c.admin.ID {
+			t.Fatalf("usuario_ids = %v, esperado [%s] (nivel padrao do sistema)", pending.UsuarioIDs, c.admin.ID)
 		}
 	case <-time.After(2 * time.Second):
 		t.Fatal("nenhum PendingAlert recebido no canal em 2s")

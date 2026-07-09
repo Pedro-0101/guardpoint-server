@@ -240,6 +240,27 @@ func (h *SenhaVigiaHandler) writeSenhaError(w http.ResponseWriter, err error) bo
 	case errors.Is(err, service.ErrSenhaObrigatoriaNaoRemovivel):
 		writeError(w, http.StatusConflict, "senha obrigatoria nao pode ser removida")
 		return true
+	case errors.Is(err, service.ErrSenhaNivelObrigatorio):
+		writeError(w, http.StatusBadRequest, "nivel de escalonamento obrigatorio para este tipo de senha")
+		return true
+	case errors.Is(err, service.ErrSenhaNivelNaoPermitido):
+		writeError(w, http.StatusBadRequest, "senha do tipo ok nao pode ter nivel de escalonamento")
+		return true
+	case errors.Is(err, service.ErrSenhaEmergenciaNivelInvalido):
+		writeError(w, http.StatusBadRequest, "senha de emergencia deve usar o nivel padrao do sistema")
+		return true
+	case errors.Is(err, service.ErrSenhaCustomizadaNivelInvalido):
+		writeError(w, http.StatusBadRequest, "senha customizada nao pode usar o nivel padrao do sistema")
+		return true
+	case errors.Is(err, service.ErrSenhaNivelInexistente):
+		writeError(w, http.StatusBadRequest, "nivel de escalonamento nao encontrado")
+		return true
+	case errors.Is(err, service.ErrSenhaNivelDuplicado):
+		writeError(w, http.StatusConflict, "nivel de escalonamento ja vinculado a outra senha")
+		return true
+	case errors.Is(err, service.ErrSenhaNivelNaoPertenceEmpresa):
+		writeError(w, http.StatusBadRequest, "nivel de escalonamento nao pertence a empresa")
+		return true
 	}
 	return false
 }
