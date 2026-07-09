@@ -19,11 +19,11 @@ type SenhaVigia struct {
 
 type CreateSenhaVigiaRequest struct {
 	Tipo      string  `json:"tipo" validate:"required,oneof=ok emergencia customizada"`
-	Codigo    string  `json:"codigo" validate:"required,numeric,min=4,max=6"`
+	Codigo    string  `json:"codigo" validate:"required,numeric,min=2,max=6"`
 	Descricao *string `json:"descricao" validate:"required_if=Tipo customizada,omitempty,max=255"`
 }
 
 type UpdateSenhaVigiaRequest struct {
-	Codigo    *string `json:"codigo" validate:"omitempty,numeric,min=4,max=6"`
+	Codigo    *string `json:"codigo" validate:"omitempty,numeric,min=2,max=6"`
 	Descricao *string `json:"descricao" validate:"omitempty,max=255"`
 }
