@@ -184,7 +184,14 @@ func (s *TurnoService) Iniciar(ctx context.Context, userID, empresaID string, re
 
 	tokenSessao := uuid.New().String()
 
-	fimPrevisto := now.Add(12 * time.Hour)
+	dateStr := now.Format("2006-01-02")
+	fimPrevisto, err := parseHoraData(dateStr, esc.HoraFim)
+	if err != nil {
+		fimPrevisto = now.Add(12 * time.Hour)
+	}
+	if !fimPrevisto.After(now) {
+		fimPrevisto = fimPrevisto.AddDate(0, 0, 1)
+	}
 
 	deviceID := req.DeviceID
 
