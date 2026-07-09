@@ -1678,7 +1678,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Status (agendado,em_andamento,pausado,critico,finalizado)",
+                        "description": "Status (agendado,em_andamento,pausado,critico,finalizado) - multiplos separados por virgula",
                         "name": "status",
                         "in": "query"
                     },
@@ -1696,13 +1696,13 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "ID do vigia (uuid)",
+                        "description": "ID(s) do(s) vigia(s) (uuid) - multiplos separados por virgula",
                         "name": "usuario_id",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "ID do posto (uuid)",
+                        "description": "ID(s) do(s) posto(s) (uuid) - multiplos separados por virgula",
                         "name": "posto_id",
                         "in": "query"
                     },
@@ -1762,7 +1762,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Status (agendado,em_andamento,pausado,critico,finalizado)",
+                        "description": "Status (agendado,em_andamento,pausado,critico,finalizado) - multiplos separados por virgula",
                         "name": "status",
                         "in": "query"
                     },
@@ -1780,13 +1780,13 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "ID do vigia (uuid)",
+                        "description": "ID(s) do(s) vigia(s) (uuid) - multiplos separados por virgula",
                         "name": "usuario_id",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "ID do posto (uuid)",
+                        "description": "ID(s) do(s) posto(s) (uuid) - multiplos separados por virgula",
                         "name": "posto_id",
                         "in": "query"
                     },

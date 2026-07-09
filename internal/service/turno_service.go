@@ -9,7 +9,6 @@ import (
 	"math"
 	"math/big"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -718,7 +717,7 @@ func (s *TurnoService) GetTurnos(ctx context.Context, empresaID string, filter m
 		return nil, 0, fmt.Errorf("empresa_id invalido: %w", err)
 	}
 
-	requestedStatuses := splitStatuses(filter.Status)
+	requestedStatuses := filter.Status
 	hasAgendado := false
 	hasReal := false
 	for _, st := range requestedStatuses {
@@ -795,21 +794,6 @@ func (s *TurnoService) GetTurnos(ctx context.Context, empresaID string, filter m
 	}
 
 	return allTurnos[filter.Offset:end], total, nil
-}
-
-func splitStatuses(status string) []string {
-	if status == "" {
-		return nil
-	}
-	parts := strings.Split(status, ",")
-	var result []string
-	for _, s := range parts {
-		s = strings.TrimSpace(s)
-		if s != "" {
-			result = append(result, s)
-		}
-	}
-	return result
 }
 
 func (s *TurnoService) gerarTurnosAgendados(ctx context.Context, empresaID uuid.UUID, filter model.TurnoFilter) ([]model.Turno, error) {

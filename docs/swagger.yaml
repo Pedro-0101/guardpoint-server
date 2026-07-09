@@ -2014,7 +2014,8 @@ paths:
         Para vigias, retorna apenas os turnos do proprio usuario autenticado.
         Admin e supervisores podem filtrar por qualquer usuario/posto.
       parameters:
-      - description: Status (agendado,em_andamento,pausado,critico,finalizado)
+      - description: Status (agendado,em_andamento,pausado,critico,finalizado) - multiplos
+          separados por virgula
         in: query
         name: status
         type: string
@@ -2026,11 +2027,11 @@ paths:
         in: query
         name: data_fim
         type: string
-      - description: ID do vigia (uuid)
+      - description: ID(s) do(s) vigia(s) (uuid) - multiplos separados por virgula
         in: query
         name: usuario_id
         type: string
-      - description: ID do posto (uuid)
+      - description: ID(s) do(s) posto(s) (uuid) - multiplos separados por virgula
         in: query
         name: posto_id
         type: string
@@ -2122,7 +2123,8 @@ paths:
         Para vigias, retorna apenas os turnos do proprio usuario autenticado.
         Admin e supervisores podem filtrar por qualquer usuario/posto.
       parameters:
-      - description: Status (agendado,em_andamento,pausado,critico,finalizado)
+      - description: Status (agendado,em_andamento,pausado,critico,finalizado) - multiplos
+          separados por virgula
         in: query
         name: status
         type: string
@@ -2134,11 +2136,11 @@ paths:
         in: query
         name: data_fim
         type: string
-      - description: ID do vigia (uuid)
+      - description: ID(s) do(s) vigia(s) (uuid) - multiplos separados por virgula
         in: query
         name: usuario_id
         type: string
-      - description: ID do posto (uuid)
+      - description: ID(s) do(s) posto(s) (uuid) - multiplos separados por virgula
         in: query
         name: posto_id
         type: string

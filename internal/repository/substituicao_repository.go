@@ -3,6 +3,7 @@ package repository
 import (
 	"context"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -188,7 +189,7 @@ func (r *SubstituicaoRepository) FindAtivaByUsuarioPostoData(ctx context.Context
 	return &sub, nil
 }
 
-func (r *SubstituicaoRepository) ListAtivasByDateRange(ctx context.Context, empresaID uuid.UUID, dataInicio, dataFim, usuarioID, postoID string) ([]model.Substituicao, error) {
+func (r *SubstituicaoRepository) ListAtivasByDateRange(ctx context.Context, empresaID uuid.UUID, dataInicio, dataFim string, usuarioIDs, postoIDs []string) ([]model.Substituicao, error) {
 	where := "WHERE s.empresa_id = $1 AND s.ativo = true"
 	args := []interface{}{empresaID}
 
@@ -197,13 +198,23 @@ func (r *SubstituicaoRepository) ListAtivasByDateRange(ctx context.Context, empr
 		where += fmt.Sprintf(" AND s.data_inicio <= $%d::date AND s.data_fim >= $%d::date", idx, idx+1)
 		args = append(args, dataFim, dataInicio)
 	}
-	if usuarioID != "" {
-		where += fmt.Sprintf(" AND s.usuario_id = $%d::uuid", len(args)+1)
-		args = append(args, usuarioID)
+	if len(usuarioIDs) > 0 {
+		base := len(args)
+		placeholders := make([]string, len(usuarioIDs))
+		for i, id := range usuarioIDs {
+			placeholders[i] = fmt.Sprintf("$%d::uuid", base+i+1)
+			args = append(args, id)
+		}
+		where += fmt.Sprintf(" AND s.usuario_id IN (%s)", strings.Join(placeholders, ", "))
 	}
-	if postoID != "" {
-		where += fmt.Sprintf(" AND s.posto_id = $%d::uuid", len(args)+1)
-		args = append(args, postoID)
+	if len(postoIDs) > 0 {
+		base := len(args)
+		placeholders := make([]string, len(postoIDs))
+		for i, id := range postoIDs {
+			placeholders[i] = fmt.Sprintf("$%d::uuid", base+i+1)
+			args = append(args, id)
+		}
+		where += fmt.Sprintf(" AND s.posto_id IN (%s)", strings.Join(placeholders, ", "))
 	}
 
 	query := fmt.Sprintf(`

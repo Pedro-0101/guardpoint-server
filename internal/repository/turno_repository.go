@@ -197,11 +197,21 @@ func (r *TurnoRepository) ListTurnos(ctx context.Context, empresaID uuid.UUID, f
 	where := "WHERE t.empresa_id = $1"
 	args := []interface{}{empresaID}
 
-	statuses := parseStatusFilter(filter.Status)
-	if len(statuses) > 0 {
+	statuses := filter.Status
+	hasAgendado := false
+	var realStatuses []string
+	for _, s := range statuses {
+		if s == "agendado" {
+			hasAgendado = true
+			continue
+		}
+		realStatuses = append(realStatuses, s)
+	}
+	_ = hasAgendado
+	if len(realStatuses) > 0 {
 		base := len(args)
-		placeholders := make([]string, len(statuses))
-		for i, s := range statuses {
+		placeholders := make([]string, len(realStatuses))
+		for i, s := range realStatuses {
 			placeholders[i] = fmt.Sprintf("$%d", base+i+1)
 			args = append(args, s)
 		}
@@ -216,13 +226,23 @@ func (r *TurnoRepository) ListTurnos(ctx context.Context, empresaID uuid.UUID, f
 		where += fmt.Sprintf(" AND t.inicio_previsto <= $%d::timestamptz", len(args)+1)
 		args = append(args, filter.DataFim)
 	}
-	if filter.UsuarioID != "" {
-		where += fmt.Sprintf(" AND t.usuario_id = $%d::uuid", len(args)+1)
-		args = append(args, filter.UsuarioID)
+	if len(filter.UsuarioID) > 0 {
+		base := len(args)
+		placeholders := make([]string, len(filter.UsuarioID))
+		for i, id := range filter.UsuarioID {
+			placeholders[i] = fmt.Sprintf("$%d::uuid", base+i+1)
+			args = append(args, id)
+		}
+		where += fmt.Sprintf(" AND t.usuario_id IN (%s)", strings.Join(placeholders, ", "))
 	}
-	if filter.PostoID != "" {
-		where += fmt.Sprintf(" AND t.posto_id = $%d::uuid", len(args)+1)
-		args = append(args, filter.PostoID)
+	if len(filter.PostoID) > 0 {
+		base := len(args)
+		placeholders := make([]string, len(filter.PostoID))
+		for i, id := range filter.PostoID {
+			placeholders[i] = fmt.Sprintf("$%d::uuid", base+i+1)
+			args = append(args, id)
+		}
+		where += fmt.Sprintf(" AND t.posto_id IN (%s)", strings.Join(placeholders, ", "))
 	}
 
 	query := fmt.Sprintf(`
@@ -258,23 +278,7 @@ func (r *TurnoRepository) ListTurnos(ctx context.Context, empresaID uuid.UUID, f
 	return turnos, rows.Err()
 }
 
-func parseStatusFilter(status string) []string {
-	if status == "" {
-		return nil
-	}
-	parts := strings.Split(status, ",")
-	var result []string
-	for _, s := range parts {
-		s = strings.TrimSpace(s)
-		if s == "" || s == "agendado" {
-			continue
-		}
-		result = append(result, s)
-	}
-	return result
-}
-
-func (r *TurnoRepository) ListTurnosByDateRange(ctx context.Context, empresaID uuid.UUID, dataInicio, dataFim, usuarioID, postoID string) ([]model.Turno, error) {
+func (r *TurnoRepository) ListTurnosByDateRange(ctx context.Context, empresaID uuid.UUID, dataInicio, dataFim string, usuarioIDs, postoIDs []string) ([]model.Turno, error) {
 	where := "WHERE t.empresa_id = $1"
 	args := []interface{}{empresaID}
 
@@ -286,13 +290,23 @@ func (r *TurnoRepository) ListTurnosByDateRange(ctx context.Context, empresaID u
 		where += fmt.Sprintf(" AND t.inicio_previsto <= $%d::timestamptz", len(args)+1)
 		args = append(args, dataFim)
 	}
-	if usuarioID != "" {
-		where += fmt.Sprintf(" AND t.usuario_id = $%d::uuid", len(args)+1)
-		args = append(args, usuarioID)
+	if len(usuarioIDs) > 0 {
+		base := len(args)
+		placeholders := make([]string, len(usuarioIDs))
+		for i, id := range usuarioIDs {
+			placeholders[i] = fmt.Sprintf("$%d::uuid", base+i+1)
+			args = append(args, id)
+		}
+		where += fmt.Sprintf(" AND t.usuario_id IN (%s)", strings.Join(placeholders, ", "))
 	}
-	if postoID != "" {
-		where += fmt.Sprintf(" AND t.posto_id = $%d::uuid", len(args)+1)
-		args = append(args, postoID)
+	if len(postoIDs) > 0 {
+		base := len(args)
+		placeholders := make([]string, len(postoIDs))
+		for i, id := range postoIDs {
+			placeholders[i] = fmt.Sprintf("$%d::uuid", base+i+1)
+			args = append(args, id)
+		}
+		where += fmt.Sprintf(" AND t.posto_id IN (%s)", strings.Join(placeholders, ", "))
 	}
 
 	query := fmt.Sprintf(`

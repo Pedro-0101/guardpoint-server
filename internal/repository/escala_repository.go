@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -153,17 +154,27 @@ func (r *EscalaRepository) List(ctx context.Context, empresaID uuid.UUID, filter
 	return escalas, total, rows.Err()
 }
 
-func (r *EscalaRepository) ListAtivasByEmpresa(ctx context.Context, empresaID uuid.UUID, usuarioID, postoID string) ([]model.Escala, error) {
+func (r *EscalaRepository) ListAtivasByEmpresa(ctx context.Context, empresaID uuid.UUID, usuarioIDs, postoIDs []string) ([]model.Escala, error) {
 	where := "WHERE e.empresa_id = $1 AND e.ativo = true"
 	args := []interface{}{empresaID}
 
-	if usuarioID != "" {
-		where += fmt.Sprintf(" AND e.usuario_id = $%d::uuid", len(args)+1)
-		args = append(args, usuarioID)
+	if len(usuarioIDs) > 0 {
+		base := len(args)
+		placeholders := make([]string, len(usuarioIDs))
+		for i, id := range usuarioIDs {
+			placeholders[i] = fmt.Sprintf("$%d::uuid", base+i+1)
+			args = append(args, id)
+		}
+		where += fmt.Sprintf(" AND e.usuario_id IN (%s)", strings.Join(placeholders, ", "))
 	}
-	if postoID != "" {
-		where += fmt.Sprintf(" AND e.posto_id = $%d::uuid", len(args)+1)
-		args = append(args, postoID)
+	if len(postoIDs) > 0 {
+		base := len(args)
+		placeholders := make([]string, len(postoIDs))
+		for i, id := range postoIDs {
+			placeholders[i] = fmt.Sprintf("$%d::uuid", base+i+1)
+			args = append(args, id)
+		}
+		where += fmt.Sprintf(" AND e.posto_id IN (%s)", strings.Join(placeholders, ", "))
 	}
 
 	query := fmt.Sprintf(`

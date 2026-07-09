@@ -112,13 +112,13 @@ type HistoricoFilter struct {
 }
 
 type TurnoFilter struct {
-	Status     string `json:"status"`
-	DataInicio string `json:"data_inicio"`
-	DataFim    string `json:"data_fim"`
-	UsuarioID  string `json:"usuario_id"`
-	PostoID    string `json:"posto_id"`
-	SortBy     string `json:"sort_by"`
-	SortOrder  string `json:"sort_order"`
-	Limit      int    `json:"limit"`
-	Offset     int    `json:"offset"`
+	Status     []string `json:"status"`
+	DataInicio string   `json:"data_inicio"`
+	DataFim    string   `json:"data_fim"`
+	UsuarioID  []string `json:"usuario_id"`
+	PostoID    []string `json:"posto_id"`
+	SortBy     string   `json:"sort_by"`
+	SortOrder  string   `json:"sort_order"`
+	Limit      int      `json:"limit"`
+	Offset     int      `json:"offset"`
 }

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
@@ -219,11 +220,11 @@ func (h *TurnoHandler) Status(w http.ResponseWriter, r *http.Request) {
 // @Description  Para vigias, retorna apenas os turnos do proprio usuario autenticado.
 // @Description  Admin e supervisores podem filtrar por qualquer usuario/posto.
 // @Tags         turnos
-// @Param        status query string false "Status (agendado,em_andamento,pausado,critico,finalizado)"
+// @Param        status query string false "Status (agendado,em_andamento,pausado,critico,finalizado) - multiplos separados por virgula"
 // @Param        data_inicio query string false "Data inicial (YYYY-MM-DD)"
 // @Param        data_fim query string false "Data final (YYYY-MM-DD)"
-// @Param        usuario_id query string false "ID do vigia (uuid)"
-// @Param        posto_id query string false "ID do posto (uuid)"
+// @Param        usuario_id query string false "ID(s) do(s) vigia(s) (uuid) - multiplos separados por virgula"
+// @Param        posto_id query string false "ID(s) do(s) posto(s) (uuid) - multiplos separados por virgula"
 // @Param        sort_by query string false "Campo de ordenacao (inicio_previsto, created_at, status)"
 // @Param        sort_order query string false "Direcao (asc, desc)"
 // @Param        limit query int false "Limite (max 100)"
@@ -238,18 +239,18 @@ func (h *TurnoHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	limit, offset := parsePagination(r)
 
-	usuarioID := r.URL.Query().Get("usuario_id")
+	usuarioIDs := parseCSV(r.URL.Query().Get("usuario_id"))
 
 	if role == "vigia" {
-		usuarioID = userID
+		usuarioIDs = []string{userID}
 	}
 
 	filter := model.TurnoFilter{
-		Status:     r.URL.Query().Get("status"),
+		Status:     parseCSV(r.URL.Query().Get("status")),
 		DataInicio: r.URL.Query().Get("data_inicio"),
 		DataFim:    r.URL.Query().Get("data_fim"),
-		UsuarioID:  usuarioID,
-		PostoID:    r.URL.Query().Get("posto_id"),
+		UsuarioID:  usuarioIDs,
+		PostoID:    parseCSV(r.URL.Query().Get("posto_id")),
 		SortBy:     r.URL.Query().Get("sort_by"),
 		SortOrder:  r.URL.Query().Get("sort_order"),
 		Limit:      limit,
@@ -509,4 +510,19 @@ func collectUniqueTurnoIDs(reqs []model.CheckinRequest) []uuid.UUID {
 		ids = append(ids, id)
 	}
 	return ids
+}
+
+func parseCSV(raw string) []string {
+	if raw == "" {
+		return nil
+	}
+	parts := strings.Split(raw, ",")
+	result := make([]string, 0, len(parts))
+	for _, s := range parts {
+		s = strings.TrimSpace(s)
+		if s != "" {
+			result = append(result, s)
+		}
+	}
+	return result
 }
