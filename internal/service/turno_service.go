@@ -167,7 +167,7 @@ func (s *TurnoService) Iniciar(ctx context.Context, userID, empresaID string, re
 	}
 
 	now := timeutil.NowBRT()
-	esc, err := s.buscarEscalaParaInicio(ctx, parsedEmpresaID, parsedUserID, parsedPostoID, now)
+	esc, subID, err := s.buscarEscalaParaInicio(ctx, parsedEmpresaID, parsedUserID, parsedPostoID, now)
 	if err != nil {
 		return nil, err
 	}
@@ -208,6 +208,7 @@ func (s *TurnoService) Iniciar(ctx context.Context, userID, empresaID string, re
 		TokenSessao:    &tokenSessao,
 		DeviceID:       &deviceID,
 		IntervaloMin:   intervaloMin,
+		SubstituicaoID: subID,
 	}
 
 	if err := s.turnoRepo.Create(ctx, turno); err != nil {
@@ -250,10 +251,11 @@ func (s *TurnoService) Iniciar(ctx context.Context, userID, empresaID string, re
 // buscarEscalaParaInicio procura a escala ativa compativel com o inicio de turno
 // em `now`. Primeiro verifica substituicoes pontuais (ex.: vigia cobrindo falta),
 // depois cai no fluxo normal de escalas semanais.
-func (s *TurnoService) buscarEscalaParaInicio(ctx context.Context, empresaID, usuarioID, postoID uuid.UUID, now time.Time) (*model.Escala, error) {
+// Retorna a escala encontrada e, se aplicavel, o ID da substituicao que a originou.
+func (s *TurnoService) buscarEscalaParaInicio(ctx context.Context, empresaID, usuarioID, postoID uuid.UUID, now time.Time) (*model.Escala, *uuid.UUID, error) {
 	sub, err := s.substituicaoRepo.FindAtivaByUsuarioPostoData(ctx, empresaID, usuarioID, postoID, now)
 	if err != nil {
-		return nil, fmt.Errorf("validar substituicao: %w", err)
+		return nil, nil, fmt.Errorf("validar substituicao: %w", err)
 	}
 	if sub != nil {
 		esc := &model.Escala{
@@ -262,39 +264,39 @@ func (s *TurnoService) buscarEscalaParaInicio(ctx context.Context, empresaID, us
 			ToleranciaMin: sub.ToleranciaMin,
 		}
 		if ok, _ := VerificarToleranciaEscala(esc, now); ok {
-			return esc, nil
+			return esc, &sub.ID, nil
 		}
 	}
 
 	hoje := int16(now.Weekday())
 	esc, err := s.escalaRepo.FindAtivaByUsuarioPostoDia(ctx, empresaID, usuarioID, postoID, hoje)
 	if err != nil {
-		return nil, fmt.Errorf("validar escala: %w", err)
+		return nil, nil, fmt.Errorf("validar escala: %w", err)
 	}
 	if esc != nil {
 		if ok, _ := VerificarToleranciaEscala(esc, now); ok {
-			return esc, nil
+			return esc, nil, nil
 		}
 	}
 
 	ontem := int16(now.AddDate(0, 0, -1).Weekday())
 	if ontem == hoje {
-		return esc, nil
+		return esc, nil, nil
 	}
 	escOntem, err := s.escalaRepo.FindAtivaByUsuarioPostoDia(ctx, empresaID, usuarioID, postoID, ontem)
 	if err != nil {
-		return nil, fmt.Errorf("validar escala: %w", err)
+		return nil, nil, fmt.Errorf("validar escala: %w", err)
 	}
 	if escOntem != nil && EscalaCruzaMeiaNoite(escOntem) {
 		if ok, _ := VerificarToleranciaEscala(escOntem, now); ok {
-			return escOntem, nil
+			return escOntem, nil, nil
 		}
 		if esc == nil {
 			esc = escOntem
 		}
 	}
 
-	return esc, nil
+	return esc, nil, nil
 }
 
 func (s *TurnoService) Checkin(ctx context.Context, userID, empresaID string, req model.CheckinRequest) (*model.CheckinResponse, error) {
@@ -873,36 +875,39 @@ func (s *TurnoService) gerarTurnosAgendados(ctx context.Context, empresaID uuid.
 			usuarioNome := esc.UsuarioNome
 			postoNome := esc.PostoNome
 
-			if sub, ok := subByUserPostoDate[key]; ok {
-				horaInicio = sub.HoraInicio
-				horaFim = sub.HoraFim
-				usuarioNome = sub.UsuarioNome
-				postoNome = sub.PostoNome
-			}
+			var substituicaoID *uuid.UUID
+		if sub, ok := subByUserPostoDate[key]; ok {
+			horaInicio = sub.HoraInicio
+			horaFim = sub.HoraFim
+			usuarioNome = sub.UsuarioNome
+			postoNome = sub.PostoNome
+			substituicaoID = &sub.ID
+		}
 
-			inicioPrevisto, err := parseHoraData(dateStr, horaInicio)
-			if err != nil {
-				continue
-			}
-			fimPrevisto, err := parseHoraData(dateStr, horaFim)
-			if err != nil {
-				continue
-			}
+		inicioPrevisto, err := parseHoraData(dateStr, horaInicio)
+		if err != nil {
+			continue
+		}
+		fimPrevisto, err := parseHoraData(dateStr, horaFim)
+		if err != nil {
+			continue
+		}
 
-			if !fimPrevisto.After(inicioPrevisto) {
-				fimPrevisto = fimPrevisto.AddDate(0, 0, 1)
-			}
+		if !fimPrevisto.After(inicioPrevisto) {
+			fimPrevisto = fimPrevisto.AddDate(0, 0, 1)
+		}
 
-			turno := model.Turno{
-				EmpresaID:      empresaID,
-				UsuarioID:      esc.UsuarioID,
-				PostoID:        esc.PostoID,
-				PostoNome:      postoNome,
-				UsuarioNome:    usuarioNome,
-				Status:         "agendado",
-				InicioPrevisto: inicioPrevisto,
-				FimPrevisto:    fimPrevisto,
-			}
+		turno := model.Turno{
+			EmpresaID:      empresaID,
+			UsuarioID:      esc.UsuarioID,
+			PostoID:        esc.PostoID,
+			PostoNome:      postoNome,
+			UsuarioNome:    usuarioNome,
+			Status:         "agendado",
+			InicioPrevisto: inicioPrevisto,
+			FimPrevisto:    fimPrevisto,
+			SubstituicaoID: substituicaoID,
+		}
 			turnos = append(turnos, turno)
 		}
 	}

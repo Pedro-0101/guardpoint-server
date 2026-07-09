@@ -24,21 +24,21 @@ func NewTurnoRepository(db *pgxpool.Pool) *TurnoRepository {
 
 func (r *TurnoRepository) Create(ctx context.Context, t *model.Turno) error {
 	query := `
-		INSERT INTO turnos (empresa_id, usuario_id, posto_id, status, inicio_previsto, fim_previsto, inicio_real, token_sessao, device_id, intervalo_min)
-		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+		INSERT INTO turnos (empresa_id, usuario_id, posto_id, status, inicio_previsto, fim_previsto, inicio_real, token_sessao, device_id, intervalo_min, substituicao_id)
+		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
 		RETURNING id, created_at
 	`
 	return r.db.QueryRow(ctx, query,
 		t.EmpresaID, t.UsuarioID, t.PostoID, t.Status,
 		t.InicioPrevisto, t.FimPrevisto, t.InicioReal,
-		t.TokenSessao, t.DeviceID, t.IntervaloMin,
+		t.TokenSessao, t.DeviceID, t.IntervaloMin, t.SubstituicaoID,
 	).Scan(&t.ID, &t.CreatedAt)
 }
 
 func (r *TurnoRepository) FindAtivoByUsuario(ctx context.Context, empresaID, usuarioID uuid.UUID) (*model.Turno, error) {
 	query := `
 		SELECT id, empresa_id, usuario_id, posto_id, status, inicio_previsto, fim_previsto,
-		       inicio_real, fim_real, token_sessao, device_id, intervalo_min, created_at
+		       inicio_real, fim_real, token_sessao, device_id, intervalo_min, substituicao_id, created_at
 		FROM turnos
 		WHERE empresa_id = $1 AND usuario_id = $2 AND status IN ('em_andamento', 'pausado', 'critico')
 		LIMIT 1
@@ -47,7 +47,7 @@ func (r *TurnoRepository) FindAtivoByUsuario(ctx context.Context, empresaID, usu
 	err := r.db.QueryRow(ctx, query, empresaID, usuarioID).Scan(
 		&t.ID, &t.EmpresaID, &t.UsuarioID, &t.PostoID, &t.Status,
 		&t.InicioPrevisto, &t.FimPrevisto, &t.InicioReal, &t.FimReal,
-		&t.TokenSessao, &t.DeviceID, &t.IntervaloMin, &t.CreatedAt,
+		&t.TokenSessao, &t.DeviceID, &t.IntervaloMin, &t.SubstituicaoID, &t.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -61,7 +61,7 @@ func (r *TurnoRepository) FindAtivoByUsuario(ctx context.Context, empresaID, usu
 func (r *TurnoRepository) FindByID(ctx context.Context, empresaID, id uuid.UUID) (*model.Turno, error) {
 	query := `
 		SELECT id, empresa_id, usuario_id, posto_id, status, inicio_previsto, fim_previsto,
-		       inicio_real, fim_real, token_sessao, device_id, intervalo_min, created_at
+		       inicio_real, fim_real, token_sessao, device_id, intervalo_min, substituicao_id, created_at
 		FROM turnos
 		WHERE id = $1 AND empresa_id = $2
 	`
@@ -69,7 +69,7 @@ func (r *TurnoRepository) FindByID(ctx context.Context, empresaID, id uuid.UUID)
 	err := r.db.QueryRow(ctx, query, id, empresaID).Scan(
 		&t.ID, &t.EmpresaID, &t.UsuarioID, &t.PostoID, &t.Status,
 		&t.InicioPrevisto, &t.FimPrevisto, &t.InicioReal, &t.FimReal,
-		&t.TokenSessao, &t.DeviceID, &t.IntervaloMin, &t.CreatedAt,
+		&t.TokenSessao, &t.DeviceID, &t.IntervaloMin, &t.SubstituicaoID, &t.CreatedAt,
 	)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -95,7 +95,7 @@ func (r *TurnoRepository) UpdateStatus(ctx context.Context, id, empresaID uuid.U
 func (r *TurnoRepository) ListAtivos(ctx context.Context, empresaID uuid.UUID) ([]model.Turno, error) {
 	query := `
 		SELECT id, empresa_id, usuario_id, posto_id, status, inicio_previsto, fim_previsto,
-		       inicio_real, fim_real, token_sessao, device_id, intervalo_min, created_at
+		       inicio_real, fim_real, token_sessao, device_id, intervalo_min, substituicao_id, created_at
 		FROM turnos
 		WHERE empresa_id = $1 AND status IN ('em_andamento', 'pausado', 'critico')
 		ORDER BY inicio_real DESC
@@ -112,7 +112,7 @@ func (r *TurnoRepository) ListAtivos(ctx context.Context, empresaID uuid.UUID) (
 		if err := rows.Scan(
 			&t.ID, &t.EmpresaID, &t.UsuarioID, &t.PostoID, &t.Status,
 			&t.InicioPrevisto, &t.FimPrevisto, &t.InicioReal, &t.FimReal,
-			&t.TokenSessao, &t.DeviceID, &t.IntervaloMin, &t.CreatedAt,
+			&t.TokenSessao, &t.DeviceID, &t.IntervaloMin, &t.SubstituicaoID, &t.CreatedAt,
 		); err != nil {
 			return nil, fmt.Errorf("scan turno: %w", err)
 		}
@@ -167,7 +167,7 @@ func (r *TurnoRepository) ListHistorico(ctx context.Context, empresaID uuid.UUID
 
 	dataQuery := fmt.Sprintf(`
 		SELECT id, empresa_id, usuario_id, posto_id, status, inicio_previsto, fim_previsto,
-		       inicio_real, fim_real, token_sessao, device_id, intervalo_min, created_at
+		       inicio_real, fim_real, token_sessao, device_id, intervalo_min, substituicao_id, created_at
 		FROM turnos %s ORDER BY created_at DESC LIMIT $%d OFFSET $%d
 	`, where, argIdx, argIdx+1)
 	args = append(args, filter.Limit, filter.Offset)
@@ -184,7 +184,7 @@ func (r *TurnoRepository) ListHistorico(ctx context.Context, empresaID uuid.UUID
 		if err := rows.Scan(
 			&t.ID, &t.EmpresaID, &t.UsuarioID, &t.PostoID, &t.Status,
 			&t.InicioPrevisto, &t.FimPrevisto, &t.InicioReal, &t.FimReal,
-			&t.TokenSessao, &t.DeviceID, &t.IntervaloMin, &t.CreatedAt,
+			&t.TokenSessao, &t.DeviceID, &t.IntervaloMin, &t.SubstituicaoID, &t.CreatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan turno: %w", err)
 		}
@@ -248,7 +248,7 @@ func (r *TurnoRepository) ListTurnos(ctx context.Context, empresaID uuid.UUID, f
 	query := fmt.Sprintf(`
 		SELECT t.id, t.empresa_id, t.usuario_id, t.posto_id, t.status,
 		       t.inicio_previsto, t.fim_previsto, t.inicio_real, t.fim_real,
-		       t.token_sessao, t.device_id, t.intervalo_min, t.created_at,
+		       t.token_sessao, t.device_id, t.intervalo_min, t.substituicao_id, t.created_at,
 		       u.nome AS usuario_nome, p.nome AS posto_nome
 		FROM turnos t
 		LEFT JOIN usuarios u ON u.id = t.usuario_id
@@ -268,7 +268,7 @@ func (r *TurnoRepository) ListTurnos(ctx context.Context, empresaID uuid.UUID, f
 		if err := rows.Scan(
 			&t.ID, &t.EmpresaID, &t.UsuarioID, &t.PostoID, &t.Status,
 			&t.InicioPrevisto, &t.FimPrevisto, &t.InicioReal, &t.FimReal,
-			&t.TokenSessao, &t.DeviceID, &t.IntervaloMin, &t.CreatedAt,
+			&t.TokenSessao, &t.DeviceID, &t.IntervaloMin, &t.SubstituicaoID, &t.CreatedAt,
 			&t.UsuarioNome, &t.PostoNome,
 		); err != nil {
 			return nil, fmt.Errorf("scan turno: %w", err)
@@ -312,7 +312,7 @@ func (r *TurnoRepository) ListTurnosByDateRange(ctx context.Context, empresaID u
 	query := fmt.Sprintf(`
 		SELECT t.id, t.empresa_id, t.usuario_id, t.posto_id, t.status,
 		       t.inicio_previsto, t.fim_previsto, t.inicio_real, t.fim_real,
-		       t.token_sessao, t.device_id, t.intervalo_min, t.created_at,
+		       t.token_sessao, t.device_id, t.intervalo_min, t.substituicao_id, t.created_at,
 		       u.nome AS usuario_nome, p.nome AS posto_nome
 		FROM turnos t
 		LEFT JOIN usuarios u ON u.id = t.usuario_id
@@ -332,7 +332,7 @@ func (r *TurnoRepository) ListTurnosByDateRange(ctx context.Context, empresaID u
 		if err := rows.Scan(
 			&t.ID, &t.EmpresaID, &t.UsuarioID, &t.PostoID, &t.Status,
 			&t.InicioPrevisto, &t.FimPrevisto, &t.InicioReal, &t.FimReal,
-			&t.TokenSessao, &t.DeviceID, &t.IntervaloMin, &t.CreatedAt,
+			&t.TokenSessao, &t.DeviceID, &t.IntervaloMin, &t.SubstituicaoID, &t.CreatedAt,
 			&t.UsuarioNome, &t.PostoNome,
 		); err != nil {
 			return nil, fmt.Errorf("scan turno: %w", err)

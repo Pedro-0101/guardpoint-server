@@ -3659,6 +3659,9 @@ const docTemplate = `{
                 "status": {
                     "type": "string"
                 },
+                "substituicao_id": {
+                    "type": "string"
+                },
                 "token_sessao": {
                     "type": "string"
                 },
@@ -3716,6 +3719,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "status": {
+                    "type": "string"
+                },
+                "substituicao_id": {
                     "type": "string"
                 },
                 "token_sessao": {

@@ -684,6 +684,8 @@ definitions:
         type: string
       status:
         type: string
+      substituicao_id:
+        type: string
       token_sessao:
         type: string
       usuario_id:
@@ -722,6 +724,8 @@ definitions:
       posto_nome:
         type: string
       status:
+        type: string
+      substituicao_id:
         type: string
       token_sessao:
         type: string

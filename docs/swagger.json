@@ -3652,6 +3652,9 @@
                 "status": {
                     "type": "string"
                 },
+                "substituicao_id": {
+                    "type": "string"
+                },
                 "token_sessao": {
                     "type": "string"
                 },
@@ -3709,6 +3712,9 @@
                     "type": "string"
                 },
                 "status": {
+                    "type": "string"
+                },
+                "substituicao_id": {
                     "type": "string"
                 },
                 "token_sessao": {

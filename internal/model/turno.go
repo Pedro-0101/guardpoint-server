@@ -23,7 +23,8 @@ type Turno struct {
 	IntervaloMin   int        `json:"intervalo_min"`
 	Pin          *string    `json:"-"`
 	PinValidoAte *time.Time `json:"-"`
-	CreatedAt    time.Time  `json:"created_at"`
+	SubstituicaoID *uuid.UUID `json:"substituicao_id,omitempty"`
+	CreatedAt      time.Time  `json:"created_at"`
 }
 
 type TurnoDetalhe struct {
