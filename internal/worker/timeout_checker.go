@@ -11,6 +11,7 @@ import (
 
 	"github.com/guardpoint/guardpoint-server/internal/repository"
 	"github.com/guardpoint/guardpoint-server/internal/service"
+	"github.com/guardpoint/guardpoint-server/internal/timeutil"
 )
 
 type TimeoutChecker struct {
@@ -171,7 +172,7 @@ func (w *TimeoutChecker) getUltimoCheckin(ctx context.Context, turnoID uuid.UUID
 }
 
 func (w *TimeoutChecker) checkNoShow(ctx context.Context) {
-	now := time.Now()
+	now := timeutil.NowBRT()
 
 	escalas, err := w.escalaRepo.FindEscalasSemTurno(ctx, now)
 	if err != nil {

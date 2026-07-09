@@ -10,6 +10,7 @@ import (
 
 	"github.com/guardpoint/guardpoint-server/internal/model"
 	"github.com/guardpoint/guardpoint-server/internal/repository"
+	"github.com/guardpoint/guardpoint-server/internal/timeutil"
 )
 
 var (
@@ -33,11 +34,11 @@ func (s *SubstituicaoService) Create(ctx context.Context, empresaID uuid.UUID, r
 	if err != nil {
 		return nil, fmt.Errorf("posto_id invalido: %w", err)
 	}
-	dataInicio, err := time.Parse("2006-01-02", req.DataInicio)
+	dataInicio, err := time.ParseInLocation("2006-01-02", req.DataInicio, timeutil.BRT)
 	if err != nil {
 		return nil, fmt.Errorf("data_inicio invalida: %w", err)
 	}
-	dataFim, err := time.Parse("2006-01-02", req.DataFim)
+	dataFim, err := time.ParseInLocation("2006-01-02", req.DataFim, timeutil.BRT)
 	if err != nil {
 		return nil, fmt.Errorf("data_fim invalida: %w", err)
 	}
@@ -102,14 +103,14 @@ func (s *SubstituicaoService) Update(ctx context.Context, empresaID, id uuid.UUI
 		sub.PostoID = pid
 	}
 	if req.DataInicio != nil {
-		di, err := time.Parse("2006-01-02", *req.DataInicio)
+		di, err := time.ParseInLocation("2006-01-02", *req.DataInicio, timeutil.BRT)
 		if err != nil {
 			return nil, fmt.Errorf("data_inicio invalida: %w", err)
 		}
 		sub.DataInicio = di
 	}
 	if req.DataFim != nil {
-		df, err := time.Parse("2006-01-02", *req.DataFim)
+		df, err := time.ParseInLocation("2006-01-02", *req.DataFim, timeutil.BRT)
 		if err != nil {
 			return nil, fmt.Errorf("data_fim invalida: %w", err)
 		}

@@ -15,6 +15,7 @@ import (
 
 	"github.com/guardpoint/guardpoint-server/internal/model"
 	"github.com/guardpoint/guardpoint-server/internal/repository"
+	"github.com/guardpoint/guardpoint-server/internal/timeutil"
 	"github.com/guardpoint/guardpoint-server/internal/ws"
 )
 
@@ -165,7 +166,7 @@ func (s *TurnoService) Iniciar(ctx context.Context, userID, empresaID string, re
 		return nil, fmt.Errorf("posto inativo")
 	}
 
-	now := time.Now()
+	now := timeutil.NowBRT()
 	esc, err := s.buscarEscalaParaInicio(ctx, parsedEmpresaID, parsedUserID, parsedPostoID, now)
 	if err != nil {
 		return nil, err
@@ -329,7 +330,7 @@ func (s *TurnoService) Checkin(ctx context.Context, userID, empresaID string, re
 
 	timestampCriacao, err := time.Parse(time.RFC3339, req.Timestamp)
 	if err != nil {
-		timestampCriacao = time.Now()
+		timestampCriacao = timeutil.NowBRT()
 	}
 
 	flagGeofence := s.calcularGeofence(ctx, turno.PostoID, parsedEmpresaID, req.Latitude, req.Longitude)
@@ -432,7 +433,7 @@ func (s *TurnoService) Finalizar(ctx context.Context, userID, empresaID string, 
 
 	timestampCriacao, err := time.Parse(time.RFC3339, req.Timestamp)
 	if err != nil {
-		timestampCriacao = time.Now()
+		timestampCriacao = timeutil.NowBRT()
 	}
 
 	flagGeofence := s.calcularGeofence(ctx, turno.PostoID, parsedEmpresaID, req.Latitude, req.Longitude)
@@ -469,7 +470,7 @@ func (s *TurnoService) Finalizar(ctx context.Context, userID, empresaID string, 
 	// alerta e quem carrega a urgencia, nao o status final do turno.
 	s.aplicarConsequenciaSenha(ctx, empresaID, parsedEmpresaID, parsedTurnoID, parsedUserID, req.Senha)
 
-	now := time.Now()
+	now := timeutil.NowBRT()
 	if err := s.turnoRepo.UpdateStatus(ctx, parsedTurnoID, parsedEmpresaID, "finalizado", &now); err != nil {
 		return nil, fmt.Errorf("finalizar turno: %w", err)
 	}
@@ -642,7 +643,7 @@ func (s *TurnoService) Revogar(ctx context.Context, empresaID, turnoID string) (
 		return nil, fmt.Errorf("gerar pin: %w", err)
 	}
 	validadeMinutos := 15
-	pinValidoAte := time.Now().Add(time.Duration(validadeMinutos) * time.Minute)
+	pinValidoAte := timeutil.NowBRT().Add(time.Duration(validadeMinutos) * time.Minute)
 
 	if err := s.turnoRepo.RevogarToken(ctx, parsedTurnoID, parsedEmpresaID, pin, pinValidoAte); err != nil {
 		return nil, fmt.Errorf("revogar turno: %w", err)
@@ -682,7 +683,7 @@ func (s *TurnoService) Reassociar(ctx context.Context, userID, empresaID string,
 	if turno.Pin == nil || *turno.Pin != req.Pin {
 		return nil, ErrPinInvalido
 	}
-	if turno.PinValidoAte == nil || time.Now().After(*turno.PinValidoAte) {
+	if turno.PinValidoAte == nil || timeutil.NowBRT().After(*turno.PinValidoAte) {
 		return nil, ErrPinExpirado
 	}
 
@@ -808,11 +809,11 @@ func (s *TurnoService) gerarTurnosAgendados(ctx context.Context, empresaID uuid.
 		return nil, nil
 	}
 
-	dataInicio, err := time.Parse("2006-01-02", filter.DataInicio)
+	dataInicio, err := time.ParseInLocation("2006-01-02", filter.DataInicio, timeutil.BRT)
 	if err != nil {
 		return nil, fmt.Errorf("data_inicio invalida: %w", err)
 	}
-	dataFim, err := time.Parse("2006-01-02", filter.DataFim)
+	dataFim, err := time.ParseInLocation("2006-01-02", filter.DataFim, timeutil.BRT)
 	if err != nil {
 		return nil, fmt.Errorf("data_fim invalida: %w", err)
 	}
@@ -834,7 +835,7 @@ func (s *TurnoService) gerarTurnosAgendados(ctx context.Context, empresaID uuid.
 
 	realByUserPostoDate := make(map[string]bool)
 	for _, t := range reais {
-		dateStr := t.InicioPrevisto.Format("2006-01-02")
+		dateStr := t.InicioPrevisto.In(timeutil.BRT).Format("2006-01-02")
 		key := t.UsuarioID.String() + "|" + t.PostoID.String() + "|" + dateStr
 		realByUserPostoDate[key] = true
 	}
@@ -915,7 +916,7 @@ func parseHoraData(dateStr, hora string) (time.Time, error) {
 		"2006-01-02 15:04",
 	}
 	for _, f := range formats {
-		t, err := time.Parse(f, dateStr+" "+hora)
+		t, err := time.ParseInLocation(f, dateStr+" "+hora, timeutil.BRT)
 		if err == nil {
 			return t, nil
 		}
@@ -956,7 +957,7 @@ func (s *TurnoService) Sabotagem(ctx context.Context, userID, empresaID string, 
 
 	timestampCriacao, err := time.Parse(time.RFC3339, req.Timestamp)
 	if err != nil {
-		timestampCriacao = time.Now()
+		timestampCriacao = timeutil.NowBRT()
 	}
 
 	flagGeofence := s.calcularGeofence(ctx, turno.PostoID, parsedEmpresaID, req.Latitude, req.Longitude)
@@ -1030,7 +1031,7 @@ func (s *TurnoService) ProcessarLote(ctx context.Context, userID, empresaID stri
 
 		timestampCriacao, err := time.Parse(time.RFC3339, req.Timestamp)
 		if err != nil {
-			timestampCriacao = time.Now()
+			timestampCriacao = timeutil.NowBRT()
 		}
 
 		flagGeofence := s.calcularGeofence(ctx, turno.PostoID, parsedEmpresaID, req.Latitude, req.Longitude)
