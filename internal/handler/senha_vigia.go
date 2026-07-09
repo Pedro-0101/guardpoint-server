@@ -35,6 +35,12 @@ func NewSenhaVigiaHandler(s *service.SenhaVigiaService) *SenhaVigiaHandler {
 // @Failure      404 {object} map[string]string
 // @Router       /usuarios/{id}/senhas [get]
 func (h *SenhaVigiaHandler) List(w http.ResponseWriter, r *http.Request) {
+	role := GetRole(r.Context())
+	if role != "admin" {
+		writeJSON(w, http.StatusOK, map[string]string{"mensagem": "apenas administradores podem visualizar senhas"})
+		return
+	}
+
 	empresaID := GetEmpresaID(r.Context())
 	usuarioID := chi.URLParam(r, "id")
 
@@ -228,9 +234,6 @@ func (h *SenhaVigiaHandler) writeSenhaError(w http.ResponseWriter, err error) bo
 		return true
 	case errors.Is(err, service.ErrSenhaTipoJaExiste):
 		writeError(w, http.StatusBadRequest, "vigia ja possui uma senha deste tipo")
-		return true
-	case errors.Is(err, service.ErrSenhaCampoNaoEditavelParaTipo):
-		writeError(w, http.StatusBadRequest, "campo nao editavel para este tipo de senha")
 		return true
 	case errors.Is(err, service.ErrSenhaObrigatoriaNaoRemovivel):
 		writeError(w, http.StatusConflict, "senha obrigatoria nao pode ser removida")

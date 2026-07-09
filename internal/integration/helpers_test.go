@@ -205,8 +205,8 @@ func novoCenario(t *testing.T) *cenario {
 
 	// PINs obrigatorios do vigia de teste, cadastrados antes de qualquer
 	// iniciarTurno/checkinBody usar seus codigos.
-	c.criarSenhaVigia(c.vigia.ID, "ok", SenhaOK, nil, nil)
-	c.criarSenhaVigia(c.vigia.ID, "emergencia", SenhaEmergencia, nil, &emergenciaNivelID)
+	c.criarSenhaVigia(c.vigia.ID, "ok", SenhaOK, nil)
+	c.criarSenhaVigia(c.vigia.ID, "emergencia", SenhaEmergencia, &emergenciaNivelID)
 
 	e.reqJSON(http.MethodPost, "/api/v1/postos", c.adminToken, map[string]any{
 		"nome": "Posto Central", "latitude": postoLat, "longitude": postoLon, "raio_m": 100,
@@ -219,16 +219,12 @@ func novoCenario(t *testing.T) *cenario {
 }
 
 // criarSenhaVigia cadastra um PIN para o vigia via POST /usuarios/{id}/senhas
-// (rota admin-only). descricao so e obrigatoria para tipo "customizada";
-// nivelID e obrigatorio para "emergencia" e "customizada", nil para "ok".
-func (c *cenario) criarSenhaVigia(usuarioID uuid.UUID, tipo, codigo string, descricao *string, nivelID *uuid.UUID) model.SenhaVigia {
+// (rota admin-only). nivelID e obrigatorio para "emergencia" e "customizada", nil para "ok".
+func (c *cenario) criarSenhaVigia(usuarioID uuid.UUID, tipo, codigo string, nivelID *uuid.UUID) model.SenhaVigia {
 	c.e.t.Helper()
 	body := map[string]any{
 		"tipo":   tipo,
 		"codigo": codigo,
-	}
-	if descricao != nil {
-		body["descricao"] = *descricao
 	}
 	if nivelID != nil {
 		body["nivel_escalonamento_id"] = nivelID.String()

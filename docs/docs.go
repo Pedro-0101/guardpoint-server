@@ -3105,10 +3105,6 @@ const docTemplate = `{
                     "maxLength": 6,
                     "minLength": 2
                 },
-                "descricao": {
-                    "type": "string",
-                    "maxLength": 255
-                },
                 "tipo": {
                     "type": "string",
                     "enum": [
@@ -3581,9 +3577,6 @@ const docTemplate = `{
                 "created_at": {
                     "type": "string"
                 },
-                "descricao": {
-                    "type": "string"
-                },
                 "empresa_id": {
                     "type": "string"
                 },
@@ -3924,10 +3917,6 @@ const docTemplate = `{
                     "type": "string",
                     "maxLength": 6,
                     "minLength": 2
-                },
-                "descricao": {
-                    "type": "string",
-                    "maxLength": 255
                 }
             }
         },

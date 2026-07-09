@@ -22,7 +22,6 @@ func TestWriteSenhaError(t *testing.T) {
 		{"senha nao encontrada → 404", service.ErrSenhaNaoEncontrada, http.StatusNotFound, `{"error":"senha nao encontrada"}`},
 		{"codigo duplicado → 400", service.ErrSenhaCodigoDuplicado, http.StatusBadRequest, `{"error":"codigo ja usado por outra senha deste vigia"}`},
 		{"tipo ja existe → 400", service.ErrSenhaTipoJaExiste, http.StatusBadRequest, `{"error":"vigia ja possui uma senha deste tipo"}`},
-		{"campo nao editavel → 400", service.ErrSenhaCampoNaoEditavelParaTipo, http.StatusBadRequest, `{"error":"campo nao editavel para este tipo de senha"}`},
 		{"senha obrigatoria nao removivel → 409", service.ErrSenhaObrigatoriaNaoRemovivel, http.StatusConflict, `{"error":"senha obrigatoria nao pode ser removida"}`},
 		{"erro desconhecido → false", errors.New("erro qualquer"), 0, ""},
 	}
@@ -59,7 +58,6 @@ func TestWriteSenhaError_CobreTodosSentinela(t *testing.T) {
 		service.ErrSenhaNaoEncontrada,
 		service.ErrSenhaCodigoDuplicado,
 		service.ErrSenhaTipoJaExiste,
-		service.ErrSenhaCampoNaoEditavelParaTipo,
 		service.ErrSenhaObrigatoriaNaoRemovivel,
 	}
 

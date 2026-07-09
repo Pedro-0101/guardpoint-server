@@ -119,11 +119,7 @@ func (s *TurnoService) aplicarConsequenciaSenha(ctx context.Context, empresaIDSt
 	mensagem := "Senha de emergencia detectada"
 	if senha.Tipo == "customizada" {
 		tipoAlerta = "senha_customizada"
-		desc := ""
-		if senha.Descricao != nil {
-			desc = *senha.Descricao
-		}
-		mensagem = "Senha customizada detectada: " + desc
+		mensagem = "Senha customizada detectada"
 	}
 
 	if _, err := s.alertaService.CreateAlertaImediato(ctx, empresaID, turnoID, tipoAlerta, mensagem); err != nil {

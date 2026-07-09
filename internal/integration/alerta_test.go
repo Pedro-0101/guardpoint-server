@@ -163,8 +163,7 @@ func TestAlertaSenhaCustomizadaUsaNivelEspecificoNaoOMaximo(t *testing.T) {
 		"nivel": 2, "atraso_minutos": 15, "usuario_ids": []string{nivelMaxUser.ID.String()},
 	}, http.StatusCreated, &nivelMax)
 
-	desc := "Suspeita de invasao"
-	senhaCustom := c.criarSenhaVigia(c.vigia.ID, "customizada", "5555", &desc, &nivel1.ID)
+	senhaCustom := c.criarSenhaVigia(c.vigia.ID, "customizada", "5555", &nivel1.ID)
 
 	c.e.reqJSON(http.MethodPost, "/api/v1/turnos/checkin", c.vigiaToken,
 		c.checkinBody(turno.ID, senhaCustom.Codigo, time.Now()), http.StatusOK, nil)
@@ -253,8 +252,7 @@ func TestDeleteEscalonamentoEmUsoPorSenhaCustomizadaRetorna409(t *testing.T) {
 		"nivel": 1, "atraso_minutos": 5, "usuario_ids": []string{c.admin.ID.String()},
 	}, http.StatusCreated, &nivel)
 
-	desc := "Pin vinculado ao nivel"
-	c.criarSenhaVigia(c.vigia.ID, "customizada", "7777", &desc, &nivel.ID)
+	c.criarSenhaVigia(c.vigia.ID, "customizada", "7777", &nivel.ID)
 
 	status, _ := c.e.request(http.MethodDelete, "/api/v1/config/escalonamento/"+nivel.ID.String(), c.adminToken, nil)
 	if status != http.StatusConflict {

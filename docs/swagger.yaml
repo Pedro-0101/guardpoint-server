@@ -291,9 +291,6 @@ definitions:
         maxLength: 6
         minLength: 2
         type: string
-      descricao:
-        maxLength: 255
-        type: string
       tipo:
         enum:
         - ok
@@ -626,8 +623,6 @@ definitions:
         type: string
       created_at:
         type: string
-      descricao:
-        type: string
       empresa_id:
         type: string
       id:
@@ -857,9 +852,6 @@ definitions:
       codigo:
         maxLength: 6
         minLength: 2
-        type: string
-      descricao:
-        maxLength: 255
         type: string
     type: object
   model.UpdateSubstituicaoRequest:

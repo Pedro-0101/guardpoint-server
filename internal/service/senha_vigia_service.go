@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -18,7 +17,6 @@ var (
 	ErrSenhaCodigoDuplicado         = errors.New("codigo ja usado por outra senha deste vigia")
 	ErrSenhaTipoJaExiste            = errors.New("vigia ja possui uma senha deste tipo")
 	ErrSenhaObrigatoriaNaoRemovivel = errors.New("senha obrigatoria (ok/emergencia) nao pode ser removida")
-	ErrSenhaCampoNaoEditavelParaTipo = errors.New("campo nao editavel para este tipo de senha")
 
 	// ErrUsuarioNaoPertenceAEmpresa ja e declarado em alerta_service.go -- reaproveitado
 )
@@ -53,12 +51,6 @@ func (s *SenhaVigiaService) Create(ctx context.Context, empresaID, usuarioID uui
 		return nil, err
 	}
 
-	if req.Tipo == tipoSenhaCustomizada {
-		if req.Descricao == nil || strings.TrimSpace(*req.Descricao) == "" {
-			return nil, errors.New("descricao obrigatoria para senha customizada")
-		}
-	}
-
 	existentes, err := s.senhaRepo.ListByUsuario(ctx, empresaID, usuarioID)
 	if err != nil {
 		return nil, err
@@ -76,7 +68,6 @@ func (s *SenhaVigiaService) Create(ctx context.Context, empresaID, usuarioID uui
 		UsuarioID: usuarioID,
 		Tipo:      req.Tipo,
 		Codigo:    req.Codigo,
-		Descricao: req.Descricao,
 	}
 	if err := s.senhaRepo.Create(ctx, senha); err != nil {
 		return nil, err
@@ -91,17 +82,6 @@ func (s *SenhaVigiaService) Update(ctx context.Context, empresaID, usuarioID, se
 	}
 	if existing == nil || existing.UsuarioID != usuarioID {
 		return nil, ErrSenhaNaoEncontrada
-	}
-
-	switch existing.Tipo {
-	case tipoSenhaOK, tipoSenhaEmergencia:
-		if req.Descricao != nil {
-			return nil, ErrSenhaCampoNaoEditavelParaTipo
-		}
-	case tipoSenhaCustomizada:
-		if req.Descricao != nil {
-			existing.Descricao = req.Descricao
-		}
 	}
 
 	if req.Codigo != nil {

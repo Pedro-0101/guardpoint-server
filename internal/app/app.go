@@ -165,9 +165,12 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 				r.Get("/{id}", usuarioHandler.GetByID)
 				r.Put("/{id}", usuarioHandler.Update)
 				r.Delete("/{id}", usuarioHandler.Delete)
+			})
 
-				r.Route("/{id}/senhas", func(r chi.Router) {
-					r.Get("/", senhaVigiaHandler.List)
+			r.Route("/usuarios/{id}/senhas", func(r chi.Router) {
+				r.Get("/", senhaVigiaHandler.List)
+				r.Group(func(r chi.Router) {
+					r.Use(handler.RequireRole("admin"))
 					r.Post("/", senhaVigiaHandler.Create)
 					r.Put("/{senhaId}", senhaVigiaHandler.Update)
 					r.Delete("/{senhaId}", senhaVigiaHandler.Delete)

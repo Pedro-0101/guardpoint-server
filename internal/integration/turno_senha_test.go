@@ -97,8 +97,7 @@ func TestAlertaSenhaCustomizadaNotificaNivelCorreto(t *testing.T) {
 	}, http.StatusOK, nil)
 
 	// PIN customizada vinculada ao nivel 2
-	desc := "Alerta nivel 2"
-	senhaCustom := c.criarSenhaVigia(c.vigia.ID, "customizada", "9991", &desc, toUUIDPtr(nivelID2.String()))
+	senhaCustom := c.criarSenhaVigia(c.vigia.ID, "customizada", "9991", toUUIDPtr(nivelID2.String()))
 
 	c.e.reqJSON(http.MethodPost, "/api/v1/turnos/checkin", c.vigiaToken,
 		c.checkinBody(turno.ID, senhaCustom.Codigo, time.Now()), http.StatusOK, nil)
