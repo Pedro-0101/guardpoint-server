@@ -27,7 +27,7 @@ func NewSenhaVigiaHandler(s *service.SenhaVigiaService) *SenhaVigiaHandler {
 }
 
 // List godoc
-// @Summary      Lista as senhas cadastradas para um vigia (somente admin)
+// @Summary      Lista as senhas cadastradas para um vigia
 // @Tags         usuarios
 // @Param        id path string true "ID do usuario/vigia (uuid)"
 // @Success      200 {array} model.SenhaVigia
@@ -36,10 +36,6 @@ func NewSenhaVigiaHandler(s *service.SenhaVigiaService) *SenhaVigiaHandler {
 // @Router       /usuarios/{id}/senhas [get]
 func (h *SenhaVigiaHandler) List(w http.ResponseWriter, r *http.Request) {
 	role := GetRole(r.Context())
-	if role != "admin" {
-		writeJSON(w, http.StatusOK, map[string]string{"mensagem": "apenas administradores podem visualizar senhas"})
-		return
-	}
 
 	empresaID := GetEmpresaID(r.Context())
 	usuarioID := chi.URLParam(r, "id")
@@ -68,6 +64,12 @@ func (h *SenhaVigiaHandler) List(w http.ResponseWriter, r *http.Request) {
 
 	if senhas == nil {
 		senhas = []model.SenhaVigia{}
+	}
+
+	if role == "supervisor" {
+		for i := range senhas {
+			senhas[i].Codigo = "0000"
+		}
 	}
 
 	writeJSON(w, http.StatusOK, senhas)

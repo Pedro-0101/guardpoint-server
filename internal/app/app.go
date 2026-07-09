@@ -159,16 +159,24 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 			r.Post("/checkins/lote", turnoHandler.Lote)
 
 			r.Route("/usuarios", func(r chi.Router) {
-				r.Use(handler.RequireRole("admin"))
-				r.Get("/", usuarioHandler.List)
-				r.Post("/", usuarioHandler.Create)
-				r.Get("/{id}", usuarioHandler.GetByID)
-				r.Put("/{id}", usuarioHandler.Update)
-				r.Delete("/{id}", usuarioHandler.Delete)
+				r.Group(func(r chi.Router) {
+					r.Use(handler.RequireRole("admin", "supervisor"))
+					r.Get("/", usuarioHandler.List)
+					r.Get("/{id}", usuarioHandler.GetByID)
+				})
+				r.Group(func(r chi.Router) {
+					r.Use(handler.RequireRole("admin"))
+					r.Post("/", usuarioHandler.Create)
+					r.Put("/{id}", usuarioHandler.Update)
+					r.Delete("/{id}", usuarioHandler.Delete)
+				})
 			})
 
 			r.Route("/usuarios/{id}/senhas", func(r chi.Router) {
-				r.Get("/", senhaVigiaHandler.List)
+				r.Group(func(r chi.Router) {
+					r.Use(handler.RequireRole("admin", "supervisor"))
+					r.Get("/", senhaVigiaHandler.List)
+				})
 				r.Group(func(r chi.Router) {
 					r.Use(handler.RequireRole("admin"))
 					r.Post("/", senhaVigiaHandler.Create)
