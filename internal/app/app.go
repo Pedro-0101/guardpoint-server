@@ -143,14 +143,13 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 			})
 
 			r.Route("/turnos", func(r chi.Router) {
+				r.Get("/", turnoHandler.List)
 				r.Post("/iniciar", turnoHandler.Iniciar)
 				r.Post("/checkin", turnoHandler.Checkin)
 				r.Post("/finalizar", turnoHandler.Finalizar)
 				r.Post("/sabotagem", turnoHandler.Sabotagem)
 				r.Post("/reassociar", turnoHandler.Reassociar)
 				r.Get("/status", turnoHandler.Status)
-				r.Get("/ativos", turnoHandler.Ativos)
-				r.Get("/historico", turnoHandler.Historico)
 				r.Get("/{id}", turnoHandler.GetByID)
 				r.Post("/{id}/revogar", turnoHandler.Revogar)
 			})

@@ -1667,20 +1667,160 @@ const docTemplate = `{
                 }
             }
         },
-        "/turnos/ativos": {
+        "/turnos": {
             "get": {
+                "description": "Para vigias, retorna apenas os turnos do proprio usuario autenticado.\nAdmin e supervisores podem filtrar por qualquer usuario/posto.",
                 "tags": [
+                    "turnos",
                     "turnos"
                 ],
-                "summary": "Lista turnos ativos da empresa",
+                "summary": "Lista turnos com filtros unificados, ordenacao e paginacao",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Status (agendado,em_andamento,pausado,critico,finalizado)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Data inicial (YYYY-MM-DD)",
+                        "name": "data_inicio",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Data final (YYYY-MM-DD)",
+                        "name": "data_fim",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID do vigia (uuid)",
+                        "name": "usuario_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID do posto (uuid)",
+                        "name": "posto_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Campo de ordenacao (inicio_previsto, created_at, status)",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Direcao (asc, desc)",
+                        "name": "sort_order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limite (max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "type": "array",
-                            "items": {
-                                "$ref": "#/definitions/model.TurnoDetalhe"
+                            "type": "object",
+                            "additionalProperties": true
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": {
+                                "type": "string"
                             }
+                        }
+                    }
+                }
+            }
+        },
+        "/turnos/ativos": {
+            "get": {
+                "description": "Para vigias, retorna apenas os turnos do proprio usuario autenticado.\nAdmin e supervisores podem filtrar por qualquer usuario/posto.",
+                "tags": [
+                    "turnos",
+                    "turnos"
+                ],
+                "summary": "Lista turnos com filtros unificados, ordenacao e paginacao",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Status (agendado,em_andamento,pausado,critico,finalizado)",
+                        "name": "status",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Data inicial (YYYY-MM-DD)",
+                        "name": "data_inicio",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Data final (YYYY-MM-DD)",
+                        "name": "data_fim",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID do vigia (uuid)",
+                        "name": "usuario_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID do posto (uuid)",
+                        "name": "posto_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Campo de ordenacao (inicio_previsto, created_at, status)",
+                        "name": "sort_by",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "Direcao (asc, desc)",
+                        "name": "sort_order",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Limite (max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "object",
+                            "additionalProperties": true
                         }
                     },
                     "500": {
@@ -1811,76 +1951,6 @@ const docTemplate = `{
                     },
                     "409": {
                         "description": "Conflict",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": {
-                                "type": "string"
-                            }
-                        }
-                    }
-                }
-            }
-        },
-        "/turnos/historico": {
-            "get": {
-                "tags": [
-                    "turnos"
-                ],
-                "summary": "Lista o historico de turnos com filtros e paginacao",
-                "parameters": [
-                    {
-                        "type": "string",
-                        "description": "Data inicial (YYYY-MM-DD)",
-                        "name": "data_inicio",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Data final (YYYY-MM-DD)",
-                        "name": "data_fim",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "ID do usuario (uuid)",
-                        "name": "usuario_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "ID do posto (uuid)",
-                        "name": "posto_id",
-                        "in": "query"
-                    },
-                    {
-                        "type": "string",
-                        "description": "Status do turno",
-                        "name": "status",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Limite de itens (max 100)",
-                        "name": "limit",
-                        "in": "query"
-                    },
-                    {
-                        "type": "integer",
-                        "description": "Offset da paginacao",
-                        "name": "offset",
-                        "in": "query"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "OK",
-                        "schema": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "500": {
-                        "description": "Internal Server Error",
                         "schema": {
                             "type": "object",
                             "additionalProperties": {
@@ -3594,6 +3664,9 @@ const docTemplate = `{
                 },
                 "usuario_id": {
                     "type": "string"
+                },
+                "usuario_nome": {
+                    "type": "string"
                 }
             }
         },
@@ -3652,6 +3725,9 @@ const docTemplate = `{
                     "$ref": "#/definitions/model.User"
                 },
                 "usuario_id": {
+                    "type": "string"
+                },
+                "usuario_nome": {
                     "type": "string"
                 }
             }

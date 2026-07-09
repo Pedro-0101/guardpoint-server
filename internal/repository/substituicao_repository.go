@@ -188,6 +188,58 @@ func (r *SubstituicaoRepository) FindAtivaByUsuarioPostoData(ctx context.Context
 	return &sub, nil
 }
 
+func (r *SubstituicaoRepository) ListAtivasByDateRange(ctx context.Context, empresaID uuid.UUID, dataInicio, dataFim, usuarioID, postoID string) ([]model.Substituicao, error) {
+	where := "WHERE s.empresa_id = $1 AND s.ativo = true"
+	args := []interface{}{empresaID}
+
+	if dataInicio != "" && dataFim != "" {
+		idx := len(args) + 1
+		where += fmt.Sprintf(" AND s.data_inicio <= $%d::date AND s.data_fim >= $%d::date", idx, idx+1)
+		args = append(args, dataFim, dataInicio)
+	}
+	if usuarioID != "" {
+		where += fmt.Sprintf(" AND s.usuario_id = $%d::uuid", len(args)+1)
+		args = append(args, usuarioID)
+	}
+	if postoID != "" {
+		where += fmt.Sprintf(" AND s.posto_id = $%d::uuid", len(args)+1)
+		args = append(args, postoID)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT s.id, s.empresa_id, s.usuario_id, s.posto_id,
+		       s.data_inicio, s.data_fim, s.hora_inicio::text, s.hora_fim::text,
+		       s.tolerancia_min, COALESCE(s.motivo, ''), s.ativo, s.created_at, s.updated_at,
+		       u.nome AS usuario_nome, p.nome AS posto_nome
+		FROM substituicoes s
+		LEFT JOIN usuarios u ON u.id = s.usuario_id
+		LEFT JOIN postos p ON p.id = s.posto_id
+		%s
+		ORDER BY s.data_inicio, s.hora_inicio
+	`, where)
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("listar substituicoes ativas: %w", err)
+	}
+	defer rows.Close()
+
+	var subs []model.Substituicao
+	for rows.Next() {
+		var sub model.Substituicao
+		if err := rows.Scan(
+			&sub.ID, &sub.EmpresaID, &sub.UsuarioID, &sub.PostoID,
+			&sub.DataInicio, &sub.DataFim, &sub.HoraInicio, &sub.HoraFim,
+			&sub.ToleranciaMin, &sub.Motivo, &sub.Ativo, &sub.CreatedAt, &sub.UpdatedAt,
+			&sub.UsuarioNome, &sub.PostoNome,
+		); err != nil {
+			return nil, fmt.Errorf("scan substituicao: %w", err)
+		}
+		subs = append(subs, sub)
+	}
+	return subs, rows.Err()
+}
+
 // SubstituicaoSemTurno e a projecao usada pelo worker de no-show.
 type SubstituicaoSemTurno struct {
 	ID            uuid.UUID

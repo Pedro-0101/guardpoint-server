@@ -153,6 +153,53 @@ func (r *EscalaRepository) List(ctx context.Context, empresaID uuid.UUID, filter
 	return escalas, total, rows.Err()
 }
 
+func (r *EscalaRepository) ListAtivasByEmpresa(ctx context.Context, empresaID uuid.UUID, usuarioID, postoID string) ([]model.Escala, error) {
+	where := "WHERE e.empresa_id = $1 AND e.ativo = true"
+	args := []interface{}{empresaID}
+
+	if usuarioID != "" {
+		where += fmt.Sprintf(" AND e.usuario_id = $%d::uuid", len(args)+1)
+		args = append(args, usuarioID)
+	}
+	if postoID != "" {
+		where += fmt.Sprintf(" AND e.posto_id = $%d::uuid", len(args)+1)
+		args = append(args, postoID)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT e.id, e.empresa_id, e.usuario_id, e.posto_id,
+		       e.dia_semana_inicio, e.dia_semana_fim, e.hora_inicio::text, e.hora_fim::text,
+		       e.tolerancia_min, e.ativo, e.created_at, e.updated_at,
+		       u.nome AS usuario_nome, p.nome AS posto_nome
+		FROM escalas e
+		LEFT JOIN usuarios u ON u.id = e.usuario_id
+		LEFT JOIN postos p ON p.id = e.posto_id
+		%s
+		ORDER BY e.dia_semana_inicio, e.hora_inicio
+	`, where)
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("listar escalas ativas: %w", err)
+	}
+	defer rows.Close()
+
+	var escalas []model.Escala
+	for rows.Next() {
+		var esc model.Escala
+		if err := rows.Scan(
+			&esc.ID, &esc.EmpresaID, &esc.UsuarioID, &esc.PostoID,
+			&esc.DiaSemanaInicio, &esc.DiaSemanaFim, &esc.HoraInicio, &esc.HoraFim,
+			&esc.ToleranciaMin, &esc.Ativo, &esc.CreatedAt, &esc.UpdatedAt,
+			&esc.UsuarioNome, &esc.PostoNome,
+		); err != nil {
+			return nil, fmt.Errorf("scan escala: %w", err)
+		}
+		escalas = append(escalas, esc)
+	}
+	return escalas, rows.Err()
+}
+
 func (r *EscalaRepository) Update(ctx context.Context, empresaID, id uuid.UUID, e *model.Escala) error {
 	query := `
 		UPDATE escalas

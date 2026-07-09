@@ -12,6 +12,7 @@ type Turno struct {
 	UsuarioID      uuid.UUID  `json:"usuario_id"`
 	PostoID        uuid.UUID  `json:"posto_id"`
 	PostoNome      string     `json:"posto_nome,omitempty"`
+	UsuarioNome    string     `json:"usuario_nome,omitempty"`
 	Status         string     `json:"status"`
 	InicioPrevisto time.Time  `json:"inicio_previsto"`
 	FimPrevisto    time.Time  `json:"fim_previsto"`
@@ -20,8 +21,6 @@ type Turno struct {
 	TokenSessao    *string    `json:"token_sessao,omitempty"`
 	DeviceID       *string    `json:"device_id,omitempty"`
 	IntervaloMin   int        `json:"intervalo_min"`
-	// Pin so e preenchido pela consulta dedicada do fluxo de reassociacao;
-	// nunca e serializado para nao vazar o PIN ativo em listagens.
 	Pin          *string    `json:"-"`
 	PinValidoAte *time.Time `json:"-"`
 	CreatedAt    time.Time  `json:"created_at"`
@@ -108,6 +107,18 @@ type HistoricoFilter struct {
 	UsuarioID  string `json:"usuario_id"`
 	PostoID    string `json:"posto_id"`
 	Status     string `json:"status"`
+	Limit      int    `json:"limit"`
+	Offset     int    `json:"offset"`
+}
+
+type TurnoFilter struct {
+	Status     string `json:"status"`
+	DataInicio string `json:"data_inicio"`
+	DataFim    string `json:"data_fim"`
+	UsuarioID  string `json:"usuario_id"`
+	PostoID    string `json:"posto_id"`
+	SortBy     string `json:"sort_by"`
+	SortOrder  string `json:"sort_order"`
 	Limit      int    `json:"limit"`
 	Offset     int    `json:"offset"`
 }

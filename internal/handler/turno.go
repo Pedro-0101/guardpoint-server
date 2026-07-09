@@ -214,13 +214,52 @@ func (h *TurnoHandler) Status(w http.ResponseWriter, r *http.Request) {
 // @Success      200 {array} model.TurnoDetalhe
 // @Failure      500 {object} map[string]string
 // @Router       /turnos/ativos [get]
-func (h *TurnoHandler) Ativos(w http.ResponseWriter, r *http.Request) {
+// List godoc
+// @Summary      Lista turnos com filtros unificados, ordenacao e paginacao
+// @Description  Para vigias, retorna apenas os turnos do proprio usuario autenticado.
+// @Description  Admin e supervisores podem filtrar por qualquer usuario/posto.
+// @Tags         turnos
+// @Param        status query string false "Status (agendado,em_andamento,pausado,critico,finalizado)"
+// @Param        data_inicio query string false "Data inicial (YYYY-MM-DD)"
+// @Param        data_fim query string false "Data final (YYYY-MM-DD)"
+// @Param        usuario_id query string false "ID do vigia (uuid)"
+// @Param        posto_id query string false "ID do posto (uuid)"
+// @Param        sort_by query string false "Campo de ordenacao (inicio_previsto, created_at, status)"
+// @Param        sort_order query string false "Direcao (asc, desc)"
+// @Param        limit query int false "Limite (max 100)"
+// @Param        offset query int false "Offset"
+// @Success      200 {object} map[string]interface{}
+// @Failure      500 {object} map[string]string
+// @Router       /turnos [get]
+func (h *TurnoHandler) List(w http.ResponseWriter, r *http.Request) {
 	empresaID := GetEmpresaID(r.Context())
+	userID := GetUserID(r.Context())
+	role := GetRole(r.Context())
 
-	turnos, err := h.turnoService.GetAtivos(r.Context(), empresaID)
+	limit, offset := parsePagination(r)
+
+	usuarioID := r.URL.Query().Get("usuario_id")
+
+	if role == "vigia" {
+		usuarioID = userID
+	}
+
+	filter := model.TurnoFilter{
+		Status:     r.URL.Query().Get("status"),
+		DataInicio: r.URL.Query().Get("data_inicio"),
+		DataFim:    r.URL.Query().Get("data_fim"),
+		UsuarioID:  usuarioID,
+		PostoID:    r.URL.Query().Get("posto_id"),
+		SortBy:     r.URL.Query().Get("sort_by"),
+		SortOrder:  r.URL.Query().Get("sort_order"),
+		Limit:      limit,
+		Offset:     offset,
+	}
+
+	turnos, total, err := h.turnoService.GetTurnos(r.Context(), empresaID, filter)
 	if err != nil {
-		slog.Error("listar ativos failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "erro ao listar turnos ativos")
+		slog.Error("listar turnos failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "erro ao listar turnos")
 		return
 	}
 
@@ -228,7 +267,10 @@ func (h *TurnoHandler) Ativos(w http.ResponseWriter, r *http.Request) {
 		turnos = []model.TurnoDetalhe{}
 	}
 
-	writeJSON(w, http.StatusOK, turnos)
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"data":  turnos,
+		"total": total,
+	})
 }
 
 // GetByID godoc
@@ -449,51 +491,6 @@ func (h *TurnoHandler) Lote(w http.ResponseWriter, r *http.Request) {
 		"recebidos":   len(reqs),
 		"processados": len(resultados),
 		"checkins":    resultados,
-	})
-}
-
-// Historico godoc
-// @Summary      Lista o historico de turnos com filtros e paginacao
-// @Tags         turnos
-// @Param        data_inicio query string false "Data inicial (YYYY-MM-DD)"
-// @Param        data_fim query string false "Data final (YYYY-MM-DD)"
-// @Param        usuario_id query string false "ID do usuario (uuid)"
-// @Param        posto_id query string false "ID do posto (uuid)"
-// @Param        status query string false "Status do turno"
-// @Param        limit query int false "Limite de itens (max 100)"
-// @Param        offset query int false "Offset da paginacao"
-// @Success      200 {object} map[string]interface{}
-// @Failure      500 {object} map[string]string
-// @Router       /turnos/historico [get]
-func (h *TurnoHandler) Historico(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
-
-	limit, offset := parsePagination(r)
-
-	filter := model.HistoricoFilter{
-		DataInicio: r.URL.Query().Get("data_inicio"),
-		DataFim:    r.URL.Query().Get("data_fim"),
-		UsuarioID:  r.URL.Query().Get("usuario_id"),
-		PostoID:    r.URL.Query().Get("posto_id"),
-		Status:     r.URL.Query().Get("status"),
-		Limit:      limit,
-		Offset:     offset,
-	}
-
-	turnos, total, err := h.turnoService.GetHistorico(r.Context(), empresaID, filter)
-	if err != nil {
-		slog.Error("historico turnos failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "erro ao buscar historico")
-		return
-	}
-
-	if turnos == nil {
-		turnos = []model.Turno{}
-	}
-
-	writeJSON(w, http.StatusOK, map[string]interface{}{
-		"data":  turnos,
-		"total": total,
 	})
 }
 

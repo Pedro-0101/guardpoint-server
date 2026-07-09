@@ -8,6 +8,8 @@ import (
 	"log/slog"
 	"math"
 	"math/big"
+	"sort"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -708,6 +710,226 @@ func (s *TurnoService) GetHistorico(ctx context.Context, empresaID string, filte
 	}
 
 	return s.turnoRepo.ListHistorico(ctx, parsedEmpresaID, filter)
+}
+
+func (s *TurnoService) GetTurnos(ctx context.Context, empresaID string, filter model.TurnoFilter) ([]model.TurnoDetalhe, int, error) {
+	parsedEmpresaID, err := uuid.Parse(empresaID)
+	if err != nil {
+		return nil, 0, fmt.Errorf("empresa_id invalido: %w", err)
+	}
+
+	requestedStatuses := splitStatuses(filter.Status)
+	hasAgendado := false
+	hasReal := false
+	for _, st := range requestedStatuses {
+		if st == "agendado" {
+			hasAgendado = true
+		} else {
+			hasReal = true
+		}
+	}
+	if len(requestedStatuses) == 0 {
+		hasAgendado = true
+		hasReal = true
+	}
+
+	var allTurnos []model.TurnoDetalhe
+
+	if hasAgendado {
+		agendados, err := s.gerarTurnosAgendados(ctx, parsedEmpresaID, filter)
+		if err != nil {
+			return nil, 0, fmt.Errorf("gerar turnos agendados: %w", err)
+		}
+		for _, t := range agendados {
+			allTurnos = append(allTurnos, model.TurnoDetalhe{Turno: t})
+		}
+	}
+
+	if hasReal {
+		reais, err := s.turnoRepo.ListTurnos(ctx, parsedEmpresaID, filter)
+		if err != nil {
+			return nil, 0, fmt.Errorf("listar turnos reais: %w", err)
+		}
+		for _, t := range reais {
+			allTurnos = append(allTurnos, model.TurnoDetalhe{Turno: t})
+		}
+	}
+
+	sortBy := filter.SortBy
+	if sortBy == "" {
+		sortBy = "inicio_previsto"
+	}
+	sortDesc := filter.SortOrder == "desc"
+
+	sort.Slice(allTurnos, func(i, j int) bool {
+		a, b := allTurnos[i].Turno, allTurnos[j].Turno
+		var less bool
+		switch sortBy {
+		case "created_at":
+			less = a.CreatedAt.Before(b.CreatedAt)
+		case "status":
+			less = a.Status < b.Status
+		default:
+			less = a.InicioPrevisto.Before(b.InicioPrevisto)
+		}
+		if sortDesc {
+			return !less
+		}
+		return less
+	})
+
+	total := len(allTurnos)
+
+	if filter.Limit <= 0 {
+		filter.Limit = 20
+	}
+	if filter.Offset < 0 {
+		filter.Offset = 0
+	}
+	if filter.Offset >= len(allTurnos) {
+		return []model.TurnoDetalhe{}, total, nil
+	}
+	end := filter.Offset + filter.Limit
+	if end > len(allTurnos) {
+		end = len(allTurnos)
+	}
+
+	return allTurnos[filter.Offset:end], total, nil
+}
+
+func splitStatuses(status string) []string {
+	if status == "" {
+		return nil
+	}
+	parts := strings.Split(status, ",")
+	var result []string
+	for _, s := range parts {
+		s = strings.TrimSpace(s)
+		if s != "" {
+			result = append(result, s)
+		}
+	}
+	return result
+}
+
+func (s *TurnoService) gerarTurnosAgendados(ctx context.Context, empresaID uuid.UUID, filter model.TurnoFilter) ([]model.Turno, error) {
+	if filter.DataInicio == "" || filter.DataFim == "" {
+		return nil, nil
+	}
+
+	dataInicio, err := time.Parse("2006-01-02", filter.DataInicio)
+	if err != nil {
+		return nil, fmt.Errorf("data_inicio invalida: %w", err)
+	}
+	dataFim, err := time.Parse("2006-01-02", filter.DataFim)
+	if err != nil {
+		return nil, fmt.Errorf("data_fim invalida: %w", err)
+	}
+
+	escalas, err := s.escalaRepo.ListAtivasByEmpresa(ctx, empresaID, filter.UsuarioID, filter.PostoID)
+	if err != nil {
+		return nil, fmt.Errorf("listar escalas: %w", err)
+	}
+
+	subs, err := s.substituicaoRepo.ListAtivasByDateRange(ctx, empresaID, filter.DataInicio, filter.DataFim, filter.UsuarioID, filter.PostoID)
+	if err != nil {
+		return nil, fmt.Errorf("listar substituicoes: %w", err)
+	}
+
+	reais, err := s.turnoRepo.ListTurnosByDateRange(ctx, empresaID, filter.DataInicio, filter.DataFim, filter.UsuarioID, filter.PostoID)
+	if err != nil {
+		return nil, fmt.Errorf("listar turnos reais: %w", err)
+	}
+
+	realByUserPostoDate := make(map[string]bool)
+	for _, t := range reais {
+		dateStr := t.InicioPrevisto.Format("2006-01-02")
+		key := t.UsuarioID.String() + "|" + t.PostoID.String() + "|" + dateStr
+		realByUserPostoDate[key] = true
+	}
+
+	subByUserPostoDate := make(map[string]*model.Substituicao)
+	for i := range subs {
+		sub := &subs[i]
+		current := sub.DataInicio
+		for !current.After(sub.DataFim) {
+			dateStr := current.Format("2006-01-02")
+			key := sub.UsuarioID.String() + "|" + sub.PostoID.String() + "|" + dateStr
+			subByUserPostoDate[key] = sub
+			current = current.AddDate(0, 0, 1)
+		}
+	}
+
+	var turnos []model.Turno
+
+	for d := dataInicio; !d.After(dataFim); d = d.AddDate(0, 0, 1) {
+		diaSemana := int16(d.Weekday())
+		dateStr := d.Format("2006-01-02")
+
+		for _, esc := range escalas {
+			if esc.DiaSemanaInicio != diaSemana {
+				continue
+			}
+
+			key := esc.UsuarioID.String() + "|" + esc.PostoID.String() + "|" + dateStr
+			if realByUserPostoDate[key] {
+				continue
+			}
+
+			horaInicio := esc.HoraInicio
+			horaFim := esc.HoraFim
+			usuarioNome := esc.UsuarioNome
+			postoNome := esc.PostoNome
+
+			if sub, ok := subByUserPostoDate[key]; ok {
+				horaInicio = sub.HoraInicio
+				horaFim = sub.HoraFim
+				usuarioNome = sub.UsuarioNome
+				postoNome = sub.PostoNome
+			}
+
+			inicioPrevisto, err := parseHoraData(dateStr, horaInicio)
+			if err != nil {
+				continue
+			}
+			fimPrevisto, err := parseHoraData(dateStr, horaFim)
+			if err != nil {
+				continue
+			}
+
+			if !fimPrevisto.After(inicioPrevisto) {
+				fimPrevisto = fimPrevisto.AddDate(0, 0, 1)
+			}
+
+			turno := model.Turno{
+				EmpresaID:      empresaID,
+				UsuarioID:      esc.UsuarioID,
+				PostoID:        esc.PostoID,
+				PostoNome:      postoNome,
+				UsuarioNome:    usuarioNome,
+				Status:         "agendado",
+				InicioPrevisto: inicioPrevisto,
+				FimPrevisto:    fimPrevisto,
+			}
+			turnos = append(turnos, turno)
+		}
+	}
+
+	return turnos, nil
+}
+
+func parseHoraData(dateStr, hora string) (time.Time, error) {
+	formats := []string{
+		"2006-01-02 15:04:05",
+		"2006-01-02 15:04",
+	}
+	for _, f := range formats {
+		t, err := time.Parse(f, dateStr+" "+hora)
+		if err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("formato de hora invalido: %s", hora)
 }
 
 func (s *TurnoService) Sabotagem(ctx context.Context, userID, empresaID string, req model.SabotagemRequest) (*model.SabotagemResponse, error) {

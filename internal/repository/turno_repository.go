@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -192,8 +193,141 @@ func (r *TurnoRepository) ListHistorico(ctx context.Context, empresaID uuid.UUID
 	return turnos, total, rows.Err()
 }
 
-// RevogarToken invalida a sessao do dispositivo (token_sessao/device_id) sem
-// encerrar o turno: o vigia retoma em outro aparelho via PIN (PLANNING 8.5).
+func (r *TurnoRepository) ListTurnos(ctx context.Context, empresaID uuid.UUID, filter model.TurnoFilter) ([]model.Turno, error) {
+	where := "WHERE t.empresa_id = $1"
+	args := []interface{}{empresaID}
+
+	statuses := parseStatusFilter(filter.Status)
+	if len(statuses) > 0 {
+		base := len(args)
+		placeholders := make([]string, len(statuses))
+		for i, s := range statuses {
+			placeholders[i] = fmt.Sprintf("$%d", base+i+1)
+			args = append(args, s)
+		}
+		where += fmt.Sprintf(" AND t.status IN (%s)", strings.Join(placeholders, ", "))
+	}
+
+	if filter.DataInicio != "" {
+		where += fmt.Sprintf(" AND t.inicio_previsto >= $%d::timestamptz", len(args)+1)
+		args = append(args, filter.DataInicio)
+	}
+	if filter.DataFim != "" {
+		where += fmt.Sprintf(" AND t.inicio_previsto <= $%d::timestamptz", len(args)+1)
+		args = append(args, filter.DataFim)
+	}
+	if filter.UsuarioID != "" {
+		where += fmt.Sprintf(" AND t.usuario_id = $%d::uuid", len(args)+1)
+		args = append(args, filter.UsuarioID)
+	}
+	if filter.PostoID != "" {
+		where += fmt.Sprintf(" AND t.posto_id = $%d::uuid", len(args)+1)
+		args = append(args, filter.PostoID)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT t.id, t.empresa_id, t.usuario_id, t.posto_id, t.status,
+		       t.inicio_previsto, t.fim_previsto, t.inicio_real, t.fim_real,
+		       t.token_sessao, t.device_id, t.intervalo_min, t.created_at,
+		       u.nome AS usuario_nome, p.nome AS posto_nome
+		FROM turnos t
+		LEFT JOIN usuarios u ON u.id = t.usuario_id
+		LEFT JOIN postos p ON p.id = t.posto_id
+		%s
+	`, where)
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("listar turnos: %w", err)
+	}
+	defer rows.Close()
+
+	var turnos []model.Turno
+	for rows.Next() {
+		var t model.Turno
+		if err := rows.Scan(
+			&t.ID, &t.EmpresaID, &t.UsuarioID, &t.PostoID, &t.Status,
+			&t.InicioPrevisto, &t.FimPrevisto, &t.InicioReal, &t.FimReal,
+			&t.TokenSessao, &t.DeviceID, &t.IntervaloMin, &t.CreatedAt,
+			&t.UsuarioNome, &t.PostoNome,
+		); err != nil {
+			return nil, fmt.Errorf("scan turno: %w", err)
+		}
+		turnos = append(turnos, t)
+	}
+	return turnos, rows.Err()
+}
+
+func parseStatusFilter(status string) []string {
+	if status == "" {
+		return nil
+	}
+	parts := strings.Split(status, ",")
+	var result []string
+	for _, s := range parts {
+		s = strings.TrimSpace(s)
+		if s == "" || s == "agendado" {
+			continue
+		}
+		result = append(result, s)
+	}
+	return result
+}
+
+func (r *TurnoRepository) ListTurnosByDateRange(ctx context.Context, empresaID uuid.UUID, dataInicio, dataFim, usuarioID, postoID string) ([]model.Turno, error) {
+	where := "WHERE t.empresa_id = $1"
+	args := []interface{}{empresaID}
+
+	if dataInicio != "" {
+		where += fmt.Sprintf(" AND t.inicio_previsto >= $%d::timestamptz", len(args)+1)
+		args = append(args, dataInicio)
+	}
+	if dataFim != "" {
+		where += fmt.Sprintf(" AND t.inicio_previsto <= $%d::timestamptz", len(args)+1)
+		args = append(args, dataFim)
+	}
+	if usuarioID != "" {
+		where += fmt.Sprintf(" AND t.usuario_id = $%d::uuid", len(args)+1)
+		args = append(args, usuarioID)
+	}
+	if postoID != "" {
+		where += fmt.Sprintf(" AND t.posto_id = $%d::uuid", len(args)+1)
+		args = append(args, postoID)
+	}
+
+	query := fmt.Sprintf(`
+		SELECT t.id, t.empresa_id, t.usuario_id, t.posto_id, t.status,
+		       t.inicio_previsto, t.fim_previsto, t.inicio_real, t.fim_real,
+		       t.token_sessao, t.device_id, t.intervalo_min, t.created_at,
+		       u.nome AS usuario_nome, p.nome AS posto_nome
+		FROM turnos t
+		LEFT JOIN usuarios u ON u.id = t.usuario_id
+		LEFT JOIN postos p ON p.id = t.posto_id
+		%s
+	`, where)
+
+	rows, err := r.db.Query(ctx, query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("listar turnos por data: %w", err)
+	}
+	defer rows.Close()
+
+	var turnos []model.Turno
+	for rows.Next() {
+		var t model.Turno
+		if err := rows.Scan(
+			&t.ID, &t.EmpresaID, &t.UsuarioID, &t.PostoID, &t.Status,
+			&t.InicioPrevisto, &t.FimPrevisto, &t.InicioReal, &t.FimReal,
+			&t.TokenSessao, &t.DeviceID, &t.IntervaloMin, &t.CreatedAt,
+			&t.UsuarioNome, &t.PostoNome,
+		); err != nil {
+			return nil, fmt.Errorf("scan turno: %w", err)
+		}
+		turnos = append(turnos, t)
+	}
+	return turnos, rows.Err()
+}
+
 func (r *TurnoRepository) RevogarToken(ctx context.Context, id, empresaID uuid.UUID, pin string, pinValidoAte time.Time) error {
 	query := `UPDATE turnos SET token_sessao = NULL, device_id = NULL, pin = $3, pin_valido_ate = $4 WHERE id = $1 AND empresa_id = $2`
 	ct, err := r.db.Exec(ctx, query, id, empresaID, pin, pinValidoAte)

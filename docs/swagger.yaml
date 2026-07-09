@@ -688,6 +688,8 @@ definitions:
         type: string
       usuario_id:
         type: string
+      usuario_nome:
+        type: string
     type: object
   model.TurnoDetalhe:
     properties:
@@ -726,6 +728,8 @@ definitions:
       usuario:
         $ref: '#/definitions/model.User'
       usuario_id:
+        type: string
+      usuario_nome:
         type: string
     type: object
   model.TurnoPorPosto:
@@ -2004,6 +2008,64 @@ paths:
       summary: Atualiza uma substituicao (admin/supervisor)
       tags:
       - substituicoes
+  /turnos:
+    get:
+      description: |-
+        Para vigias, retorna apenas os turnos do proprio usuario autenticado.
+        Admin e supervisores podem filtrar por qualquer usuario/posto.
+      parameters:
+      - description: Status (agendado,em_andamento,pausado,critico,finalizado)
+        in: query
+        name: status
+        type: string
+      - description: Data inicial (YYYY-MM-DD)
+        in: query
+        name: data_inicio
+        type: string
+      - description: Data final (YYYY-MM-DD)
+        in: query
+        name: data_fim
+        type: string
+      - description: ID do vigia (uuid)
+        in: query
+        name: usuario_id
+        type: string
+      - description: ID do posto (uuid)
+        in: query
+        name: posto_id
+        type: string
+      - description: Campo de ordenacao (inicio_previsto, created_at, status)
+        in: query
+        name: sort_by
+        type: string
+      - description: Direcao (asc, desc)
+        in: query
+        name: sort_order
+        type: string
+      - description: Limite (max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
+      responses:
+        "200":
+          description: OK
+          schema:
+            additionalProperties: true
+            type: object
+        "500":
+          description: Internal Server Error
+          schema:
+            additionalProperties:
+              type: string
+            type: object
+      summary: Lista turnos com filtros unificados, ordenacao e paginacao
+      tags:
+      - turnos
+      - turnos
   /turnos/{id}:
     get:
       parameters:
@@ -2056,21 +2118,61 @@ paths:
       - turnos
   /turnos/ativos:
     get:
+      description: |-
+        Para vigias, retorna apenas os turnos do proprio usuario autenticado.
+        Admin e supervisores podem filtrar por qualquer usuario/posto.
+      parameters:
+      - description: Status (agendado,em_andamento,pausado,critico,finalizado)
+        in: query
+        name: status
+        type: string
+      - description: Data inicial (YYYY-MM-DD)
+        in: query
+        name: data_inicio
+        type: string
+      - description: Data final (YYYY-MM-DD)
+        in: query
+        name: data_fim
+        type: string
+      - description: ID do vigia (uuid)
+        in: query
+        name: usuario_id
+        type: string
+      - description: ID do posto (uuid)
+        in: query
+        name: posto_id
+        type: string
+      - description: Campo de ordenacao (inicio_previsto, created_at, status)
+        in: query
+        name: sort_by
+        type: string
+      - description: Direcao (asc, desc)
+        in: query
+        name: sort_order
+        type: string
+      - description: Limite (max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset
+        in: query
+        name: offset
+        type: integer
       responses:
         "200":
           description: OK
           schema:
-            items:
-              $ref: '#/definitions/model.TurnoDetalhe'
-            type: array
+            additionalProperties: true
+            type: object
         "500":
           description: Internal Server Error
           schema:
             additionalProperties:
               type: string
             type: object
-      summary: Lista turnos ativos da empresa
+      summary: Lista turnos com filtros unificados, ordenacao e paginacao
       tags:
+      - turnos
       - turnos
   /turnos/checkin:
     post:
@@ -2152,52 +2254,6 @@ paths:
               type: string
             type: object
       summary: Finaliza um turno em andamento
-      tags:
-      - turnos
-  /turnos/historico:
-    get:
-      parameters:
-      - description: Data inicial (YYYY-MM-DD)
-        in: query
-        name: data_inicio
-        type: string
-      - description: Data final (YYYY-MM-DD)
-        in: query
-        name: data_fim
-        type: string
-      - description: ID do usuario (uuid)
-        in: query
-        name: usuario_id
-        type: string
-      - description: ID do posto (uuid)
-        in: query
-        name: posto_id
-        type: string
-      - description: Status do turno
-        in: query
-        name: status
-        type: string
-      - description: Limite de itens (max 100)
-        in: query
-        name: limit
-        type: integer
-      - description: Offset da paginacao
-        in: query
-        name: offset
-        type: integer
-      responses:
-        "200":
-          description: OK
-          schema:
-            additionalProperties: true
-            type: object
-        "500":
-          description: Internal Server Error
-          schema:
-            additionalProperties:
-              type: string
-            type: object
-      summary: Lista o historico de turnos com filtros e paginacao
       tags:
       - turnos
   /turnos/iniciar:
