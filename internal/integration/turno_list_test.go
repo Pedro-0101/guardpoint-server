@@ -249,8 +249,8 @@ func TestGetTurnos_SubstituicaoId_Agendado_DiferenteUsuario(t *testing.T) {
 		if !foundSubstituto {
 			t.Error("turno agendado para o substituto (vigiaB) nao encontrado")
 		}
-		if !foundOriginal {
-			t.Error("turno agendado para o vigia original nao encontrado")
+		if foundOriginal {
+			t.Error("turno agendado do vigia original nao deveria aparecer pois foi substituido")
 		}
 	})
 }

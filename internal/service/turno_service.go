@@ -9,6 +9,7 @@ import (
 	"math"
 	"math/big"
 	"sort"
+	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -854,6 +855,14 @@ func (s *TurnoService) gerarTurnosAgendados(ctx context.Context, empresaID uuid.
 		}
 	}
 
+	subPostoDate := make(map[string]bool)
+	for key := range subByUserPostoDate {
+		parts := strings.SplitN(key, "|", 3)
+		if len(parts) == 3 {
+			subPostoDate[parts[1]+"|"+parts[2]] = true
+		}
+	}
+
 	var turnos []model.Turno
 
 	for d := dataInicio; !d.After(dataFim); d = d.AddDate(0, 0, 1) {
@@ -867,6 +876,12 @@ func (s *TurnoService) gerarTurnosAgendados(ctx context.Context, empresaID uuid.
 
 			key := esc.UsuarioID.String() + "|" + esc.PostoID.String() + "|" + dateStr
 			if realByUserPostoDate[key] {
+				continue
+			}
+
+			_, hasSubForSameUser := subByUserPostoDate[key]
+			postoDateKey := esc.PostoID.String() + "|" + dateStr
+			if !hasSubForSameUser && subPostoDate[postoDateKey] {
 				continue
 			}
 
