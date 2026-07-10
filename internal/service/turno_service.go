@@ -933,6 +933,17 @@ func (s *TurnoService) gerarTurnosAgendados(ctx context.Context, empresaID uuid.
 		generatedKeys[key] = true
 	}
 
+	escalaPostoDate := make(map[string]bool)
+	for d := dataInicio; !d.After(dataFim); d = d.AddDate(0, 0, 1) {
+		diaSemana := int16(d.Weekday())
+		dateStr := d.Format("2006-01-02")
+		for _, esc := range escalas {
+			if esc.DiaSemanaInicio == diaSemana {
+				escalaPostoDate[esc.PostoID.String()+"|"+dateStr] = true
+			}
+		}
+	}
+
 	for _, sub := range subs {
 		current := sub.DataInicio
 		for !current.After(sub.DataFim) {
@@ -944,6 +955,10 @@ func (s *TurnoService) gerarTurnosAgendados(ctx context.Context, empresaID uuid.
 				continue
 			}
 			if generatedKeys[key] {
+				current = current.AddDate(0, 0, 1)
+				continue
+			}
+			if !escalaPostoDate[sub.PostoID.String()+"|"+dateStr] {
 				current = current.AddDate(0, 0, 1)
 				continue
 			}

@@ -124,6 +124,25 @@ func hojeStr() string {
 	return time.Now().Format("2006-01-02")
 }
 
+func amanhaStr() string {
+	return time.Now().AddDate(0, 0, 1).Format("2006-01-02")
+}
+
+func (c *cenarioLista) criarEscala(usuarioID, postoID uuid.UUID, diaSemanaInicio int16, horaInicio, horaFim string, toleranciaMin int) model.Escala {
+	c.e.t.Helper()
+	var esc model.Escala
+	c.e.reqJSON(http.MethodPost, "/api/v1/escalas", c.adminToken, map[string]any{
+		"usuario_id":        usuarioID.String(),
+		"posto_id":          postoID.String(),
+		"dia_semana_inicio": diaSemanaInicio,
+		"hora_inicio":       horaInicio,
+		"dia_semana_fim":    diaSemanaInicio,
+		"hora_fim":          horaFim,
+		"tolerancia_min":    toleranciaMin,
+	}, http.StatusCreated, &esc)
+	return esc
+}
+
 func TestGetTurnos_SubstituicaoId_RealTurno(t *testing.T) {
 	c := novoAmbienteLista(t)
 	h := hojeStr()
@@ -253,4 +272,113 @@ func TestGetTurnos_SubstituicaoId_Agendado_DiferenteUsuario(t *testing.T) {
 			t.Error("turno agendado do vigia original nao deveria aparecer pois foi substituido")
 		}
 	})
+}
+
+func TestGetTurnos_SubstituicaoNoturna_MesmoUsuario_NaoDuplica(t *testing.T) {
+	c := novoAmbienteLista(t)
+	h := hojeStr()
+	a := amanhaStr()
+
+	var postoNoturno model.Posto
+	c.e.reqJSON(http.MethodPost, "/api/v1/postos", c.adminToken, map[string]any{
+		"nome": "Posto Noturno", "latitude": postoLat, "longitude": postoLon, "raio_m": 100,
+	}, http.StatusCreated, &postoNoturno)
+
+	c.criarEscala(c.vigia.ID, postoNoturno.ID, int16(time.Now().Weekday()), "22:00", "05:00", 120)
+
+	_ = c.criarSubstituicao(c.vigia.ID, postoNoturno.ID, h, a, "22:00", "05:00", 120)
+
+	var listResp struct {
+		Data  []model.TurnoDetalhe `json:"data"`
+		Total int                  `json:"total"`
+	}
+	c.e.reqJSON(http.MethodGet, "/api/v1/turnos?status=agendado&data_inicio="+h+"&data_fim="+a, c.adminToken, nil, http.StatusOK, &listResp)
+
+	var count int
+	for _, td := range listResp.Data {
+		if td.Turno.PostoID == postoNoturno.ID && td.Turno.UsuarioID == c.vigia.ID {
+			count++
+		}
+	}
+	if count != 1 {
+		t.Errorf("turno noturno: esperado 1 turno agendado, obteve %d (total=%d)", count, listResp.Total)
+	}
+}
+
+func TestGetTurnos_SubstituicaoNoturna_DiferenteUsuario_NaoDuplica(t *testing.T) {
+	c := novoAmbienteLista(t)
+	h := hojeStr()
+	a := amanhaStr()
+
+	vigiaB := c.e.criarUsuario(c.empresa.ID, "Vigia B Noturno", "vigiaB.not@a.com", "senha123", "vigia", true)
+
+	var postoNoturno model.Posto
+	c.e.reqJSON(http.MethodPost, "/api/v1/postos", c.adminToken, map[string]any{
+		"nome": "Posto Noturno 2", "latitude": postoLat, "longitude": postoLon, "raio_m": 100,
+	}, http.StatusCreated, &postoNoturno)
+
+	c.criarEscala(c.vigia.ID, postoNoturno.ID, int16(time.Now().Weekday()), "22:00", "05:00", 120)
+
+	_ = c.criarSubstituicao(vigiaB.ID, postoNoturno.ID, h, a, "22:00", "05:00", 120)
+
+	var listResp struct {
+		Data  []model.TurnoDetalhe `json:"data"`
+		Total int                  `json:"total"`
+	}
+	c.e.reqJSON(http.MethodGet, "/api/v1/turnos?status=agendado&data_inicio="+h+"&data_fim="+a, c.adminToken, nil, http.StatusOK, &listResp)
+
+	var countSubstituto int
+	var countOriginal int
+	for _, td := range listResp.Data {
+		if td.Turno.PostoID != postoNoturno.ID {
+			continue
+		}
+		if td.Turno.UsuarioID == vigiaB.ID {
+			countSubstituto++
+		}
+		if td.Turno.UsuarioID == c.vigia.ID {
+			countOriginal++
+		}
+	}
+	if countSubstituto != 1 {
+		t.Errorf("turno noturno (diferente usuario): esperado 1 turno para o substituto, obteve %d", countSubstituto)
+	}
+	if countOriginal != 0 {
+		t.Error("turno noturno (diferente usuario): vigia original nao deveria aparecer")
+	}
+}
+
+func TestGetTurnos_SubstituicaoNoturna_EscalaDiaria_MultiplosTurnos(t *testing.T) {
+	c := novoAmbienteLista(t)
+	h := hojeStr()
+	a := amanhaStr()
+
+	var postoDiario model.Posto
+	c.e.reqJSON(http.MethodPost, "/api/v1/postos", c.adminToken, map[string]any{
+		"nome": "Posto Diario Noturno", "latitude": postoLat, "longitude": postoLon, "raio_m": 100,
+	}, http.StatusCreated, &postoDiario)
+
+	hojeWeekday := int16(time.Now().Weekday())
+	amanhaWeekday := int16((time.Now().Weekday() + 1) % 7)
+
+	c.criarEscala(c.vigia.ID, postoDiario.ID, hojeWeekday, "22:00", "05:00", 120)
+	c.criarEscala(c.vigia.ID, postoDiario.ID, amanhaWeekday, "22:00", "05:00", 120)
+
+	_ = c.criarSubstituicao(c.vigia.ID, postoDiario.ID, h, a, "22:00", "05:00", 120)
+
+	var listResp struct {
+		Data  []model.TurnoDetalhe `json:"data"`
+		Total int                  `json:"total"`
+	}
+	c.e.reqJSON(http.MethodGet, "/api/v1/turnos?status=agendado&data_inicio="+h+"&data_fim="+a, c.adminToken, nil, http.StatusOK, &listResp)
+
+	var count int
+	for _, td := range listResp.Data {
+		if td.Turno.PostoID == postoDiario.ID && td.Turno.UsuarioID == c.vigia.ID {
+			count++
+		}
+	}
+	if count != 2 {
+		t.Errorf("turno noturno (escala diaria): esperado 2 turnos agendados (um por dia), obteve %d (total=%d)", count, listResp.Total)
+	}
 }
