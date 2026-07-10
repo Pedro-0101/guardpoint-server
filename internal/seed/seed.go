@@ -29,7 +29,7 @@ func Run(ctx context.Context, empresaRepo *repository.EmpresaRepository, userRep
 		if err := empresaRepo.Create(ctx, empresa); err != nil {
 			return err
 		}
-		slog.Info("empresa criada", "id", empresa.ID.String())
+		slog.Info("empresa criada", "id", empresa.ID.String(), "codigo", empresa.Codigo)
 	}
 
 	existingAdmin, err := userRepo.FindByEmail(ctx, "admin@guardpoint.com")
@@ -46,10 +46,11 @@ func Run(ctx context.Context, empresaRepo *repository.EmpresaRepository, userRep
 		return err
 	}
 
+	adminEmail := "admin@guardpoint.com"
 	admin := &model.User{
 		EmpresaID: empresa.ID,
 		Nome:      "Administrador",
-		Email:     "admin@guardpoint.com",
+		Email:     &adminEmail,
 		SenhaHash: string(senhaHash),
 		Role:      "admin",
 	}
@@ -58,7 +59,7 @@ func Run(ctx context.Context, empresaRepo *repository.EmpresaRepository, userRep
 		return err
 	}
 
-	slog.Info("admin criado", "id", admin.ID.String(), "email", admin.Email)
+	slog.Info("admin criado", "id", admin.ID.String(), "email", admin.EmailOrEmpty())
 
 	if err := empresaService.ProvisionarPadrao(ctx, empresa.ID, admin.ID); err != nil {
 		return err

@@ -40,8 +40,8 @@ func novoAmbienteLista(t *testing.T) *cenarioLista {
 		empresa:    empresa,
 		admin:      admin,
 		vigia:      vigia,
-		adminToken: e.login(admin.Email, "senha123").AccessToken,
-		vigiaToken: e.login(vigia.Email, "senha123").AccessToken,
+		adminToken: e.login(admin.EmailOrEmpty(), "senha123").AccessToken,
+		vigiaToken: e.login(vigia.EmailOrEmpty(), "senha123").AccessToken,
 		deviceID:   "device-lista-01",
 	}
 

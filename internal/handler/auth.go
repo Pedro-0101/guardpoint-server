@@ -26,14 +26,16 @@ func NewAuthHandler(authService *service.AuthService) *AuthHandler {
 }
 
 // Login godoc
-// @Summary      Login por email e senha
+// @Summary      Login por email+senha (admin/supervisor) ou codigo da empresa+nome+senha (vigia)
+// @Description  Admin e supervisor autenticam com "email" + "senha". Vigia autentica com "codigo_empresa" + "nome" + "senha" (nao usa email). Enviar exatamente um dos dois pares de credenciais.
 // @Tags         auth
 // @Security
-// @Param        request body model.LoginRequest true "Credenciais"
+// @Param        request body model.LoginRequest true "Credenciais (email+senha OU codigo_empresa+nome+senha)"
 // @Success      200 {object} model.LoginResponse
 // @Failure      400 {object} model.ErrorResponse
 // @Failure      401 {object} model.ErrorResponse
 // @Failure      403 {object} model.ErrorResponse
+// @Failure      422 {object} model.ErrorResponse
 // @Router       /auth/login [post]
 func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 	var req model.LoginRequest
@@ -67,12 +69,14 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 
 // Register godoc
 // @Summary      Cria um novo usuario (somente admin)
+// @Description  "email" e obrigatorio para role "admin"/"supervisor" e opcional para "vigia". "nome" precisa ser unico dentro da empresa (pode repetir entre empresas diferentes); "email", quando enviado, e unico globalmente.
 // @Tags         auth
 // @Param        request body model.RegisterRequest true "Dados do usuario"
 // @Success      201 {object} model.User
 // @Failure      400 {object} model.ErrorResponse
 // @Failure      401 {object} model.ErrorResponse
 // @Failure      409 {object} model.ErrorResponse
+// @Failure      422 {object} model.ErrorResponse
 // @Router       /auth/register [post]
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	empresaID := middleware.GetEmpresaID(r.Context())
@@ -96,6 +100,10 @@ func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, service.ErrEmailAlreadyExists) {
 			writeError(w, http.StatusConflict, "email ja cadastrado")
+			return
+		}
+		if errors.Is(err, service.ErrNomeAlreadyExists) {
+			writeError(w, http.StatusConflict, "nome ja cadastrado")
 			return
 		}
 		slog.Error("register failed", "error", err)

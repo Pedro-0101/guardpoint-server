@@ -10,7 +10,7 @@ type User struct {
 	ID        uuid.UUID  `json:"id"`
 	EmpresaID uuid.UUID  `json:"empresa_id"`
 	Nome      string     `json:"nome"`
-	Email     string     `json:"email"`
+	Email     *string    `json:"email,omitempty"`
 	SenhaHash string     `json:"-"`
 	Role      string     `json:"role"`
 	Telefone  *string    `json:"telefone,omitempty"`
@@ -19,9 +19,18 @@ type User struct {
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
 
+// EmailOrEmpty retorna o email do usuario ou string vazia se nao houver
+// (caso de vigias, para quem o cadastro de email nao e obrigatorio).
+func (u *User) EmailOrEmpty() string {
+	if u.Email == nil {
+		return ""
+	}
+	return *u.Email
+}
+
 type CreateUsuarioRequest struct {
 	Nome  string `json:"nome" validate:"required,min=2,max=255"`
-	Email string `json:"email" validate:"required,email,max=255"`
+	Email string `json:"email" validate:"required_unless=Cargo vigia,omitempty,email,max=255"`
 	Senha string `json:"senha" validate:"required,min=6,max=72"`
 	Cargo string `json:"cargo" validate:"required,oneof=admin supervisor vigia"`
 	Ativo *bool  `json:"ativo"`
@@ -38,7 +47,7 @@ type UpdateUsuarioRequest struct {
 type UsuarioResponse struct {
 	ID        uuid.UUID  `json:"id"`
 	Nome      string     `json:"nome"`
-	Email     string     `json:"email"`
+	Email     *string    `json:"email,omitempty"`
 	Cargo     string     `json:"cargo"`
 	EmpresaID uuid.UUID  `json:"empresaId"`
 	Ativo     bool       `json:"ativo"`
@@ -60,8 +69,10 @@ func ToUsuarioResponse(u *User) UsuarioResponse {
 }
 
 type LoginRequest struct {
-	Email    string `json:"email" validate:"required,email"`
-	Password string `json:"senha" validate:"required,min=6"`
+	Email         string `json:"email,omitempty" validate:"required_without=Nome,omitempty,email"`
+	Nome          string `json:"nome,omitempty" validate:"required_without=Email,required_with=CodigoEmpresa"`
+	CodigoEmpresa string `json:"codigo_empresa,omitempty" validate:"required_with=Nome"`
+	Password      string `json:"senha" validate:"required,min=6"`
 }
 
 type LoginResponse struct {
@@ -73,7 +84,7 @@ type LoginResponse struct {
 
 type RegisterRequest struct {
 	Nome     string `json:"nome" validate:"required,min=2,max=255"`
-	Email    string `json:"email" validate:"required,email,max=255"`
+	Email    string `json:"email" validate:"required_unless=Role vigia,omitempty,email,max=255"`
 	Password string `json:"senha" validate:"required,min=6,max=72"`
 	Role     string `json:"role" validate:"required,oneof=admin supervisor vigia"`
 	Telefone string `json:"telefone,omitempty" validate:"omitempty,max=20"`

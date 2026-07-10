@@ -137,13 +137,13 @@ func (w *TimeoutChecker) processTurno(ctx context.Context, t turnoAtivoInfo) {
 		}
 	}
 
-	if hasAtraso && atrasoMinutos >= menorAtraso {
+		if hasAtraso && atrasoMinutos >= menorAtraso {
 		mensagem := fmt.Sprintf(
 			"Atraso de %d minutos detectado no turno.",
 			atrasoMinutos,
 		)
 
-		_, err := w.alertaSvc.CreateAlerta(ctx, t.EmpresaID, t.ID, "atraso", mensagem)
+		_, err := w.alertaSvc.CreateAlerta(ctx, t.EmpresaID, t.ID, t.PostoID, "atraso", mensagem)
 		if err != nil {
 			slog.Error("timeout checker: criar alerta", "error", err, "turno_id", t.ID)
 			return
@@ -226,7 +226,7 @@ func (w *TimeoutChecker) checkNoShow(ctx context.Context) {
 			now.Format("15:04"), tolerancia, e.horaInicio, e.usuarioID.String(),
 		)
 
-		_, err = w.alertaSvc.CreateAlertaImediato(ctx, e.empresaID, uuid.Nil, "no_show", mensagem, nil)
+		_, err = w.alertaSvc.CreateAlertaImediato(ctx, e.empresaID, uuid.Nil, e.postoID, "no_show", mensagem, nil)
 		if err != nil {
 			slog.Error("timeout checker: criar alerta no-show", "error", err, "usuario_id", e.usuarioID)
 			continue

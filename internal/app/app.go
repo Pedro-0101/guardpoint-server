@@ -63,7 +63,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 	postoService := service.NewPostoService(postoRepo)
 	postoHandler := handler.NewPostoHandler(postoService)
 
-	escalonamentoSvc := service.NewEscalonamentoService(configEscalonamentoRepo, userRepo)
+	escalonamentoSvc := service.NewEscalonamentoService(configEscalonamentoRepo, userRepo, postoRepo)
 	alertaService := service.NewAlertaService(alertaRepo, escalonamentoSvc, hub)
 
 	turnoService := service.NewTurnoService(turnoRepo, checkinRepo, postoRepo, userRepo, sessaoDispositivoRepo, escalaRepo, substituicaoRepo, senhaVigiaRepo, alertaService, hub)
@@ -139,10 +139,17 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 				r.Get("/{id}", postoHandler.GetByID)
 
 				r.Group(func(r chi.Router) {
+					r.Use(middleware.RequireRole("admin", "supervisor"))
+					r.Get("/{id}/supervisores", postoHandler.ListSupervisores)
+				})
+
+				r.Group(func(r chi.Router) {
 					r.Use(middleware.RequireRole("admin"))
 					r.Post("/", postoHandler.Create)
 					r.Put("/{id}", postoHandler.Update)
 					r.Delete("/{id}", postoHandler.Delete)
+					r.Post("/{id}/supervisores", postoHandler.AddSupervisor)
+					r.Delete("/{id}/supervisores/{supervisorId}", postoHandler.RemoveSupervisor)
 				})
 			})
 
@@ -164,6 +171,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 				r.Group(func(r chi.Router) {
 					r.Use(middleware.RequireRole("admin", "supervisor"))
 					r.Get("/", usuarioHandler.List)
+					r.Get("/{supervisorId}/postos", postoHandler.ListPostosBySupervisor)
 					r.Get("/{id}", usuarioHandler.GetByID)
 				})
 				r.Group(func(r chi.Router) {

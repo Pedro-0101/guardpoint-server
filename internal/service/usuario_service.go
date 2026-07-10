@@ -14,6 +14,7 @@ type UserRepository interface {
 	ListByEmpresa(ctx context.Context, empresaID uuid.UUID) ([]model.User, error)
 	FindByIDEmpresa(ctx context.Context, empresaID, id uuid.UUID) (*model.User, error)
 	FindByEmail(ctx context.Context, email string) (*model.User, error)
+	FindByEmpresaNome(ctx context.Context, empresaID uuid.UUID, nome string) (*model.User, error)
 	Create(ctx context.Context, u *model.User) error
 	Update(ctx context.Context, empresaID, id uuid.UUID, u *model.User) error
 }
@@ -50,9 +51,13 @@ func (s *UsuarioService) GetByID(ctx context.Context, empresaID, id uuid.UUID) (
 }
 
 func (s *UsuarioService) Create(ctx context.Context, empresaID uuid.UUID, req model.CreateUsuarioRequest) (*model.UsuarioResponse, error) {
-	existing, err := s.userRepo.FindByEmail(ctx, req.Email)
-	if err == nil && existing != nil {
-		return nil, ErrEmailAlreadyExists
+	if req.Email != "" {
+		if existing, err := s.userRepo.FindByEmail(ctx, req.Email); err == nil && existing != nil {
+			return nil, ErrEmailAlreadyExists
+		}
+	}
+	if existing, err := s.userRepo.FindByEmpresaNome(ctx, empresaID, req.Nome); err == nil && existing != nil {
+		return nil, ErrNomeAlreadyExists
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Senha), bcrypt.DefaultCost)
@@ -68,10 +73,13 @@ func (s *UsuarioService) Create(ctx context.Context, empresaID uuid.UUID, req mo
 	user := &model.User{
 		EmpresaID: empresaID,
 		Nome:      req.Nome,
-		Email:     req.Email,
 		SenhaHash: string(hashedPassword),
 		Role:      req.Cargo,
 		Ativo:     ativo,
+	}
+	if req.Email != "" {
+		email := req.Email
+		user.Email = &email
 	}
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
@@ -92,7 +100,7 @@ func (s *UsuarioService) Update(ctx context.Context, empresaID, id uuid.UUID, re
 		user.Nome = *req.Nome
 	}
 	if req.Email != nil {
-		user.Email = *req.Email
+		user.Email = req.Email
 	}
 	if req.Cargo != nil {
 		user.Role = *req.Cargo
@@ -106,6 +114,19 @@ func (s *UsuarioService) Update(ctx context.Context, empresaID, id uuid.UUID, re
 			return nil, fmt.Errorf("hash senha: %w", err)
 		}
 		user.SenhaHash = string(hashedPassword)
+	}
+
+	if user.Role != "vigia" && (user.Email == nil || *user.Email == "") {
+		return nil, ErrEmailRequired
+	}
+
+	if user.Email != nil && *user.Email != "" {
+		if existing, err := s.userRepo.FindByEmail(ctx, *user.Email); err == nil && existing != nil && existing.ID != id {
+			return nil, ErrEmailAlreadyExists
+		}
+	}
+	if existing, err := s.userRepo.FindByEmpresaNome(ctx, empresaID, user.Nome); err == nil && existing != nil && existing.ID != id {
+		return nil, ErrNomeAlreadyExists
 	}
 
 	if err := s.userRepo.Update(ctx, empresaID, id, user); err != nil {

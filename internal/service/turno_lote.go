@@ -96,7 +96,7 @@ func (s *TurnoService) ProcessarLote(ctx context.Context, userID, empresaID stri
 			}
 		}
 
-		s.aplicarConsequenciaSenha(ctx, empresaID, parsedEmpresaID, parsedTurnoID, parsedUserID, req.Senha)
+		s.aplicarConsequenciaSenha(ctx, empresaID, parsedEmpresaID, parsedTurnoID, parsedUserID, turno.PostoID, req.Senha)
 
 		s.emitirGPSUpdate(empresaID, req.TurnoID, req.Latitude, req.Longitude, timestampCriacao, flagGeofence)
 

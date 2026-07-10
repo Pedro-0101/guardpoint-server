@@ -42,6 +42,28 @@ func (r *UserRepository) FindByEmail(ctx context.Context, email string) (*model.
 	return &u, nil
 }
 
+func (r *UserRepository) FindByEmpresaNome(ctx context.Context, empresaID uuid.UUID, nome string) (*model.User, error) {
+	query := `
+		SELECT id, empresa_id, nome, email, senha_hash, role, telefone, ativo, created_at, updated_at
+		FROM usuarios
+		WHERE empresa_id = $1 AND nome = $2
+	`
+
+	var u model.User
+	err := r.db.QueryRow(ctx, query, empresaID, nome).Scan(
+		&u.ID, &u.EmpresaID, &u.Nome, &u.Email, &u.SenhaHash,
+		&u.Role, &u.Telefone, &u.Ativo, &u.CreatedAt, &u.UpdatedAt,
+	)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, fmt.Errorf("usuario nao encontrado: %w", err)
+		}
+		return nil, fmt.Errorf("buscar usuario por empresa e nome: %w", err)
+	}
+
+	return &u, nil
+}
+
 func (r *UserRepository) FindByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
 	query := `
 		SELECT id, empresa_id, nome, email, senha_hash, role, telefone, ativo, created_at, updated_at
@@ -140,4 +162,22 @@ func (r *UserRepository) Update(ctx context.Context, empresaID, id uuid.UUID, u 
 		&u.ID, &u.EmpresaID, &u.Nome, &u.Email, &u.SenhaHash,
 		&u.Role, &u.Telefone, &u.Ativo, &u.CreatedAt, &u.UpdatedAt,
 	)
+}
+
+func (r *UserRepository) FindAdminIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]bool, error) {
+	rows, err := r.db.Query(ctx, `SELECT id FROM usuarios WHERE id = ANY($1) AND role = 'admin'`, ids)
+	if err != nil {
+		return nil, fmt.Errorf("buscar admin ids: %w", err)
+	}
+	defer rows.Close()
+
+	admins := make(map[uuid.UUID]bool)
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan admin id: %w", err)
+		}
+		admins[id] = true
+	}
+	return admins, rows.Err()
 }

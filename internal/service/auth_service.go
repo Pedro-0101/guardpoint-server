@@ -19,14 +19,21 @@ import (
 var (
 	ErrInvalidCredentials        = errors.New("email ou senha invalidos")
 	ErrEmailAlreadyExists        = errors.New("email ja cadastrado")
+	ErrNomeAlreadyExists         = errors.New("nome ja cadastrado")
+	ErrEmailRequired             = errors.New("email obrigatorio para este cargo")
 	ErrUserNotActive             = errors.New("usuario inativo")
 	ErrDispositivoNaoReconhecido = errors.New("dispositivo nao reconhecido")
 )
 
 type AuthUserRepository interface {
 	FindByEmail(ctx context.Context, email string) (*model.User, error)
+	FindByEmpresaNome(ctx context.Context, empresaID uuid.UUID, nome string) (*model.User, error)
 	FindByID(ctx context.Context, id uuid.UUID) (*model.User, error)
 	Create(ctx context.Context, u *model.User) error
+}
+
+type AuthEmpresaRepository interface {
+	FindByCodigo(ctx context.Context, codigo string) (*model.Empresa, error)
 }
 
 type AuthSessaoDispositivoRepository interface {
@@ -38,26 +45,44 @@ type AuthSessaoDispositivoRepository interface {
 type AuthService struct {
 	jwtService            *auth.JWTService
 	userRepo              AuthUserRepository
+	empresaRepo           AuthEmpresaRepository
 	sessaoDispositivoRepo AuthSessaoDispositivoRepository
 }
 
 func NewAuthService(
 	jwtService *auth.JWTService,
 	userRepo AuthUserRepository,
-	_ interface{},
+	empresaRepo AuthEmpresaRepository,
 	sessaoDispositivoRepo AuthSessaoDispositivoRepository,
 ) *AuthService {
 	return &AuthService{
 		jwtService:            jwtService,
 		userRepo:              userRepo,
+		empresaRepo:           empresaRepo,
 		sessaoDispositivoRepo: sessaoDispositivoRepo,
 	}
 }
 
 func (s *AuthService) Login(ctx context.Context, req model.LoginRequest) (*model.LoginResponse, error) {
-	user, err := s.userRepo.FindByEmail(ctx, req.Email)
-	if err != nil {
-		return nil, fmt.Errorf("login: %w", ErrInvalidCredentials)
+	var user *model.User
+	var err error
+	if req.Email != "" {
+		user, err = s.userRepo.FindByEmail(ctx, req.Email)
+		if err != nil {
+			return nil, fmt.Errorf("login: %w", ErrInvalidCredentials)
+		}
+	} else {
+		empresa, eerr := s.empresaRepo.FindByCodigo(ctx, req.CodigoEmpresa)
+		if eerr != nil {
+			return nil, fmt.Errorf("login: %w", ErrInvalidCredentials)
+		}
+		user, err = s.userRepo.FindByEmpresaNome(ctx, empresa.ID, req.Nome)
+		if err != nil {
+			return nil, fmt.Errorf("login: %w", ErrInvalidCredentials)
+		}
+		if user.Role != "vigia" {
+			return nil, fmt.Errorf("login: %w", ErrInvalidCredentials)
+		}
 	}
 
 	if !user.Ativo {
@@ -68,7 +93,7 @@ func (s *AuthService) Login(ctx context.Context, req model.LoginRequest) (*model
 		return nil, fmt.Errorf("login: %w", ErrInvalidCredentials)
 	}
 
-	accessToken, err := s.jwtService.GenerateAccessToken(user.ID, user.EmpresaID, user.Email, user.Role, user.Nome)
+	accessToken, err := s.jwtService.GenerateAccessToken(user.ID, user.EmpresaID, user.EmailOrEmpty(), user.Role, user.Nome)
 	if err != nil {
 		return nil, fmt.Errorf("gerar access token: %w", err)
 	}
@@ -87,9 +112,18 @@ func (s *AuthService) Login(ctx context.Context, req model.LoginRequest) (*model
 }
 
 func (s *AuthService) Register(ctx context.Context, empresaID string, req model.RegisterRequest) (*model.User, error) {
-	existing, err := s.userRepo.FindByEmail(ctx, req.Email)
-	if err == nil && existing != nil {
-		return nil, ErrEmailAlreadyExists
+	parsedID, err := uuid.Parse(empresaID)
+	if err != nil {
+		return nil, fmt.Errorf("empresa_id invalido: %w", err)
+	}
+
+	if req.Email != "" {
+		if existing, err := s.userRepo.FindByEmail(ctx, req.Email); err == nil && existing != nil {
+			return nil, ErrEmailAlreadyExists
+		}
+	}
+	if existing, err := s.userRepo.FindByEmpresaNome(ctx, parsedID, req.Nome); err == nil && existing != nil {
+		return nil, ErrNomeAlreadyExists
 	}
 
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(req.Password), bcrypt.DefaultCost)
@@ -98,21 +132,19 @@ func (s *AuthService) Register(ctx context.Context, empresaID string, req model.
 	}
 
 	user := &model.User{
+		EmpresaID: parsedID,
 		Nome:      req.Nome,
-		Email:     req.Email,
 		SenhaHash: string(hashedPassword),
 		Role:      req.Role,
+	}
+	if req.Email != "" {
+		email := req.Email
+		user.Email = &email
 	}
 
 	if req.Telefone != "" {
 		user.Telefone = &req.Telefone
 	}
-
-	parsedID, err := uuid.Parse(empresaID)
-	if err != nil {
-		return nil, fmt.Errorf("empresa_id invalido: %w", err)
-	}
-	user.EmpresaID = parsedID
 
 	if err := s.userRepo.Create(ctx, user); err != nil {
 		return nil, fmt.Errorf("criar usuario: %w", err)
@@ -141,7 +173,7 @@ func (s *AuthService) Refresh(ctx context.Context, req model.RefreshRequest) (*m
 		return nil, ErrUserNotActive
 	}
 
-	accessToken, err := s.jwtService.GenerateAccessToken(user.ID, user.EmpresaID, user.Email, user.Role, user.Nome)
+	accessToken, err := s.jwtService.GenerateAccessToken(user.ID, user.EmpresaID, user.EmailOrEmpty(), user.Role, user.Nome)
 	if err != nil {
 		return nil, fmt.Errorf("gerar access token: %w", err)
 	}
@@ -190,7 +222,7 @@ func (s *AuthService) BiometricLogin(ctx context.Context, req model.BiometricLog
 		return nil, ErrUserNotActive
 	}
 
-	accessToken, err := s.jwtService.GenerateAccessToken(user.ID, user.EmpresaID, user.Email, user.Role, user.Nome)
+	accessToken, err := s.jwtService.GenerateAccessToken(user.ID, user.EmpresaID, user.EmailOrEmpty(), user.Role, user.Nome)
 	if err != nil {
 		return nil, fmt.Errorf("gerar access token: %w", err)
 	}

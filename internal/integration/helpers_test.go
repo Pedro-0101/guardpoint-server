@@ -85,7 +85,10 @@ func (e *env) criarUsuario(empresaID uuid.UUID, nome, email, senha, role string,
 	if err != nil {
 		e.t.Fatalf("hash senha: %v", err)
 	}
-	u := &model.User{EmpresaID: empresaID, Nome: nome, Email: email, SenhaHash: string(hash), Role: role}
+	u := &model.User{EmpresaID: empresaID, Nome: nome, SenhaHash: string(hash), Role: role}
+	if email != "" {
+		u.Email = &email
+	}
 	if err := e.app.UserRepo.Create(context.Background(), u); err != nil {
 		e.t.Fatalf("criar usuario %s: %v", email, err)
 	}
@@ -156,6 +159,13 @@ func (e *env) login(email, senha string) model.LoginResponse {
 	return resp
 }
 
+func (e *env) loginVigiaPorNome(codigoEmpresa, nome, senha string) model.LoginResponse {
+	e.t.Helper()
+	var resp model.LoginResponse
+	e.reqJSON(http.MethodPost, "/api/v1/auth/login", "", map[string]string{"codigo_empresa": codigoEmpresa, "nome": nome, "senha": senha}, http.StatusOK, &resp)
+	return resp
+}
+
 // cenario padrao: empresa com admin e vigia logados, posto, device biometrico
 // registrado e escala ativa cobrindo o horario atual.
 type cenario struct {
@@ -196,8 +206,8 @@ func novoCenario(t *testing.T) *cenario {
 		empresa:    empresa,
 		admin:      admin,
 		vigia:      vigia,
-		adminToken: e.login(admin.Email, "senha123").AccessToken,
-		vigiaToken: e.login(vigia.Email, "senha123").AccessToken,
+		adminToken: e.login(admin.EmailOrEmpty(), "senha123").AccessToken,
+		vigiaToken: e.login(vigia.EmailOrEmpty(), "senha123").AccessToken,
 		deviceID:   "device-vigia-a-01",
 	}
 

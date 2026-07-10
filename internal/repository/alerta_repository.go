@@ -23,24 +23,24 @@ func NewAlertaRepository(db *pgxpool.Pool) *AlertaRepository {
 
 func (r *AlertaRepository) Create(ctx context.Context, a *model.Alerta) error {
 	query := `
-		INSERT INTO alertas (empresa_id, turno_id, tipo, nivel, status, mensagem)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO alertas (empresa_id, turno_id, posto_id, tipo, nivel, status, mensagem)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		RETURNING id, created_at
 	`
 	return r.db.QueryRow(ctx, query,
-		a.EmpresaID, a.TurnoID, a.Tipo, a.Nivel, a.Status, a.Mensagem,
+		a.EmpresaID, a.TurnoID, a.PostoID, a.Tipo, a.Nivel, a.Status, a.Mensagem,
 	).Scan(&a.ID, &a.CreatedAt)
 }
 
 func (r *AlertaRepository) FindByID(ctx context.Context, empresaID, id uuid.UUID) (*model.Alerta, error) {
 	query := `
-		SELECT id, empresa_id, turno_id, tipo, nivel, status, mensagem, resolvido_em, created_at
+		SELECT id, empresa_id, turno_id, posto_id, tipo, nivel, status, mensagem, resolvido_em, created_at
 		FROM alertas
 		WHERE id = $1 AND empresa_id = $2
 	`
 	var a model.Alerta
 	err := r.db.QueryRow(ctx, query, id, empresaID).Scan(
-		&a.ID, &a.EmpresaID, &a.TurnoID, &a.Tipo, &a.Nivel,
+		&a.ID, &a.EmpresaID, &a.TurnoID, &a.PostoID, &a.Tipo, &a.Nivel,
 		&a.Status, &a.Mensagem, &a.ResolvidoEm, &a.CreatedAt,
 	)
 	if err != nil {
@@ -72,6 +72,11 @@ func (r *AlertaRepository) List(ctx context.Context, empresaID uuid.UUID, filter
 		args = append(args, filter.TurnoID)
 		argIdx++
 	}
+	if filter.PostoID != "" {
+		where += fmt.Sprintf(" AND posto_id = $%d::uuid", argIdx)
+		args = append(args, filter.PostoID)
+		argIdx++
+	}
 
 	var total int
 	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM alertas %s", where)
@@ -87,7 +92,7 @@ func (r *AlertaRepository) List(ctx context.Context, empresaID uuid.UUID, filter
 	}
 
 	dataQuery := fmt.Sprintf(`
-		SELECT id, empresa_id, turno_id, tipo, nivel, status, mensagem, resolvido_em, created_at
+		SELECT id, empresa_id, turno_id, posto_id, tipo, nivel, status, mensagem, resolvido_em, created_at
 		FROM alertas %s ORDER BY created_at DESC LIMIT $%d OFFSET $%d
 	`, where, argIdx, argIdx+1)
 	args = append(args, filter.Limit, filter.Offset)
@@ -102,7 +107,7 @@ func (r *AlertaRepository) List(ctx context.Context, empresaID uuid.UUID, filter
 	for rows.Next() {
 		var a model.Alerta
 		if err := rows.Scan(
-			&a.ID, &a.EmpresaID, &a.TurnoID, &a.Tipo, &a.Nivel,
+			&a.ID, &a.EmpresaID, &a.TurnoID, &a.PostoID, &a.Tipo, &a.Nivel,
 			&a.Status, &a.Mensagem, &a.ResolvidoEm, &a.CreatedAt,
 		); err != nil {
 			return nil, 0, fmt.Errorf("scan alerta: %w", err)
@@ -138,7 +143,7 @@ func (r *AlertaRepository) CountAbertos(ctx context.Context, empresaID uuid.UUID
 
 func (r *AlertaRepository) ListRecentes(ctx context.Context, empresaID uuid.UUID, limit int) ([]model.AlertaRecente, error) {
 	query := `
-		SELECT id, tipo, turno_id, COALESCE(mensagem, ''), created_at
+		SELECT id, tipo, turno_id, posto_id, COALESCE(mensagem, ''), created_at
 		FROM alertas
 		WHERE empresa_id = $1 AND status = 'aberto'
 		ORDER BY created_at DESC
@@ -155,13 +160,17 @@ func (r *AlertaRepository) ListRecentes(ctx context.Context, empresaID uuid.UUID
 		var ar model.AlertaRecente
 		var id uuid.UUID
 		var turnoID *uuid.UUID
+		var postoID *uuid.UUID
 		var createdAt time.Time
-		if err := rows.Scan(&id, &ar.Tipo, &turnoID, &ar.Mensagem, &createdAt); err != nil {
+		if err := rows.Scan(&id, &ar.Tipo, &turnoID, &postoID, &ar.Mensagem, &createdAt); err != nil {
 			return nil, fmt.Errorf("scan alerta recente: %w", err)
 		}
 		ar.ID = id.String()
 		if turnoID != nil {
 			ar.TurnoID = turnoID.String()
+		}
+		if postoID != nil {
+			ar.PostoID = postoID.String()
 		}
 		ar.CreatedAt = createdAt.Format(time.RFC3339)
 		alertas = append(alertas, ar)

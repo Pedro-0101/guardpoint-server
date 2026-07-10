@@ -5,6 +5,7 @@ import (
 	"net/http"
 
 	"github.com/guardpoint/guardpoint-server/internal/middleware"
+	_ "github.com/guardpoint/guardpoint-server/internal/model"
 	"github.com/guardpoint/guardpoint-server/internal/service"
 )
 

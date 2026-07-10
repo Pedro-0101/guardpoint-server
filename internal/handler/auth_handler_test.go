@@ -120,6 +120,20 @@ func TestAuthHandler_Login_ValidacaoFalha(t *testing.T) {
 	}
 }
 
+func TestAuthHandler_Login_SemEmailENomeFalha(t *testing.T) {
+	h := &AuthHandler{validate: validator.New()}
+
+	body, _ := json.Marshal(map[string]string{"senha": "123456"})
+	req := httptest.NewRequest(http.MethodPost, "/auth/login", bytes.NewReader(body))
+	rec := httptest.NewRecorder()
+
+	h.Login(rec, req)
+
+	if rec.Code != http.StatusUnprocessableEntity {
+		t.Errorf("status = %d, esperado %d (422)", rec.Code, http.StatusUnprocessableEntity)
+	}
+}
+
 func TestAuthHandler_Register_SemAutenticacao(t *testing.T) {
 	h := &AuthHandler{validate: validator.New()}
 

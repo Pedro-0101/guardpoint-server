@@ -57,7 +57,7 @@ func TestIniciarTurnoSemEscalaEForaTolerancia(t *testing.T) {
 
 	// vigia 2 sem escala nenhuma
 	vigia2 := c.e.criarUsuario(c.empresa.ID, "Vigia 2", "vigia2@a.com", "senha123", "vigia", true)
-	token2 := c.e.login(vigia2.Email, "senha123").AccessToken
+	token2 := c.e.login(vigia2.EmailOrEmpty(), "senha123").AccessToken
 	var resp model.BiometricRegisterResponse
 	c.e.reqJSON(http.MethodPost, "/api/v1/auth/biometric/register", token2,
 		map[string]string{"device_id": "device-vigia-2"}, http.StatusCreated, &resp)

@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/google/uuid"
@@ -12,13 +13,20 @@ import (
 )
 
 type fakeAuthUserRepo struct {
-	findByEmailFn func(ctx context.Context, email string) (*model.User, error)
-	findByIDFn    func(ctx context.Context, id uuid.UUID) (*model.User, error)
-	createFn      func(ctx context.Context, u *model.User) error
+	findByEmailFn       func(ctx context.Context, email string) (*model.User, error)
+	findByEmpresaNomeFn func(ctx context.Context, empresaID uuid.UUID, nome string) (*model.User, error)
+	findByIDFn          func(ctx context.Context, id uuid.UUID) (*model.User, error)
+	createFn            func(ctx context.Context, u *model.User) error
 }
+
+func strPtr(s string) *string { return &s }
 
 func (m *fakeAuthUserRepo) FindByEmail(ctx context.Context, email string) (*model.User, error) {
 	if m.findByEmailFn != nil { return m.findByEmailFn(ctx, email) }
+	return nil, ErrInvalidCredentials
+}
+func (m *fakeAuthUserRepo) FindByEmpresaNome(ctx context.Context, empresaID uuid.UUID, nome string) (*model.User, error) {
+	if m.findByEmpresaNomeFn != nil { return m.findByEmpresaNomeFn(ctx, empresaID, nome) }
 	return nil, ErrInvalidCredentials
 }
 func (m *fakeAuthUserRepo) FindByID(ctx context.Context, id uuid.UUID) (*model.User, error) {
@@ -28,6 +36,15 @@ func (m *fakeAuthUserRepo) FindByID(ctx context.Context, id uuid.UUID) (*model.U
 func (m *fakeAuthUserRepo) Create(ctx context.Context, u *model.User) error {
 	if m.createFn != nil { return m.createFn(ctx, u) }
 	return nil
+}
+
+type fakeAuthEmpresaRepo struct {
+	findByCodigoFn func(ctx context.Context, codigo string) (*model.Empresa, error)
+}
+
+func (m *fakeAuthEmpresaRepo) FindByCodigo(ctx context.Context, codigo string) (*model.Empresa, error) {
+	if m.findByCodigoFn != nil { return m.findByCodigoFn(ctx, codigo) }
+	return nil, errors.New("empresa nao encontrada")
 }
 
 type fakeAuthSessaoRepo struct {
@@ -54,6 +71,11 @@ func makeAuthService(userRepo AuthUserRepository) *AuthService {
 	return NewAuthService(jwtSvc, userRepo, nil, nil)
 }
 
+func makeAuthServiceComEmpresa(userRepo AuthUserRepository, empresaRepo AuthEmpresaRepository) *AuthService {
+	jwtSvc := auth.NewJWTService("test-secret-with-sufficient-length-for-hs256")
+	return NewAuthService(jwtSvc, userRepo, empresaRepo, nil)
+}
+
 func TestAuthService_Login_Success(t *testing.T) {
 	ctx := context.Background()
 	userID := uuid.New()
@@ -64,8 +86,8 @@ func TestAuthService_Login_Success(t *testing.T) {
 	svc := makeAuthService(&fakeAuthUserRepo{
 		findByEmailFn: func(ctx context.Context, email string) (*model.User, error) {
 			return &model.User{
-				ID: userID, EmpresaID: empresaID, Nome: "Teste", Email: email,
-				SenhaHash: string(hashedPass), Role: "vigia", Ativo: true,
+				ID: userID, EmpresaID: empresaID, Nome: "Teste", Email: strPtr(email),
+				SenhaHash: string(hashedPass), Role: "admin", Ativo: true,
 			}, nil
 		},
 	})
@@ -167,6 +189,111 @@ func TestAuthService_Register_Success(t *testing.T) {
 	}
 	if user.SenhaHash == "123456" {
 		t.Error("SenhaHash nao pode ser texto puro")
+	}
+}
+
+func TestAuthService_Login_VigiaPorNome_SemEmail_Success(t *testing.T) {
+	ctx := context.Background()
+	userID := uuid.New()
+	empresaID := uuid.New()
+
+	hashedPass, _ := bcrypt.GenerateFromPassword([]byte("senha123"), bcrypt.DefaultCost)
+
+	svc := makeAuthServiceComEmpresa(
+		&fakeAuthUserRepo{
+			findByEmpresaNomeFn: func(ctx context.Context, eID uuid.UUID, nome string) (*model.User, error) {
+				return &model.User{
+					ID: userID, EmpresaID: eID, Nome: nome, Email: nil,
+					SenhaHash: string(hashedPass), Role: "vigia", Ativo: true,
+				}, nil
+			},
+		},
+		&fakeAuthEmpresaRepo{
+			findByCodigoFn: func(ctx context.Context, codigo string) (*model.Empresa, error) {
+				return &model.Empresa{ID: empresaID, Codigo: codigo}, nil
+			},
+		},
+	)
+
+	resp, err := svc.Login(ctx, model.LoginRequest{Nome: "Vigia X", CodigoEmpresa: "ABCD1234", Password: "senha123"})
+	if err != nil {
+		t.Fatalf("Login() erro: %v", err)
+	}
+	if resp.AccessToken == "" {
+		t.Error("AccessToken vazio")
+	}
+	if resp.User.Email != nil {
+		t.Errorf("Email deveria ser nil, veio %q", *resp.User.Email)
+	}
+}
+
+func TestAuthService_Login_AdminPorNome_Falha(t *testing.T) {
+	ctx := context.Background()
+	empresaID := uuid.New()
+	hashedPass, _ := bcrypt.GenerateFromPassword([]byte("senha123"), bcrypt.DefaultCost)
+
+	svc := makeAuthServiceComEmpresa(
+		&fakeAuthUserRepo{
+			findByEmpresaNomeFn: func(ctx context.Context, eID uuid.UUID, nome string) (*model.User, error) {
+				return &model.User{
+					Nome: nome, Email: strPtr("admin@x.com"),
+					SenhaHash: string(hashedPass), Role: "admin", Ativo: true,
+				}, nil
+			},
+		},
+		&fakeAuthEmpresaRepo{
+			findByCodigoFn: func(ctx context.Context, codigo string) (*model.Empresa, error) {
+				return &model.Empresa{ID: empresaID, Codigo: codigo}, nil
+			},
+		},
+	)
+
+	_, err := svc.Login(ctx, model.LoginRequest{Nome: "Admin X", CodigoEmpresa: "ABCD1234", Password: "senha123"})
+	if !errors.Is(err, ErrInvalidCredentials) {
+		t.Errorf("erro = %v, esperado ErrInvalidCredentials (admin nao pode logar por nome)", err)
+	}
+}
+
+func TestAuthService_Register_Vigia_SemEmail_Success(t *testing.T) {
+	ctx := context.Background()
+	empresaID := uuid.New()
+
+	svc := makeAuthService(&fakeAuthUserRepo{
+		findByEmpresaNomeFn: func(ctx context.Context, eID uuid.UUID, nome string) (*model.User, error) {
+			return nil, nil
+		},
+		createFn: func(ctx context.Context, u *model.User) error {
+			u.ID = uuid.New()
+			return nil
+		},
+	})
+
+	user, err := svc.Register(ctx, empresaID.String(), model.RegisterRequest{
+		Nome: "Vigia Sem Email", Password: "123456", Role: "vigia",
+	})
+	if err != nil {
+		t.Fatalf("Register() erro: %v", err)
+	}
+	if user.Email != nil {
+		t.Errorf("Email deveria ser nil, veio %q", *user.Email)
+	}
+}
+
+func TestAuthService_Register_DuplicateNome(t *testing.T) {
+	ctx := context.Background()
+	empresaID := uuid.New()
+
+	svc := makeAuthService(&fakeAuthUserRepo{
+		findByEmpresaNomeFn: func(ctx context.Context, eID uuid.UUID, nome string) (*model.User, error) {
+			return &model.User{ID: uuid.New()}, nil
+		},
+	})
+
+	_, err := svc.Register(ctx, empresaID.String(), model.RegisterRequest{
+		Nome: "Ja Existe", Password: "123456", Role: "vigia",
+	})
+	if !errors.Is(err, ErrNomeAlreadyExists) {
+		t.Errorf("erro = %v, esperado ErrNomeAlreadyExists", err)
 	}
 }
 

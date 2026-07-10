@@ -23,6 +23,7 @@ const docTemplate = `{
     "paths": {
         "/alertas": {
             "get": {
+                "description": "Para supervisores, os alertas sao automaticamente filtrados pelos postos aos quais estao vinculados (via posto_supervisores). Admins veem todos os alertas. Os filtros de query sao adicionais — posto_id pode ser usado para refinar a busca.",
                 "tags": [
                     "alertas"
                 ],
@@ -30,13 +31,13 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Status do alerta",
+                        "description": "Status do alerta (aberto, reconhecido, encerrado)",
                         "name": "status",
                         "in": "query"
                     },
                     {
                         "type": "string",
-                        "description": "Tipo do alerta",
+                        "description": "Tipo do alerta (atraso, no_show, senha_emergencia, senha_customizada, sabotagem)",
                         "name": "tipo",
                         "in": "query"
                     },
@@ -44,6 +45,12 @@ const docTemplate = `{
                         "type": "string",
                         "description": "ID do turno (uuid)",
                         "name": "turno_id",
+                        "in": "query"
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID do posto (uuid)",
+                        "name": "posto_id",
                         "in": "query"
                     },
                     {
@@ -63,13 +70,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.AlertaListResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.AlertaListResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -85,13 +92,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.AlertStatistics"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.AlertStatistics"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -116,19 +123,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.StatusResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.StatusResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -153,19 +160,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.StatusResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.StatusResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -185,7 +192,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.BiometricLoginRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.BiometricLoginRequest"
                         }
                     }
                 ],
@@ -193,19 +200,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.LoginResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.LoginResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -224,7 +231,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.BiometricRegisterRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.BiometricRegisterRequest"
                         }
                     }
                 ],
@@ -232,19 +239,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.BiometricRegisterResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.BiometricRegisterResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -253,18 +260,19 @@ const docTemplate = `{
         "/auth/login": {
             "post": {
                 "security": [],
+                "description": "Admin e supervisor autenticam com \"email\" + \"senha\". Vigia autentica com \"codigo_empresa\" + \"nome\" + \"senha\" (nao usa email). Enviar exatamente um dos dois pares de credenciais.",
                 "tags": [
                     "auth"
                 ],
-                "summary": "Login por email e senha",
+                "summary": "Login por email+senha (admin/supervisor) ou codigo da empresa+nome+senha (vigia)",
                 "parameters": [
                     {
-                        "description": "Credenciais",
+                        "description": "Credenciais (email+senha OU codigo_empresa+nome+senha)",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.LoginRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.LoginRequest"
                         }
                     }
                 ],
@@ -272,25 +280,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.LoginResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.LoginResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -306,13 +320,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.MessageResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.MessageResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -332,7 +346,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.RefreshRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.RefreshRequest"
                         }
                     }
                 ],
@@ -340,19 +354,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.LoginResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.LoginResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -360,6 +374,7 @@ const docTemplate = `{
         },
         "/auth/register": {
             "post": {
+                "description": "\"email\" e obrigatorio para role \"admin\"/\"supervisor\" e opcional para \"vigia\". \"nome\" precisa ser unico dentro da empresa (pode repetir entre empresas diferentes); \"email\", quando enviado, e unico globalmente.",
                 "tags": [
                     "auth"
                 ],
@@ -371,7 +386,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.RegisterRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.RegisterRequest"
                         }
                     }
                 ],
@@ -379,25 +394,31 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.User"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.User"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "401": {
                         "description": "Unauthorized",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -418,7 +439,7 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/model.CheckinRequest"
+                                "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CheckinRequest"
                             }
                         }
                     }
@@ -427,19 +448,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.LoteCheckinResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.LoteCheckinResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -448,32 +469,32 @@ const docTemplate = `{
         "/config/escalonamento": {
             "get": {
                 "tags": [
-                    "config"
+                    "escalonamento"
                 ],
-                "summary": "Lista todas as configs de escalonamento da empresa (somente admin)",
+                "summary": "Lista as configuracoes de escalonamento da empresa (somente admin)",
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/model.ConfigEscalonamento"
+                                "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ConfigEscalonamento"
                             }
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
             },
             "post": {
                 "tags": [
-                    "config"
+                    "escalonamento"
                 ],
-                "summary": "Cria uma nova config de escalonamento (somente admin)",
+                "summary": "Cria uma configuracao de escalonamento (somente admin)",
                 "parameters": [
                     {
                         "description": "Dados da configuracao",
@@ -481,7 +502,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.CreateConfigEscalonamentoRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CreateConfigEscalonamentoRequest"
                         }
                     }
                 ],
@@ -489,19 +510,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.ConfigEscalonamento"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ConfigEscalonamento"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -510,13 +537,13 @@ const docTemplate = `{
         "/config/escalonamento/{id}": {
             "get": {
                 "tags": [
-                    "config"
+                    "escalonamento"
                 ],
-                "summary": "Retorna uma config de escalonamento por ID (somente admin)",
+                "summary": "Busca uma configuracao de escalonamento pelo ID (somente admin)",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID da config (uuid)",
+                        "description": "ID da configuracao (uuid)",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -526,43 +553,43 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.ConfigEscalonamento"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ConfigEscalonamento"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
             },
             "put": {
                 "tags": [
-                    "config"
+                    "escalonamento"
                 ],
-                "summary": "Atualiza uma config de escalonamento (somente admin, apenas sistema=false)",
+                "summary": "Atualiza uma configuracao de escalonamento (somente admin)",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID da config (uuid)",
+                        "description": "ID da configuracao (uuid)",
                         "name": "id",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "Dados da configuracao",
+                        "description": "Campos a atualizar",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.UpdateConfigEscalonamentoRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UpdateConfigEscalonamentoRequest"
                         }
                     }
                 ],
@@ -570,38 +597,44 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.ConfigEscalonamento"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ConfigEscalonamento"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
             },
             "delete": {
                 "tags": [
-                    "config"
+                    "escalonamento"
                 ],
-                "summary": "Exclui uma config de escalonamento (somente admin, apenas sistema=false)",
+                "summary": "Exclui uma configuracao de escalonamento (somente admin)",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID da config (uuid)",
+                        "description": "ID da configuracao (uuid)",
                         "name": "id",
                         "in": "path",
                         "required": true
@@ -611,25 +644,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.StatusResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.StatusResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -638,24 +671,24 @@ const docTemplate = `{
         "/config/escalonamento/{id}/usuarios": {
             "put": {
                 "tags": [
-                    "config"
+                    "escalonamento"
                 ],
-                "summary": "Atualiza apenas os destinatarios de uma config de escalonamento (somente admin)",
+                "summary": "Atualiza os destinatarios (usuarios) de uma configuracao de escalonamento (somente admin)",
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "ID da config (uuid)",
+                        "description": "ID da configuracao (uuid)",
                         "name": "id",
                         "in": "path",
                         "required": true
                     },
                     {
-                        "description": "Lista de usuarios",
+                        "description": "Lista de usuario_ids destinatarios",
                         "name": "request",
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.UpdateConfigEscalonamentoUsuariosRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UpdateConfigEscalonamentoUsuariosRequest"
                         }
                     }
                 ],
@@ -663,25 +696,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.ConfigEscalonamento"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ConfigEscalonamento"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -697,13 +736,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.DashboardSummary"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.DashboardSummary"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -719,19 +758,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.Empresa"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Empresa"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -748,7 +787,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.UpdateEmpresaRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UpdateEmpresaRequest"
                         }
                     }
                 ],
@@ -756,19 +795,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.Empresa"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Empresa"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -816,19 +855,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.EscalaListResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.EscalaListResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -845,7 +884,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.CreateEscalaRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CreateEscalaRequest"
                         }
                     }
                 ],
@@ -853,19 +892,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.Escala"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Escala"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -884,7 +923,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.CreateEscalaLoteRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CreateEscalaLoteRequest"
                         }
                     }
                 ],
@@ -892,19 +931,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.CreateEscalaLoteResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CreateEscalaLoteResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -921,7 +960,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.CreateEscalaLoteRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CreateEscalaLoteRequest"
                         }
                     }
                 ],
@@ -929,19 +968,19 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.CreateEscalaLoteResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CreateEscalaLoteResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -966,19 +1005,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.Escala"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Escala"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -1002,7 +1041,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.UpdateEscalaRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UpdateEscalaRequest"
                         }
                     }
                 ],
@@ -1010,25 +1049,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.Escala"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Escala"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -1051,25 +1090,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.MessageResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -1095,14 +1134,14 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/model.Posto"
+                                "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Posto"
                             }
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -1119,7 +1158,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.CreatePostoRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CreatePostoRequest"
                         }
                     }
                 ],
@@ -1127,13 +1166,13 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.Posto"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Posto"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -1158,19 +1197,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.Posto"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Posto"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -1194,7 +1233,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.UpdatePostoRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UpdatePostoRequest"
                         }
                     }
                 ],
@@ -1202,19 +1241,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.Posto"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Posto"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -1237,19 +1276,162 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.MessageResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/postos/{id}/supervisores": {
+            "get": {
+                "description": "Retorna a lista de IDs dos supervisores que estao vinculados a este posto e portanto recebem alertas do mesmo.",
+                "tags": [
+                    "postos"
+                ],
+                "summary": "Lista os supervisores vinculados a um posto (admin/supervisor)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do posto (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.PostoSupervisorResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "posto_id invalido",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
+                        }
+                    }
+                }
+            },
+            "post": {
+                "description": "Um supervisor vinculado a um posto recebera alertas apenas desse posto (alem de precisar estar na configuracao de escalonamento). Admins recebem alertas de todos os postos independente de vinculo.",
+                "tags": [
+                    "postos"
+                ],
+                "summary": "Vincula um supervisor a um posto (somente admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do posto (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "ID do supervisor a ser vinculado",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.PostoSupervisorRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.PostoSupervisorResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "posto_id ou supervisor_id invalido",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "posto ou supervisor nao encontrado",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/postos/{id}/supervisores/{supervisorId}": {
+            "delete": {
+                "description": "Remove o supervisor do posto. Ele deixara de receber alertas especificos deste posto (a menos que seja admin, que continua recebendo todos).",
+                "tags": [
+                    "postos"
+                ],
+                "summary": "Remove o vinculo de um supervisor com um posto (somente admin)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do posto (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID do supervisor (uuid)",
+                        "name": "supervisorId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.MessageResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "posto_id ou supervisor_id invalido",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "vinculo nao encontrado",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -1303,7 +1485,7 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.SubstituicaoListResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.SubstituicaoListResponse"
                         }
                     }
                 }
@@ -1320,7 +1502,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.CreateSubstituicaoRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CreateSubstituicaoRequest"
                         }
                     }
                 ],
@@ -1328,13 +1510,13 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.Substituicao"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Substituicao"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -1359,13 +1541,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.Substituicao"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Substituicao"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -1389,7 +1571,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.UpdateSubstituicaoRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UpdateSubstituicaoRequest"
                         }
                     }
                 ],
@@ -1397,13 +1579,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.Substituicao"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Substituicao"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -1426,13 +1608,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.MessageResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.MessageResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -1505,13 +1687,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.TurnoListResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.TurnoListResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -1530,7 +1712,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.CheckinRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CheckinRequest"
                         }
                     }
                 ],
@@ -1538,31 +1720,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.CheckinResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CheckinResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -1581,7 +1763,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.FinalizarTurnoRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.FinalizarTurnoRequest"
                         }
                     }
                 ],
@@ -1589,31 +1771,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.Turno"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Turno"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -1632,7 +1814,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.IniciarTurnoRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.IniciarTurnoRequest"
                         }
                     }
                 ],
@@ -1640,31 +1822,31 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.Turno"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Turno"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -1683,7 +1865,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.ReassociarRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ReassociarRequest"
                         }
                     }
                 ],
@@ -1691,25 +1873,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.Turno"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Turno"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -1728,7 +1910,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.SabotagemRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.SabotagemRequest"
                         }
                     }
                 ],
@@ -1736,31 +1918,31 @@ const docTemplate = `{
                     "202": {
                         "description": "Accepted",
                         "schema": {
-                            "$ref": "#/definitions/model.SabotagemResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.SabotagemResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "403": {
                         "description": "Forbidden",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -1776,13 +1958,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.TurnoStatusResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.TurnoStatusResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -1807,13 +1989,13 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.TurnoDetalhe"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.TurnoDetalhe"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -1838,19 +2020,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.RevogarResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.RevogarResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -1868,19 +2050,20 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/model.UsuarioResponse"
+                                "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UsuarioResponse"
                             }
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
             },
             "post": {
+                "description": "\"email\" e obrigatorio para cargo \"admin\"/\"supervisor\" e opcional para \"vigia\" (vigia autentica por codigo da empresa + nome + senha). \"nome\" precisa ser unico dentro da empresa.",
                 "tags": [
                     "usuarios"
                 ],
@@ -1892,7 +2075,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.CreateUsuarioRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CreateUsuarioRequest"
                         }
                     }
                 ],
@@ -1900,19 +2083,25 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.UsuarioResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UsuarioResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -1937,24 +2126,25 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.UsuarioResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UsuarioResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
             },
             "put": {
+                "description": "Se o cargo final (apos aplicar os campos enviados) nao for \"vigia\", o usuario precisa ter email cadastrado.",
                 "tags": [
                     "usuarios"
                 ],
@@ -1973,7 +2163,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.UpdateUsuarioRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UpdateUsuarioRequest"
                         }
                     }
                 ],
@@ -1981,19 +2171,31 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.UsuarioResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UsuarioResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
+                        }
+                    },
+                    "409": {
+                        "description": "Conflict",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -2016,19 +2218,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.MessageResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "500": {
                         "description": "Internal Server Error",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -2055,20 +2257,20 @@ const docTemplate = `{
                         "schema": {
                             "type": "array",
                             "items": {
-                                "$ref": "#/definitions/model.SenhaVigia"
+                                "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.SenhaVigia"
                             }
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -2092,7 +2294,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.CreateSenhaVigiaRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CreateSenhaVigiaRequest"
                         }
                     }
                 ],
@@ -2100,19 +2302,68 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.SenhaVigia"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.SenhaVigia"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/usuarios/{id}/senhas/batch": {
+            "post": {
+                "tags": [
+                    "usuarios"
+                ],
+                "summary": "Cria multiplas senhas para um vigia em lote (transacional — tudo ou nada)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do usuario/vigia (uuid)",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Array de senhas",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.BatchCreateSenhaVigiaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "201": {
+                        "description": "Created",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.SenhaVigia"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
+                        }
+                    },
+                    "404": {
+                        "description": "Not Found",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -2145,7 +2396,7 @@ const docTemplate = `{
                         "in": "body",
                         "required": true,
                         "schema": {
-                            "$ref": "#/definitions/model.UpdateSenhaVigiaRequest"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UpdateSenhaVigiaRequest"
                         }
                     }
                 ],
@@ -2153,19 +2404,19 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.SenhaVigia"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.SenhaVigia"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -2195,25 +2446,66 @@ const docTemplate = `{
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.MessageResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.MessageResponse"
                         }
                     },
                     "400": {
                         "description": "Bad Request",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "404": {
                         "description": "Not Found",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     },
                     "409": {
                         "description": "Conflict",
                         "schema": {
-                            "$ref": "#/definitions/model.ErrorResponse"
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/usuarios/{supervisorId}/postos": {
+            "get": {
+                "description": "Retorna a lista de postos (com nome) aos quais o supervisor esta vinculado. Util para a UI mostrar/ocultar alertas por posto.",
+                "tags": [
+                    "postos"
+                ],
+                "summary": "Lista os postos vinculados a um supervisor (admin/supervisor)",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID do supervisor (uuid)",
+                        "name": "supervisorId",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.SupervisorPostoResponse"
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "supervisor_id invalido",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "erro interno",
+                        "schema": {
+                            "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse"
                         }
                     }
                 }
@@ -2221,121 +2513,164 @@ const docTemplate = `{
         }
     },
     "definitions": {
-        "model.AlertStatistics": {
+        "github_com_guardpoint_guardpoint-server_internal_model.AlertStatistics": {
             "type": "object",
             "properties": {
                 "por_hora": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/model.AlertaPorHora"
+                        "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.AlertaPorHora"
                     }
                 },
                 "por_tipo": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/model.AlertaPorTipo"
+                        "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.AlertaPorTipo"
                     }
                 },
                 "total_abertos": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 5
                 },
                 "total_encerrados": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 12
                 },
                 "total_reconhecidos": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 3
                 }
             }
         },
-        "model.Alerta": {
+        "github_com_guardpoint_guardpoint-server_internal_model.Alerta": {
             "type": "object",
             "properties": {
                 "created_at": {
                     "type": "string"
                 },
                 "empresa_id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "660e8400-e29b-41d4-a716-446655440000"
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 },
                 "mensagem": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Atraso de 5 minutos detectado no turno."
                 },
                 "nivel": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 1
+                },
+                "posto_id": {
+                    "type": "string",
+                    "example": "880e8400-e29b-41d4-a716-446655440000"
                 },
                 "resolvido_em": {
                     "type": "string"
                 },
                 "status": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "aberto"
                 },
                 "tipo": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "atraso"
                 },
                 "turno_id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "770e8400-e29b-41d4-a716-446655440000"
                 }
             }
         },
-        "model.AlertaListResponse": {
+        "github_com_guardpoint_guardpoint-server_internal_model.AlertaListResponse": {
             "type": "object",
             "properties": {
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/model.Alerta"
+                        "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Alerta"
                     }
                 },
                 "total": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 42
                 }
             }
         },
-        "model.AlertaPorHora": {
+        "github_com_guardpoint_guardpoint-server_internal_model.AlertaPorHora": {
             "type": "object",
             "properties": {
                 "hora": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "08:00"
                 },
                 "quantidade": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 4
                 }
             }
         },
-        "model.AlertaPorTipo": {
+        "github_com_guardpoint_guardpoint-server_internal_model.AlertaPorTipo": {
             "type": "object",
             "properties": {
                 "quantidade": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 8
                 },
                 "tipo": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "atraso"
                 }
             }
         },
-        "model.AlertaRecente": {
+        "github_com_guardpoint_guardpoint-server_internal_model.AlertaRecente": {
             "type": "object",
             "properties": {
                 "created_at": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "2025-07-10T15:04:05Z"
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 },
                 "mensagem": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Atraso de 5 minutos detectado."
+                },
+                "posto_id": {
+                    "type": "string",
+                    "example": "880e8400-e29b-41d4-a716-446655440000"
                 },
                 "tipo": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "atraso"
                 },
                 "turno_id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "770e8400-e29b-41d4-a716-446655440000"
                 }
             }
         },
-        "model.BiometricLoginRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.BatchCreateSenhaVigiaRequest": {
+            "type": "object",
+            "required": [
+                "senhas"
+            ],
+            "properties": {
+                "senhas": {
+                    "type": "array",
+                    "minItems": 1,
+                    "items": {
+                        "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CreateSenhaVigiaRequest"
+                    }
+                }
+            }
+        },
+        "github_com_guardpoint_guardpoint-server_internal_model.BiometricLoginRequest": {
             "type": "object",
             "required": [
                 "device_id",
@@ -2354,7 +2689,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.BiometricRegisterRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.BiometricRegisterRequest": {
             "type": "object",
             "required": [
                 "device_id"
@@ -2365,7 +2700,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.BiometricRegisterResponse": {
+        "github_com_guardpoint_guardpoint-server_internal_model.BiometricRegisterResponse": {
             "type": "object",
             "properties": {
                 "criado_em": {
@@ -2388,7 +2723,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.Checkin": {
+        "github_com_guardpoint_guardpoint-server_internal_model.Checkin": {
             "type": "object",
             "properties": {
                 "cliente_checkin_id": {
@@ -2437,7 +2772,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.CheckinRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.CheckinRequest": {
             "type": "object",
             "required": [
                 "device_id",
@@ -2473,14 +2808,14 @@ const docTemplate = `{
                 }
             }
         },
-        "model.CheckinResponse": {
+        "github_com_guardpoint_guardpoint-server_internal_model.CheckinResponse": {
             "type": "object",
             "properties": {
                 "atrasado": {
                     "type": "boolean"
                 },
                 "checkin": {
-                    "$ref": "#/definitions/model.Checkin"
+                    "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Checkin"
                 },
                 "posto_nome": {
                     "type": "string"
@@ -2493,29 +2828,35 @@ const docTemplate = `{
                 }
             }
         },
-        "model.ConfigEscalonamento": {
+        "github_com_guardpoint_guardpoint-server_internal_model.ConfigEscalonamento": {
             "type": "object",
             "properties": {
                 "atraso_minutos": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 15
                 },
                 "created_at": {
                     "type": "string"
                 },
                 "descricao": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Nivel 1 - Imediato"
                 },
                 "em_uso": {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "example": true
                 },
                 "empresa_id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "660e8400-e29b-41d4-a716-446655440000"
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 },
                 "sistema": {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "example": false
                 },
                 "usuario_ids": {
                     "type": "array",
@@ -2525,7 +2866,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.CreateConfigEscalonamentoRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.CreateConfigEscalonamentoRequest": {
             "type": "object",
             "required": [
                 "usuario_ids"
@@ -2534,10 +2875,12 @@ const docTemplate = `{
                 "atraso_minutos": {
                     "type": "integer",
                     "maximum": 1440,
-                    "minimum": 0
+                    "minimum": 0,
+                    "example": 15
                 },
                 "descricao": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Nivel 1"
                 },
                 "usuario_ids": {
                     "type": "array",
@@ -2548,7 +2891,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.CreateEscalaLoteRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.CreateEscalaLoteRequest": {
             "type": "object",
             "required": [
                 "dias",
@@ -2561,7 +2904,7 @@ const docTemplate = `{
                     "maxItems": 7,
                     "minItems": 1,
                     "items": {
-                        "$ref": "#/definitions/model.DiaEscalaEntry"
+                        "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.DiaEscalaEntry"
                     }
                 },
                 "posto_id": {
@@ -2577,13 +2920,13 @@ const docTemplate = `{
                 }
             }
         },
-        "model.CreateEscalaLoteResponse": {
+        "github_com_guardpoint_guardpoint-server_internal_model.CreateEscalaLoteResponse": {
             "type": "object",
             "properties": {
                 "dias": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/model.DiaEscalaEntry"
+                        "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.DiaEscalaEntry"
                     }
                 },
                 "posto_id": {
@@ -2597,7 +2940,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.CreateEscalaRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.CreateEscalaRequest": {
             "type": "object",
             "required": [
                 "hora_fim",
@@ -2635,7 +2978,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.CreatePostoRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.CreatePostoRequest": {
             "type": "object",
             "required": [
                 "latitude",
@@ -2644,24 +2987,28 @@ const docTemplate = `{
             ],
             "properties": {
                 "latitude": {
-                    "type": "number"
+                    "type": "number",
+                    "example": -23.55052
                 },
                 "longitude": {
-                    "type": "number"
+                    "type": "number",
+                    "example": -46.633308
                 },
                 "nome": {
                     "type": "string",
                     "maxLength": 255,
-                    "minLength": 2
+                    "minLength": 2,
+                    "example": "Portaria Principal"
                 },
                 "raio_m": {
                     "type": "integer",
                     "maximum": 5000,
-                    "minimum": 10
+                    "minimum": 10,
+                    "example": 100
                 }
             }
         },
-        "model.CreateSenhaVigiaRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.CreateSenhaVigiaRequest": {
             "type": "object",
             "required": [
                 "codigo",
@@ -2686,7 +3033,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.CreateSubstituicaoRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.CreateSubstituicaoRequest": {
             "type": "object",
             "required": [
                 "data_fim",
@@ -2726,11 +3073,10 @@ const docTemplate = `{
                 }
             }
         },
-        "model.CreateUsuarioRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.CreateUsuarioRequest": {
             "type": "object",
             "required": [
                 "cargo",
-                "email",
                 "nome",
                 "senha"
             ],
@@ -2762,36 +3108,40 @@ const docTemplate = `{
                 }
             }
         },
-        "model.DashboardSummary": {
+        "github_com_guardpoint_guardpoint-server_internal_model.DashboardSummary": {
             "type": "object",
             "properties": {
                 "alertas_abertos": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 5
                 },
                 "alertas_recentes": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/model.AlertaRecente"
+                        "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.AlertaRecente"
                     }
                 },
                 "checkins_ultima_hora": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 48
                 },
                 "desvios_rota": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 2
                 },
                 "turnos_ativos": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 12
                 },
                 "turnos_por_posto": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/model.TurnoPorPosto"
+                        "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.TurnoPorPosto"
                     }
                 }
             }
         },
-        "model.DiaEscalaEntry": {
+        "github_com_guardpoint_guardpoint-server_internal_model.DiaEscalaEntry": {
             "type": "object",
             "required": [
                 "hora_fim",
@@ -2816,7 +3166,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.Empresa": {
+        "github_com_guardpoint_guardpoint-server_internal_model.Empresa": {
             "type": "object",
             "properties": {
                 "alerta_sonoro": {
@@ -2826,6 +3176,9 @@ const docTemplate = `{
                     "type": "boolean"
                 },
                 "cnpj": {
+                    "type": "string"
+                },
+                "codigo": {
                     "type": "string"
                 },
                 "created_at": {
@@ -2842,15 +3195,16 @@ const docTemplate = `{
                 }
             }
         },
-        "model.ErrorResponse": {
+        "github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse": {
             "type": "object",
             "properties": {
                 "error": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "mensagem descritiva do erro"
                 }
             }
         },
-        "model.Escala": {
+        "github_com_guardpoint_guardpoint-server_internal_model.Escala": {
             "type": "object",
             "properties": {
                 "ativo": {
@@ -2897,13 +3251,13 @@ const docTemplate = `{
                 }
             }
         },
-        "model.EscalaListResponse": {
+        "github_com_guardpoint_guardpoint-server_internal_model.EscalaListResponse": {
             "type": "object",
             "properties": {
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/model.Escala"
+                        "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Escala"
                     }
                 },
                 "total": {
@@ -2911,7 +3265,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.FinalizarTurnoRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.FinalizarTurnoRequest": {
             "type": "object",
             "required": [
                 "device_id",
@@ -2944,7 +3298,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.IniciarTurnoRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.IniciarTurnoRequest": {
             "type": "object",
             "required": [
                 "device_id",
@@ -2978,14 +3332,19 @@ const docTemplate = `{
                 }
             }
         },
-        "model.LoginRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.LoginRequest": {
             "type": "object",
             "required": [
-                "email",
                 "senha"
             ],
             "properties": {
+                "codigo_empresa": {
+                    "type": "string"
+                },
                 "email": {
+                    "type": "string"
+                },
+                "nome": {
                     "type": "string"
                 },
                 "senha": {
@@ -2994,7 +3353,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.LoginResponse": {
+        "github_com_guardpoint_guardpoint-server_internal_model.LoginResponse": {
             "type": "object",
             "properties": {
                 "access_token": {
@@ -3007,17 +3366,17 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "usuario": {
-                    "$ref": "#/definitions/model.User"
+                    "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.User"
                 }
             }
         },
-        "model.LoteCheckinResponse": {
+        "github_com_guardpoint_guardpoint-server_internal_model.LoteCheckinResponse": {
             "type": "object",
             "properties": {
                 "checkins": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/model.CheckinResponse"
+                        "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CheckinResponse"
                     }
                 },
                 "processados": {
@@ -3028,44 +3387,77 @@ const docTemplate = `{
                 }
             }
         },
-        "model.MessageResponse": {
+        "github_com_guardpoint_guardpoint-server_internal_model.MessageResponse": {
             "type": "object",
             "properties": {
                 "message": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "operacao realizada com sucesso"
                 }
             }
         },
-        "model.Posto": {
+        "github_com_guardpoint_guardpoint-server_internal_model.Posto": {
             "type": "object",
             "properties": {
                 "ativo": {
-                    "type": "boolean"
+                    "type": "boolean",
+                    "example": true
                 },
                 "created_at": {
                     "type": "string"
                 },
                 "empresa_id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "660e8400-e29b-41d4-a716-446655440000"
                 },
                 "id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 },
                 "latitude": {
-                    "type": "number"
+                    "type": "number",
+                    "example": -23.55052
                 },
                 "longitude": {
-                    "type": "number"
+                    "type": "number",
+                    "example": -46.633308
                 },
                 "nome": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Portaria Principal"
                 },
                 "raio_m": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 100
                 }
             }
         },
-        "model.ReassociarRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.PostoSupervisorRequest": {
+            "type": "object",
+            "required": [
+                "supervisor_id"
+            ],
+            "properties": {
+                "supervisor_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+            }
+        },
+        "github_com_guardpoint_guardpoint-server_internal_model.PostoSupervisorResponse": {
+            "type": "object",
+            "properties": {
+                "posto_id": {
+                    "type": "string",
+                    "example": "660e8400-e29b-41d4-a716-446655440000"
+                },
+                "supervisor_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                }
+            }
+        },
+        "github_com_guardpoint_guardpoint-server_internal_model.ReassociarRequest": {
             "type": "object",
             "required": [
                 "device_id",
@@ -3080,7 +3472,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.RefreshRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.RefreshRequest": {
             "type": "object",
             "required": [
                 "refresh_token"
@@ -3091,10 +3483,9 @@ const docTemplate = `{
                 }
             }
         },
-        "model.RegisterRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.RegisterRequest": {
             "type": "object",
             "required": [
-                "email",
                 "nome",
                 "role",
                 "senha"
@@ -3128,7 +3519,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.RevogarResponse": {
+        "github_com_guardpoint_guardpoint-server_internal_model.RevogarResponse": {
             "type": "object",
             "properties": {
                 "pin_novo_dispositivo": {
@@ -3139,7 +3530,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.SabotagemRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.SabotagemRequest": {
             "type": "object",
             "required": [
                 "device_id",
@@ -3172,7 +3563,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.SabotagemResponse": {
+        "github_com_guardpoint_guardpoint-server_internal_model.SabotagemResponse": {
             "type": "object",
             "properties": {
                 "alerta_id": {
@@ -3186,7 +3577,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.SenhaVigia": {
+        "github_com_guardpoint_guardpoint-server_internal_model.SenhaVigia": {
             "type": "object",
             "properties": {
                 "codigo": {
@@ -3216,15 +3607,16 @@ const docTemplate = `{
                 }
             }
         },
-        "model.StatusResponse": {
+        "github_com_guardpoint_guardpoint-server_internal_model.StatusResponse": {
             "type": "object",
             "properties": {
                 "status": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "ok"
                 }
             }
         },
-        "model.Substituicao": {
+        "github_com_guardpoint_guardpoint-server_internal_model.Substituicao": {
             "type": "object",
             "properties": {
                 "ativo": {
@@ -3274,13 +3666,13 @@ const docTemplate = `{
                 }
             }
         },
-        "model.SubstituicaoListResponse": {
+        "github_com_guardpoint_guardpoint-server_internal_model.SubstituicaoListResponse": {
             "type": "object",
             "properties": {
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/model.Substituicao"
+                        "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Substituicao"
                     }
                 },
                 "total": {
@@ -3288,7 +3680,20 @@ const docTemplate = `{
                 }
             }
         },
-        "model.Turno": {
+        "github_com_guardpoint_guardpoint-server_internal_model.SupervisorPostoResponse": {
+            "type": "object",
+            "properties": {
+                "posto_id": {
+                    "type": "string",
+                    "example": "660e8400-e29b-41d4-a716-446655440000"
+                },
+                "posto_nome": {
+                    "type": "string",
+                    "example": "Portaria Principal"
+                }
+            }
+        },
+        "github_com_guardpoint_guardpoint-server_internal_model.Turno": {
             "type": "object",
             "properties": {
                 "created_at": {
@@ -3341,13 +3746,13 @@ const docTemplate = `{
                 }
             }
         },
-        "model.TurnoDetalhe": {
+        "github_com_guardpoint_guardpoint-server_internal_model.TurnoDetalhe": {
             "type": "object",
             "properties": {
                 "checkins": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/model.Checkin"
+                        "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Checkin"
                     }
                 },
                 "created_at": {
@@ -3378,7 +3783,7 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "posto": {
-                    "$ref": "#/definitions/model.Posto"
+                    "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Posto"
                 },
                 "posto_id": {
                     "type": "string"
@@ -3396,7 +3801,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "usuario": {
-                    "$ref": "#/definitions/model.User"
+                    "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.User"
                 },
                 "usuario_id": {
                     "type": "string"
@@ -3406,13 +3811,13 @@ const docTemplate = `{
                 }
             }
         },
-        "model.TurnoListResponse": {
+        "github_com_guardpoint_guardpoint-server_internal_model.TurnoListResponse": {
             "type": "object",
             "properties": {
                 "data": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/model.TurnoDetalhe"
+                        "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.TurnoDetalhe"
                     }
                 },
                 "total": {
@@ -3420,21 +3825,24 @@ const docTemplate = `{
                 }
             }
         },
-        "model.TurnoPorPosto": {
+        "github_com_guardpoint_guardpoint-server_internal_model.TurnoPorPosto": {
             "type": "object",
             "properties": {
                 "posto_id": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
                 },
                 "posto_nome": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Portaria Principal"
                 },
                 "quantidade": {
-                    "type": "integer"
+                    "type": "integer",
+                    "example": 3
                 }
             }
         },
-        "model.TurnoStatusResponse": {
+        "github_com_guardpoint_guardpoint-server_internal_model.TurnoStatusResponse": {
             "type": "object",
             "properties": {
                 "checkins_hoje": {
@@ -3444,14 +3852,14 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "turno": {
-                    "$ref": "#/definitions/model.Turno"
+                    "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Turno"
                 },
                 "ultimo_checkin": {
-                    "$ref": "#/definitions/model.Checkin"
+                    "$ref": "#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Checkin"
                 }
             }
         },
-        "model.UpdateConfigEscalonamentoRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.UpdateConfigEscalonamentoRequest": {
             "type": "object",
             "required": [
                 "usuario_ids"
@@ -3460,10 +3868,12 @@ const docTemplate = `{
                 "atraso_minutos": {
                     "type": "integer",
                     "maximum": 1440,
-                    "minimum": 0
+                    "minimum": 0,
+                    "example": 30
                 },
                 "descricao": {
-                    "type": "string"
+                    "type": "string",
+                    "example": "Nivel 2"
                 },
                 "usuario_ids": {
                     "type": "array",
@@ -3474,7 +3884,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.UpdateConfigEscalonamentoUsuariosRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.UpdateConfigEscalonamentoUsuariosRequest": {
             "type": "object",
             "required": [
                 "usuario_ids"
@@ -3489,7 +3899,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.UpdateEmpresaRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.UpdateEmpresaRequest": {
             "type": "object",
             "required": [
                 "nome"
@@ -3504,7 +3914,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.UpdateEscalaRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.UpdateEscalaRequest": {
             "type": "object",
             "properties": {
                 "ativo": {
@@ -3539,31 +3949,35 @@ const docTemplate = `{
                 }
             }
         },
-        "model.UpdatePostoRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.UpdatePostoRequest": {
             "type": "object",
             "properties": {
                 "ativo": {
                     "type": "boolean"
                 },
                 "latitude": {
-                    "type": "number"
+                    "type": "number",
+                    "example": -23.551
                 },
                 "longitude": {
-                    "type": "number"
+                    "type": "number",
+                    "example": -46.634
                 },
                 "nome": {
                     "type": "string",
                     "maxLength": 255,
-                    "minLength": 2
+                    "minLength": 2,
+                    "example": "Portaria Norte"
                 },
                 "raio_m": {
                     "type": "integer",
                     "maximum": 5000,
-                    "minimum": 10
+                    "minimum": 10,
+                    "example": 150
                 }
             }
         },
-        "model.UpdateSenhaVigiaRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.UpdateSenhaVigiaRequest": {
             "type": "object",
             "properties": {
                 "codigo": {
@@ -3576,7 +3990,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.UpdateSubstituicaoRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.UpdateSubstituicaoRequest": {
             "type": "object",
             "properties": {
                 "ativo": {
@@ -3611,7 +4025,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.UpdateUsuarioRequest": {
+        "github_com_guardpoint_guardpoint-server_internal_model.UpdateUsuarioRequest": {
             "type": "object",
             "properties": {
                 "ativo": {
@@ -3641,7 +4055,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.User": {
+        "github_com_guardpoint_guardpoint-server_internal_model.User": {
             "type": "object",
             "properties": {
                 "ativo": {
@@ -3673,7 +4087,7 @@ const docTemplate = `{
                 }
             }
         },
-        "model.UsuarioResponse": {
+        "github_com_guardpoint_guardpoint-server_internal_model.UsuarioResponse": {
             "type": "object",
             "properties": {
                 "ativo": {

@@ -80,6 +80,7 @@ func (m *fakeAlertaConfigRepo) DeleteByID(ctx context.Context, id, empresaID uui
 
 type fakeAlertaUserRepo struct {
 	findByIDEmpresaFn func(ctx context.Context, empresaID, id uuid.UUID) (*model.User, error)
+	findAdminIDsFn    func(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]bool, error)
 }
 
 func (m *fakeAlertaUserRepo) FindByIDEmpresa(ctx context.Context, empresaID, id uuid.UUID) (*model.User, error) {
@@ -87,13 +88,27 @@ func (m *fakeAlertaUserRepo) FindByIDEmpresa(ctx context.Context, empresaID, id 
 	return nil, nil
 }
 
+func (m *fakeAlertaUserRepo) FindAdminIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]bool, error) {
+	if m.findAdminIDsFn != nil { return m.findAdminIDsFn(ctx, ids) }
+	return nil, nil
+}
+
+type fakePostoSupervisorRepo struct {
+	listSupervisoresFn func(ctx context.Context, postoID uuid.UUID) ([]uuid.UUID, error)
+}
+
+func (m *fakePostoSupervisorRepo) ListSupervisoresByPosto(ctx context.Context, postoID uuid.UUID) ([]uuid.UUID, error) {
+	if m.listSupervisoresFn != nil { return m.listSupervisoresFn(ctx, postoID) }
+	return nil, nil
+}
+
 func makeAlertaService(alertaRepo AlertaAlertaRepository, configRepo EscalonamentoConfigRepository, userRepo EscalonamentoUserRepository) *AlertaService {
-	escSvc := NewEscalonamentoService(configRepo, userRepo)
+	escSvc := NewEscalonamentoService(configRepo, userRepo, &fakePostoSupervisorRepo{})
 	return NewAlertaService(alertaRepo, escSvc, nil)
 }
 
 func makeEscalonamentoService(configRepo EscalonamentoConfigRepository, userRepo EscalonamentoUserRepository) *EscalonamentoService {
-	return NewEscalonamentoService(configRepo, userRepo)
+	return NewEscalonamentoService(configRepo, userRepo, &fakePostoSupervisorRepo{})
 }
 
 func TestAlertaService_Reconhecer_Success(t *testing.T) {

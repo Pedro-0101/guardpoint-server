@@ -392,7 +392,7 @@ func TestTurnoService_GetByID_Success(t *testing.T) {
 		ID:        userID,
 		EmpresaID: empresaID,
 		Nome:      "Vigia Silva",
-		Email:     "silva@guardpoint.com",
+		Email:     strPtr("silva@guardpoint.com"),
 		Role:      "vigia",
 		Ativo:     true,
 	}
@@ -613,7 +613,7 @@ func TestTurnoService_GetAtivos_WithTurnos(t *testing.T) {
 		ID:        userID,
 		EmpresaID: empresaID,
 		Nome:      "Vigia Santos",
-		Email:     "santos@guardpoint.com",
+		Email:     strPtr("santos@guardpoint.com"),
 		Role:      "vigia",
 		Ativo:     true,
 	}

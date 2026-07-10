@@ -2,81 +2,117 @@ basePath: /api/v1
 consumes:
 - application/json
 definitions:
-  model.AlertStatistics:
+  github_com_guardpoint_guardpoint-server_internal_model.AlertStatistics:
     properties:
       por_hora:
         items:
-          $ref: '#/definitions/model.AlertaPorHora'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.AlertaPorHora'
         type: array
       por_tipo:
         items:
-          $ref: '#/definitions/model.AlertaPorTipo'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.AlertaPorTipo'
         type: array
       total_abertos:
+        example: 5
         type: integer
       total_encerrados:
+        example: 12
         type: integer
       total_reconhecidos:
+        example: 3
         type: integer
     type: object
-  model.Alerta:
+  github_com_guardpoint_guardpoint-server_internal_model.Alerta:
     properties:
       created_at:
         type: string
       empresa_id:
+        example: 660e8400-e29b-41d4-a716-446655440000
         type: string
       id:
+        example: 550e8400-e29b-41d4-a716-446655440000
         type: string
       mensagem:
+        example: Atraso de 5 minutos detectado no turno.
         type: string
       nivel:
+        example: 1
         type: integer
+      posto_id:
+        example: 880e8400-e29b-41d4-a716-446655440000
+        type: string
       resolvido_em:
         type: string
       status:
+        example: aberto
         type: string
       tipo:
+        example: atraso
         type: string
       turno_id:
+        example: 770e8400-e29b-41d4-a716-446655440000
         type: string
     type: object
-  model.AlertaListResponse:
+  github_com_guardpoint_guardpoint-server_internal_model.AlertaListResponse:
     properties:
       data:
         items:
-          $ref: '#/definitions/model.Alerta'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Alerta'
         type: array
       total:
+        example: 42
         type: integer
     type: object
-  model.AlertaPorHora:
+  github_com_guardpoint_guardpoint-server_internal_model.AlertaPorHora:
     properties:
       hora:
+        example: "08:00"
         type: string
       quantidade:
+        example: 4
         type: integer
     type: object
-  model.AlertaPorTipo:
+  github_com_guardpoint_guardpoint-server_internal_model.AlertaPorTipo:
     properties:
       quantidade:
+        example: 8
         type: integer
       tipo:
+        example: atraso
         type: string
     type: object
-  model.AlertaRecente:
+  github_com_guardpoint_guardpoint-server_internal_model.AlertaRecente:
     properties:
       created_at:
+        example: "2025-07-10T15:04:05Z"
         type: string
       id:
+        example: 550e8400-e29b-41d4-a716-446655440000
         type: string
       mensagem:
+        example: Atraso de 5 minutos detectado.
+        type: string
+      posto_id:
+        example: 880e8400-e29b-41d4-a716-446655440000
         type: string
       tipo:
+        example: atraso
         type: string
       turno_id:
+        example: 770e8400-e29b-41d4-a716-446655440000
         type: string
     type: object
-  model.BiometricLoginRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.BatchCreateSenhaVigiaRequest:
+    properties:
+      senhas:
+        items:
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CreateSenhaVigiaRequest'
+        minItems: 1
+        type: array
+    required:
+    - senhas
+    type: object
+  github_com_guardpoint_guardpoint-server_internal_model.BiometricLoginRequest:
     properties:
       device_id:
         type: string
@@ -89,14 +125,14 @@ definitions:
     - device_secret
     - empresa_id
     type: object
-  model.BiometricRegisterRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.BiometricRegisterRequest:
     properties:
       device_id:
         type: string
     required:
     - device_id
     type: object
-  model.BiometricRegisterResponse:
+  github_com_guardpoint_guardpoint-server_internal_model.BiometricRegisterResponse:
     properties:
       criado_em:
         type: string
@@ -111,7 +147,7 @@ definitions:
       usuario_id:
         type: string
     type: object
-  model.Checkin:
+  github_com_guardpoint_guardpoint-server_internal_model.Checkin:
     properties:
       cliente_checkin_id:
         type: string
@@ -144,7 +180,7 @@ definitions:
       turno_id:
         type: string
     type: object
-  model.CheckinRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.CheckinRequest:
     properties:
       cliente_checkin_id:
         type: string
@@ -170,12 +206,12 @@ definitions:
     - timestamp
     - turno_id
     type: object
-  model.CheckinResponse:
+  github_com_guardpoint_guardpoint-server_internal_model.CheckinResponse:
     properties:
       atrasado:
         type: boolean
       checkin:
-        $ref: '#/definitions/model.Checkin'
+        $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Checkin'
       posto_nome:
         type: string
       proximo_deadline:
@@ -183,34 +219,42 @@ definitions:
       status:
         type: string
     type: object
-  model.ConfigEscalonamento:
+  github_com_guardpoint_guardpoint-server_internal_model.ConfigEscalonamento:
     properties:
       atraso_minutos:
+        example: 15
         type: integer
       created_at:
         type: string
       descricao:
+        example: Nivel 1 - Imediato
         type: string
       em_uso:
+        example: true
         type: boolean
       empresa_id:
+        example: 660e8400-e29b-41d4-a716-446655440000
         type: string
       id:
+        example: 550e8400-e29b-41d4-a716-446655440000
         type: string
       sistema:
+        example: false
         type: boolean
       usuario_ids:
         items:
           type: string
         type: array
     type: object
-  model.CreateConfigEscalonamentoRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.CreateConfigEscalonamentoRequest:
     properties:
       atraso_minutos:
+        example: 15
         maximum: 1440
         minimum: 0
         type: integer
       descricao:
+        example: Nivel 1
         type: string
       usuario_ids:
         items:
@@ -220,11 +264,11 @@ definitions:
     required:
     - usuario_ids
     type: object
-  model.CreateEscalaLoteRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.CreateEscalaLoteRequest:
     properties:
       dias:
         items:
-          $ref: '#/definitions/model.DiaEscalaEntry'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.DiaEscalaEntry'
         maxItems: 7
         minItems: 1
         type: array
@@ -241,11 +285,11 @@ definitions:
     - posto_id
     - usuario_id
     type: object
-  model.CreateEscalaLoteResponse:
+  github_com_guardpoint_guardpoint-server_internal_model.CreateEscalaLoteResponse:
     properties:
       dias:
         items:
-          $ref: '#/definitions/model.DiaEscalaEntry'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.DiaEscalaEntry'
         type: array
       posto_id:
         type: string
@@ -254,7 +298,7 @@ definitions:
       usuario_id:
         type: string
     type: object
-  model.CreateEscalaRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.CreateEscalaRequest:
     properties:
       dia_semana_fim:
         maximum: 6
@@ -282,17 +326,21 @@ definitions:
     - posto_id
     - usuario_id
     type: object
-  model.CreatePostoRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.CreatePostoRequest:
     properties:
       latitude:
+        example: -23.55052
         type: number
       longitude:
+        example: -46.633308
         type: number
       nome:
+        example: Portaria Principal
         maxLength: 255
         minLength: 2
         type: string
       raio_m:
+        example: 100
         maximum: 5000
         minimum: 10
         type: integer
@@ -301,7 +349,7 @@ definitions:
     - longitude
     - nome
     type: object
-  model.CreateSenhaVigiaRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.CreateSenhaVigiaRequest:
     properties:
       codigo:
         maxLength: 6
@@ -319,7 +367,7 @@ definitions:
     - codigo
     - tipo
     type: object
-  model.CreateSubstituicaoRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.CreateSubstituicaoRequest:
     properties:
       data_fim:
         type: string
@@ -348,7 +396,7 @@ definitions:
     - posto_id
     - usuario_id
     type: object
-  model.CreateUsuarioRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.CreateUsuarioRequest:
     properties:
       ativo:
         type: boolean
@@ -371,30 +419,33 @@ definitions:
         type: string
     required:
     - cargo
-    - email
     - nome
     - senha
     type: object
-  model.DashboardSummary:
+  github_com_guardpoint_guardpoint-server_internal_model.DashboardSummary:
     properties:
       alertas_abertos:
+        example: 5
         type: integer
       alertas_recentes:
         items:
-          $ref: '#/definitions/model.AlertaRecente'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.AlertaRecente'
         type: array
       checkins_ultima_hora:
+        example: 48
         type: integer
       desvios_rota:
+        example: 2
         type: integer
       turnos_ativos:
+        example: 12
         type: integer
       turnos_por_posto:
         items:
-          $ref: '#/definitions/model.TurnoPorPosto'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.TurnoPorPosto'
         type: array
     type: object
-  model.DiaEscalaEntry:
+  github_com_guardpoint_guardpoint-server_internal_model.DiaEscalaEntry:
     properties:
       dia_semana_fim:
         maximum: 6
@@ -412,13 +463,15 @@ definitions:
     - hora_fim
     - hora_inicio
     type: object
-  model.Empresa:
+  github_com_guardpoint_guardpoint-server_internal_model.Empresa:
     properties:
       alerta_sonoro:
         type: boolean
       ativa:
         type: boolean
       cnpj:
+        type: string
+      codigo:
         type: string
       created_at:
         type: string
@@ -429,12 +482,13 @@ definitions:
       updated_at:
         type: string
     type: object
-  model.ErrorResponse:
+  github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse:
     properties:
       error:
+        example: mensagem descritiva do erro
         type: string
     type: object
-  model.Escala:
+  github_com_guardpoint_guardpoint-server_internal_model.Escala:
     properties:
       ativo:
         type: boolean
@@ -465,16 +519,16 @@ definitions:
       usuario_nome:
         type: string
     type: object
-  model.EscalaListResponse:
+  github_com_guardpoint_guardpoint-server_internal_model.EscalaListResponse:
     properties:
       data:
         items:
-          $ref: '#/definitions/model.Escala'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Escala'
         type: array
       total:
         type: integer
     type: object
-  model.FinalizarTurnoRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.FinalizarTurnoRequest:
     properties:
       device_id:
         type: string
@@ -498,7 +552,7 @@ definitions:
     - timestamp
     - turno_id
     type: object
-  model.IniciarTurnoRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.IniciarTurnoRequest:
     properties:
       device_id:
         type: string
@@ -523,18 +577,21 @@ definitions:
     - posto_id
     - senha
     type: object
-  model.LoginRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.LoginRequest:
     properties:
+      codigo_empresa:
+        type: string
       email:
+        type: string
+      nome:
         type: string
       senha:
         minLength: 6
         type: string
     required:
-    - email
     - senha
     type: object
-  model.LoginResponse:
+  github_com_guardpoint_guardpoint-server_internal_model.LoginResponse:
     properties:
       access_token:
         type: string
@@ -543,44 +600,69 @@ definitions:
       refresh_token:
         type: string
       usuario:
-        $ref: '#/definitions/model.User'
+        $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.User'
     type: object
-  model.LoteCheckinResponse:
+  github_com_guardpoint_guardpoint-server_internal_model.LoteCheckinResponse:
     properties:
       checkins:
         items:
-          $ref: '#/definitions/model.CheckinResponse'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CheckinResponse'
         type: array
       processados:
         type: integer
       recebidos:
         type: integer
     type: object
-  model.MessageResponse:
+  github_com_guardpoint_guardpoint-server_internal_model.MessageResponse:
     properties:
       message:
+        example: operacao realizada com sucesso
         type: string
     type: object
-  model.Posto:
+  github_com_guardpoint_guardpoint-server_internal_model.Posto:
     properties:
       ativo:
+        example: true
         type: boolean
       created_at:
         type: string
       empresa_id:
+        example: 660e8400-e29b-41d4-a716-446655440000
         type: string
       id:
+        example: 550e8400-e29b-41d4-a716-446655440000
         type: string
       latitude:
+        example: -23.55052
         type: number
       longitude:
+        example: -46.633308
         type: number
       nome:
+        example: Portaria Principal
         type: string
       raio_m:
+        example: 100
         type: integer
     type: object
-  model.ReassociarRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.PostoSupervisorRequest:
+    properties:
+      supervisor_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    required:
+    - supervisor_id
+    type: object
+  github_com_guardpoint_guardpoint-server_internal_model.PostoSupervisorResponse:
+    properties:
+      posto_id:
+        example: 660e8400-e29b-41d4-a716-446655440000
+        type: string
+      supervisor_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+    type: object
+  github_com_guardpoint_guardpoint-server_internal_model.ReassociarRequest:
     properties:
       device_id:
         type: string
@@ -590,14 +672,14 @@ definitions:
     - device_id
     - pin
     type: object
-  model.RefreshRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.RefreshRequest:
     properties:
       refresh_token:
         type: string
     required:
     - refresh_token
     type: object
-  model.RegisterRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.RegisterRequest:
     properties:
       email:
         maxLength: 255
@@ -620,19 +702,18 @@ definitions:
         maxLength: 20
         type: string
     required:
-    - email
     - nome
     - role
     - senha
     type: object
-  model.RevogarResponse:
+  github_com_guardpoint_guardpoint-server_internal_model.RevogarResponse:
     properties:
       pin_novo_dispositivo:
         type: string
       validade_minutos:
         type: integer
     type: object
-  model.SabotagemRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.SabotagemRequest:
     properties:
       device_id:
         type: string
@@ -656,7 +737,7 @@ definitions:
     - timestamp
     - turno_id
     type: object
-  model.SabotagemResponse:
+  github_com_guardpoint_guardpoint-server_internal_model.SabotagemResponse:
     properties:
       alerta_id:
         type: string
@@ -665,7 +746,7 @@ definitions:
       status:
         type: string
     type: object
-  model.SenhaVigia:
+  github_com_guardpoint_guardpoint-server_internal_model.SenhaVigia:
     properties:
       codigo:
         type: string
@@ -685,12 +766,13 @@ definitions:
       usuario_id:
         type: string
     type: object
-  model.StatusResponse:
+  github_com_guardpoint_guardpoint-server_internal_model.StatusResponse:
     properties:
       status:
+        example: ok
         type: string
     type: object
-  model.Substituicao:
+  github_com_guardpoint_guardpoint-server_internal_model.Substituicao:
     properties:
       ativo:
         type: boolean
@@ -723,16 +805,25 @@ definitions:
       usuario_nome:
         type: string
     type: object
-  model.SubstituicaoListResponse:
+  github_com_guardpoint_guardpoint-server_internal_model.SubstituicaoListResponse:
     properties:
       data:
         items:
-          $ref: '#/definitions/model.Substituicao'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Substituicao'
         type: array
       total:
         type: integer
     type: object
-  model.Turno:
+  github_com_guardpoint_guardpoint-server_internal_model.SupervisorPostoResponse:
+    properties:
+      posto_id:
+        example: 660e8400-e29b-41d4-a716-446655440000
+        type: string
+      posto_nome:
+        example: Portaria Principal
+        type: string
+    type: object
+  github_com_guardpoint_guardpoint-server_internal_model.Turno:
     properties:
       created_at:
         type: string
@@ -767,11 +858,11 @@ definitions:
       usuario_nome:
         type: string
     type: object
-  model.TurnoDetalhe:
+  github_com_guardpoint_guardpoint-server_internal_model.TurnoDetalhe:
     properties:
       checkins:
         items:
-          $ref: '#/definitions/model.Checkin'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Checkin'
         type: array
       created_at:
         type: string
@@ -792,7 +883,7 @@ definitions:
       intervalo_min:
         type: integer
       posto:
-        $ref: '#/definitions/model.Posto'
+        $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Posto'
       posto_id:
         type: string
       posto_nome:
@@ -804,48 +895,53 @@ definitions:
       token_sessao:
         type: string
       usuario:
-        $ref: '#/definitions/model.User'
+        $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.User'
       usuario_id:
         type: string
       usuario_nome:
         type: string
     type: object
-  model.TurnoListResponse:
+  github_com_guardpoint_guardpoint-server_internal_model.TurnoListResponse:
     properties:
       data:
         items:
-          $ref: '#/definitions/model.TurnoDetalhe'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.TurnoDetalhe'
         type: array
       total:
         type: integer
     type: object
-  model.TurnoPorPosto:
+  github_com_guardpoint_guardpoint-server_internal_model.TurnoPorPosto:
     properties:
       posto_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
         type: string
       posto_nome:
+        example: Portaria Principal
         type: string
       quantidade:
+        example: 3
         type: integer
     type: object
-  model.TurnoStatusResponse:
+  github_com_guardpoint_guardpoint-server_internal_model.TurnoStatusResponse:
     properties:
       checkins_hoje:
         type: integer
       proximo_deadline:
         type: string
       turno:
-        $ref: '#/definitions/model.Turno'
+        $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Turno'
       ultimo_checkin:
-        $ref: '#/definitions/model.Checkin'
+        $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Checkin'
     type: object
-  model.UpdateConfigEscalonamentoRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.UpdateConfigEscalonamentoRequest:
     properties:
       atraso_minutos:
+        example: 30
         maximum: 1440
         minimum: 0
         type: integer
       descricao:
+        example: Nivel 2
         type: string
       usuario_ids:
         items:
@@ -855,7 +951,7 @@ definitions:
     required:
     - usuario_ids
     type: object
-  model.UpdateConfigEscalonamentoUsuariosRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.UpdateConfigEscalonamentoUsuariosRequest:
     properties:
       usuario_ids:
         items:
@@ -865,7 +961,7 @@ definitions:
     required:
     - usuario_ids
     type: object
-  model.UpdateEmpresaRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.UpdateEmpresaRequest:
     properties:
       alerta_sonoro:
         type: boolean
@@ -875,7 +971,7 @@ definitions:
     required:
     - nome
     type: object
-  model.UpdateEscalaRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.UpdateEscalaRequest:
     properties:
       ativo:
         type: boolean
@@ -900,24 +996,28 @@ definitions:
       usuario_id:
         type: string
     type: object
-  model.UpdatePostoRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.UpdatePostoRequest:
     properties:
       ativo:
         type: boolean
       latitude:
+        example: -23.551
         type: number
       longitude:
+        example: -46.634
         type: number
       nome:
+        example: Portaria Norte
         maxLength: 255
         minLength: 2
         type: string
       raio_m:
+        example: 150
         maximum: 5000
         minimum: 10
         type: integer
     type: object
-  model.UpdateSenhaVigiaRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.UpdateSenhaVigiaRequest:
     properties:
       codigo:
         maxLength: 6
@@ -926,7 +1026,7 @@ definitions:
       nivel_escalonamento_id:
         type: string
     type: object
-  model.UpdateSubstituicaoRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.UpdateSubstituicaoRequest:
     properties:
       ativo:
         type: boolean
@@ -950,7 +1050,7 @@ definitions:
       usuario_id:
         type: string
     type: object
-  model.UpdateUsuarioRequest:
+  github_com_guardpoint_guardpoint-server_internal_model.UpdateUsuarioRequest:
     properties:
       ativo:
         type: boolean
@@ -972,7 +1072,7 @@ definitions:
         minLength: 6
         type: string
     type: object
-  model.User:
+  github_com_guardpoint_guardpoint-server_internal_model.User:
     properties:
       ativo:
         type: boolean
@@ -993,7 +1093,7 @@ definitions:
       updated_at:
         type: string
     type: object
-  model.UsuarioResponse:
+  github_com_guardpoint_guardpoint-server_internal_model.UsuarioResponse:
     properties:
       ativo:
         type: boolean
@@ -1020,18 +1120,27 @@ info:
 paths:
   /alertas:
     get:
+      description: Para supervisores, os alertas sao automaticamente filtrados pelos
+        postos aos quais estao vinculados (via posto_supervisores). Admins veem todos
+        os alertas. Os filtros de query sao adicionais — posto_id pode ser usado para
+        refinar a busca.
       parameters:
-      - description: Status do alerta
+      - description: Status do alerta (aberto, reconhecido, encerrado)
         in: query
         name: status
         type: string
-      - description: Tipo do alerta
+      - description: Tipo do alerta (atraso, no_show, senha_emergencia, senha_customizada,
+          sabotagem)
         in: query
         name: tipo
         type: string
       - description: ID do turno (uuid)
         in: query
         name: turno_id
+        type: string
+      - description: ID do posto (uuid)
+        in: query
+        name: posto_id
         type: string
       - description: Limite de itens (max 100)
         in: query
@@ -1045,11 +1154,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.AlertaListResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.AlertaListResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Lista alertas com filtros e paginacao (admin/supervisor)
       tags:
       - alertas
@@ -1065,15 +1174,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.StatusResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.StatusResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Encerra um alerta (admin/supervisor)
       tags:
       - alertas
@@ -1089,15 +1198,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.StatusResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.StatusResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Reconhece um alerta aberto (admin/supervisor)
       tags:
       - alertas
@@ -1107,11 +1216,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.AlertStatistics'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.AlertStatistics'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Estatisticas agregadas de alertas (admin/supervisor)
       tags:
       - alertas
@@ -1123,20 +1232,20 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.BiometricLoginRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.BiometricLoginRequest'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.LoginResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.LoginResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       security: []
       summary: Login via dispositivo biometrico registrado
       tags:
@@ -1149,51 +1258,59 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.BiometricRegisterRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.BiometricRegisterRequest'
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/model.BiometricRegisterResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.BiometricRegisterResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Registra um dispositivo biometrico para o usuario autenticado
       tags:
       - auth
   /auth/login:
     post:
+      description: Admin e supervisor autenticam com "email" + "senha". Vigia autentica
+        com "codigo_empresa" + "nome" + "senha" (nao usa email). Enviar exatamente
+        um dos dois pares de credenciais.
       parameters:
-      - description: Credenciais
+      - description: Credenciais (email+senha OU codigo_empresa+nome+senha)
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.LoginRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.LoginRequest'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.LoginResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.LoginResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       security: []
-      summary: Login por email e senha
+      summary: Login por email+senha (admin/supervisor) ou codigo da empresa+nome+senha
+        (vigia)
       tags:
       - auth
   /auth/logout:
@@ -1202,11 +1319,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.MessageResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.MessageResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Encerra a sessao do dispositivo atual
       tags:
       - auth
@@ -1218,50 +1335,57 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.RefreshRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.RefreshRequest'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.LoginResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.LoginResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       security: []
       summary: Renova o access token a partir do refresh token
       tags:
       - auth
   /auth/register:
     post:
+      description: '"email" e obrigatorio para role "admin"/"supervisor" e opcional
+        para "vigia". "nome" precisa ser unico dentro da empresa (pode repetir entre
+        empresas diferentes); "email", quando enviado, e unico globalmente.'
       parameters:
       - description: Dados do usuario
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.RegisterRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.RegisterRequest'
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/model.User'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.User'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "401":
           description: Unauthorized
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Cria um novo usuario (somente admin)
       tags:
       - auth
@@ -1274,21 +1398,21 @@ paths:
         required: true
         schema:
           items:
-            $ref: '#/definitions/model.CheckinRequest'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CheckinRequest'
           type: array
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.LoteCheckinResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.LoteCheckinResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Processa um lote de check-ins offline (ate 500 por requisicao)
       tags:
       - turnos
@@ -1299,15 +1423,15 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/model.ConfigEscalonamento'
+              $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ConfigEscalonamento'
             type: array
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      summary: Lista todas as configs de escalonamento da empresa (somente admin)
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+      summary: Lista as configuracoes de escalonamento da empresa (somente admin)
       tags:
-      - config
+      - escalonamento
     post:
       parameters:
       - description: Dados da configuracao
@@ -1315,27 +1439,31 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.CreateConfigEscalonamentoRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CreateConfigEscalonamentoRequest'
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/model.ConfigEscalonamento'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ConfigEscalonamento'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      summary: Cria uma nova config de escalonamento (somente admin)
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+      summary: Cria uma configuracao de escalonamento (somente admin)
       tags:
-      - config
+      - escalonamento
   /config/escalonamento/{id}:
     delete:
       parameters:
-      - description: ID da config (uuid)
+      - description: ID da configuracao (uuid)
         in: path
         name: id
         required: true
@@ -1344,25 +1472,25 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.StatusResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.StatusResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      summary: Exclui uma config de escalonamento (somente admin, apenas sistema=false)
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+      summary: Exclui uma configuracao de escalonamento (somente admin)
       tags:
-      - config
+      - escalonamento
     get:
       parameters:
-      - description: ID da config (uuid)
+      - description: ID da configuracao (uuid)
         in: path
         name: id
         required: true
@@ -1371,97 +1499,105 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.ConfigEscalonamento'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ConfigEscalonamento'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      summary: Retorna uma config de escalonamento por ID (somente admin)
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+      summary: Busca uma configuracao de escalonamento pelo ID (somente admin)
       tags:
-      - config
+      - escalonamento
     put:
       parameters:
-      - description: ID da config (uuid)
+      - description: ID da configuracao (uuid)
         in: path
         name: id
         required: true
         type: string
-      - description: Dados da configuracao
+      - description: Campos a atualizar
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.UpdateConfigEscalonamentoRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UpdateConfigEscalonamentoRequest'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.ConfigEscalonamento'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ConfigEscalonamento'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      summary: Atualiza uma config de escalonamento (somente admin, apenas sistema=false)
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+      summary: Atualiza uma configuracao de escalonamento (somente admin)
       tags:
-      - config
+      - escalonamento
   /config/escalonamento/{id}/usuarios:
     put:
       parameters:
-      - description: ID da config (uuid)
+      - description: ID da configuracao (uuid)
         in: path
         name: id
         required: true
         type: string
-      - description: Lista de usuarios
+      - description: Lista de usuario_ids destinatarios
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.UpdateConfigEscalonamentoUsuariosRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UpdateConfigEscalonamentoUsuariosRequest'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.ConfigEscalonamento'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ConfigEscalonamento'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
-      summary: Atualiza apenas os destinatarios de uma config de escalonamento (somente
-        admin)
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+      summary: Atualiza os destinatarios (usuarios) de uma configuracao de escalonamento
+        (somente admin)
       tags:
-      - config
+      - escalonamento
   /dashboard/summary:
     get:
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.DashboardSummary'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.DashboardSummary'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Resumo do dashboard da empresa
       tags:
       - dashboard
@@ -1471,15 +1607,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.Empresa'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Empresa'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Retorna os dados/configuracoes da empresa do usuario logado (somente
         admin)
       tags:
@@ -1491,20 +1627,20 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.UpdateEmpresaRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UpdateEmpresaRequest'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.Empresa'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Empresa'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Atualiza nome e preferencias da empresa do usuario logado (somente
         admin)
       tags:
@@ -1536,15 +1672,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.EscalaListResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.EscalaListResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Lista escalas com filtros e paginacao (admin/supervisor)
       tags:
       - escalas
@@ -1555,20 +1691,20 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.CreateEscalaRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CreateEscalaRequest'
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/model.Escala'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Escala'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Cria uma escala semanal (admin/supervisor)
       tags:
       - escalas
@@ -1584,19 +1720,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.MessageResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Desativa uma escala (admin/supervisor)
       tags:
       - escalas
@@ -1611,15 +1747,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.Escala'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Escala'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Busca uma escala pelo ID (admin/supervisor)
       tags:
       - escalas
@@ -1635,24 +1771,24 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.UpdateEscalaRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UpdateEscalaRequest'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.Escala'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Escala'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Atualiza uma escala (admin/supervisor)
       tags:
       - escalas
@@ -1664,20 +1800,20 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.CreateEscalaLoteRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CreateEscalaLoteRequest'
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/model.CreateEscalaLoteResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CreateEscalaLoteResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Cria escalas em lote (ate 7 dias) para um usuario/posto (admin/supervisor)
       tags:
       - escalas
@@ -1688,20 +1824,20 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.CreateEscalaLoteRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CreateEscalaLoteRequest'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.CreateEscalaLoteResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CreateEscalaLoteResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Substitui todas as escalas de um usuario+posto (admin/supervisor)
       tags:
       - escalas
@@ -1717,12 +1853,12 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/model.Posto'
+              $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Posto'
             type: array
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Lista os postos da empresa
       tags:
       - postos
@@ -1733,16 +1869,16 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.CreatePostoRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CreatePostoRequest'
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/model.Posto'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Posto'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Cria um posto
       tags:
       - postos
@@ -1758,15 +1894,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.MessageResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Desativa um posto
       tags:
       - postos
@@ -1781,15 +1917,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.Posto'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Posto'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Busca um posto pelo ID
       tags:
       - postos
@@ -1805,21 +1941,120 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.UpdatePostoRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UpdatePostoRequest'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.Posto'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Posto'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Atualiza um posto
+      tags:
+      - postos
+  /postos/{id}/supervisores:
+    get:
+      description: Retorna a lista de IDs dos supervisores que estao vinculados a
+        este posto e portanto recebem alertas do mesmo.
+      parameters:
+      - description: ID do posto (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.PostoSupervisorResponse'
+            type: array
+        "400":
+          description: posto_id invalido
+          schema:
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+        "500":
+          description: erro interno
+          schema:
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+      summary: Lista os supervisores vinculados a um posto (admin/supervisor)
+      tags:
+      - postos
+    post:
+      description: Um supervisor vinculado a um posto recebera alertas apenas desse
+        posto (alem de precisar estar na configuracao de escalonamento). Admins recebem
+        alertas de todos os postos independente de vinculo.
+      parameters:
+      - description: ID do posto (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: ID do supervisor a ser vinculado
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.PostoSupervisorRequest'
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.PostoSupervisorResponse'
+        "400":
+          description: posto_id ou supervisor_id invalido
+          schema:
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+        "404":
+          description: posto ou supervisor nao encontrado
+          schema:
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+        "500":
+          description: erro interno
+          schema:
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+      summary: Vincula um supervisor a um posto (somente admin)
+      tags:
+      - postos
+  /postos/{id}/supervisores/{supervisorId}:
+    delete:
+      description: Remove o supervisor do posto. Ele deixara de receber alertas especificos
+        deste posto (a menos que seja admin, que continua recebendo todos).
+      parameters:
+      - description: ID do posto (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: ID do supervisor (uuid)
+        in: path
+        name: supervisorId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.MessageResponse'
+        "400":
+          description: posto_id ou supervisor_id invalido
+          schema:
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+        "404":
+          description: vinculo nao encontrado
+          schema:
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+        "500":
+          description: erro interno
+          schema:
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+      summary: Remove o vinculo de um supervisor com um posto (somente admin)
       tags:
       - postos
   /substituicoes:
@@ -1853,7 +2088,7 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.SubstituicaoListResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.SubstituicaoListResponse'
       summary: Lista substituicoes com filtros e paginacao (admin/supervisor)
       tags:
       - substituicoes
@@ -1864,16 +2099,16 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.CreateSubstituicaoRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CreateSubstituicaoRequest'
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/model.Substituicao'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Substituicao'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Cria uma substituicao de vigia (admin/supervisor)
       tags:
       - substituicoes
@@ -1889,11 +2124,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.MessageResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.MessageResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Desativa uma substituicao (admin/supervisor)
       tags:
       - substituicoes
@@ -1908,11 +2143,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.Substituicao'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Substituicao'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Busca uma substituicao pelo ID (admin/supervisor)
       tags:
       - substituicoes
@@ -1928,16 +2163,16 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.UpdateSubstituicaoRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UpdateSubstituicaoRequest'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.Substituicao'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Substituicao'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Atualiza uma substituicao (admin/supervisor)
       tags:
       - substituicoes
@@ -1988,11 +2223,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.TurnoListResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.TurnoListResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Lista turnos com filtros unificados, ordenacao e paginacao
       tags:
       - turnos
@@ -2008,11 +2243,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.TurnoDetalhe'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.TurnoDetalhe'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Busca o detalhe de um turno pelo ID
       tags:
       - turnos
@@ -2028,15 +2263,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.RevogarResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.RevogarResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Revoga a sessao do dispositivo de um turno, gerando PIN de resgate
       tags:
       - turnos
@@ -2048,28 +2283,28 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.CheckinRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CheckinRequest'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.CheckinResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CheckinResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Registra um check-in de turno
       tags:
       - turnos
@@ -2081,28 +2316,28 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.FinalizarTurnoRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.FinalizarTurnoRequest'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.Turno'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Turno'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Finaliza um turno em andamento
       tags:
       - turnos
@@ -2114,28 +2349,28 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.IniciarTurnoRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.IniciarTurnoRequest'
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/model.Turno'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Turno'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Inicia um turno no posto informado
       tags:
       - turnos
@@ -2147,24 +2382,24 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.ReassociarRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ReassociarRequest'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.Turno'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.Turno'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Reassocia um turno revogado a um novo dispositivo via PIN
       tags:
       - turnos
@@ -2176,28 +2411,28 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.SabotagemRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.SabotagemRequest'
       responses:
         "202":
           description: Accepted
           schema:
-            $ref: '#/definitions/model.SabotagemResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.SabotagemResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "403":
           description: Forbidden
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Registra uma sabotagem durante um turno
       tags:
       - turnos
@@ -2207,11 +2442,11 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.TurnoStatusResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.TurnoStatusResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Status do turno ativo do usuario autenticado
       tags:
       - turnos
@@ -2222,36 +2457,43 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/model.UsuarioResponse'
+              $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UsuarioResponse'
             type: array
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Lista os usuarios da empresa (somente admin)
       tags:
       - usuarios
     post:
+      description: '"email" e obrigatorio para cargo "admin"/"supervisor" e opcional
+        para "vigia" (vigia autentica por codigo da empresa + nome + senha). "nome"
+        precisa ser unico dentro da empresa.'
       parameters:
       - description: Dados do usuario
         in: body
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.CreateUsuarioRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CreateUsuarioRequest'
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/model.UsuarioResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UsuarioResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Cria um usuario (somente admin)
       tags:
       - usuarios
@@ -2267,15 +2509,15 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.MessageResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Desativa um usuario (somente admin)
       tags:
       - usuarios
@@ -2290,19 +2532,21 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.UsuarioResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UsuarioResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Busca um usuario pelo ID (somente admin)
       tags:
       - usuarios
     put:
+      description: Se o cargo final (apos aplicar os campos enviados) nao for "vigia",
+        o usuario precisa ter email cadastrado.
       parameters:
       - description: ID do usuario (uuid)
         in: path
@@ -2314,20 +2558,28 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.UpdateUsuarioRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UpdateUsuarioRequest'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.UsuarioResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UsuarioResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+        "409":
+          description: Conflict
+          schema:
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "500":
           description: Internal Server Error
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Atualiza um usuario (somente admin)
       tags:
       - usuarios
@@ -2344,16 +2596,16 @@ paths:
           description: OK
           schema:
             items:
-              $ref: '#/definitions/model.SenhaVigia'
+              $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.SenhaVigia'
             type: array
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Lista as senhas cadastradas para um vigia
       tags:
       - usuarios
@@ -2369,20 +2621,20 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.CreateSenhaVigiaRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.CreateSenhaVigiaRequest'
       responses:
         "201":
           description: Created
           schema:
-            $ref: '#/definitions/model.SenhaVigia'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.SenhaVigia'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Cria uma senha para um vigia (somente admin)
       tags:
       - usuarios
@@ -2403,19 +2655,19 @@ paths:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.MessageResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.MessageResponse'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "409":
           description: Conflict
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Remove uma senha customizada de um vigia (somente admin)
       tags:
       - usuarios
@@ -2436,23 +2688,84 @@ paths:
         name: request
         required: true
         schema:
-          $ref: '#/definitions/model.UpdateSenhaVigiaRequest'
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.UpdateSenhaVigiaRequest'
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.SenhaVigia'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.SenhaVigia'
         "400":
           description: Bad Request
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
         "404":
           description: Not Found
           schema:
-            $ref: '#/definitions/model.ErrorResponse'
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
       summary: Atualiza uma senha de um vigia (somente admin)
       tags:
       - usuarios
+  /usuarios/{id}/senhas/batch:
+    post:
+      parameters:
+      - description: ID do usuario/vigia (uuid)
+        in: path
+        name: id
+        required: true
+        type: string
+      - description: Array de senhas
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.BatchCreateSenhaVigiaRequest'
+      responses:
+        "201":
+          description: Created
+          schema:
+            items:
+              $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.SenhaVigia'
+            type: array
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+        "404":
+          description: Not Found
+          schema:
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+      summary: Cria multiplas senhas para um vigia em lote (transacional — tudo ou
+        nada)
+      tags:
+      - usuarios
+  /usuarios/{supervisorId}/postos:
+    get:
+      description: Retorna a lista de postos (com nome) aos quais o supervisor esta
+        vinculado. Util para a UI mostrar/ocultar alertas por posto.
+      parameters:
+      - description: ID do supervisor (uuid)
+        in: path
+        name: supervisorId
+        required: true
+        type: string
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.SupervisorPostoResponse'
+            type: array
+        "400":
+          description: supervisor_id invalido
+          schema:
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+        "500":
+          description: erro interno
+          schema:
+            $ref: '#/definitions/github_com_guardpoint_guardpoint-server_internal_model.ErrorResponse'
+      summary: Lista os postos vinculados a um supervisor (admin/supervisor)
+      tags:
+      - postos
 produces:
 - application/json
 security:

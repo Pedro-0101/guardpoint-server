@@ -52,7 +52,7 @@ func (s *AlertaService) AlertChannel() <-chan *model.PendingAlert {
 	return s.alertChannel
 }
 
-func (s *AlertaService) CreateAlerta(ctx context.Context, empresaID, turnoID uuid.UUID, tipo string, mensagem string) (*model.Alerta, error) {
+func (s *AlertaService) CreateAlerta(ctx context.Context, empresaID, turnoID, postoID uuid.UUID, tipo string, mensagem string) (*model.Alerta, error) {
 	count, err := s.alertaRepo.CountByTurnoETipo(ctx, turnoID, tipo)
 	if err != nil {
 		return nil, fmt.Errorf("verificar duplicidade: %w", err)
@@ -61,34 +61,43 @@ func (s *AlertaService) CreateAlerta(ctx context.Context, empresaID, turnoID uui
 		return nil, nil
 	}
 
-	usuarioIDs, err := s.escalonamentoSvc.ResolveDestinatarios(ctx, empresaID)
+	usuarioIDs, err := s.resolveComPosto(ctx, empresaID, postoID)
 	if err != nil {
 		return nil, fmt.Errorf("resolver destinatarios: %w", err)
 	}
 
-	return s.criarAlerta(ctx, empresaID, turnoID, tipo, mensagem, usuarioIDs)
+	return s.criarAlerta(ctx, empresaID, turnoID, postoID, tipo, mensagem, usuarioIDs)
 }
 
-func (s *AlertaService) CreateAlertaImediato(ctx context.Context, empresaID, turnoID uuid.UUID, tipo string, mensagem string, nivelEscalonamentoID *uuid.UUID) (*model.Alerta, error) {
-	usuarioIDs, err := s.escalonamentoSvc.ResolveDestinatariosPorNivel(ctx, empresaID, nivelEscalonamentoID)
+func (s *AlertaService) CreateAlertaImediato(ctx context.Context, empresaID, turnoID, postoID uuid.UUID, tipo string, mensagem string, nivelEscalonamentoID *uuid.UUID) (*model.Alerta, error) {
+	usuarioIDs, err := s.escalonamentoSvc.ResolveDestinatariosPorNivelEPosto(ctx, empresaID, nivelEscalonamentoID, postoID)
 	if err != nil {
 		return nil, fmt.Errorf("resolver destinatarios do nivel: %w", err)
 	}
 
-	return s.criarAlerta(ctx, empresaID, turnoID, tipo, mensagem, usuarioIDs)
+	return s.criarAlerta(ctx, empresaID, turnoID, postoID, tipo, mensagem, usuarioIDs)
 }
 
-func (s *AlertaService) criarAlerta(ctx context.Context, empresaID, turnoID uuid.UUID, tipo string, mensagem string, usuarioIDs []uuid.UUID) (*model.Alerta, error) {
+func (s *AlertaService) resolveComPosto(ctx context.Context, empresaID, postoID uuid.UUID) ([]uuid.UUID, error) {
+	if postoID == uuid.Nil {
+		return s.escalonamentoSvc.ResolveDestinatarios(ctx, empresaID)
+	}
+	return s.escalonamentoSvc.ResolveDestinatariosPorPosto(ctx, empresaID, postoID)
+}
+
+func (s *AlertaService) criarAlerta(ctx context.Context, empresaID, turnoID, postoID uuid.UUID, tipo string, mensagem string, usuarioIDs []uuid.UUID) (*model.Alerta, error) {
 	msg := &mensagem
 	if mensagem == "" {
 		msg = nil
 	}
 
 	turnoRef, turnoStr := nullableTurno(turnoID)
+	postoRef, postoStr := nullableUUID(postoID)
 
 	alerta := &model.Alerta{
 		EmpresaID: empresaID,
 		TurnoID:   turnoRef,
+		PostoID:   postoRef,
 		Tipo:      tipo,
 		Status:    "aberto",
 		Mensagem:  msg,
@@ -98,11 +107,11 @@ func (s *AlertaService) criarAlerta(ctx context.Context, empresaID, turnoID uuid
 		return nil, fmt.Errorf("criar alerta: %w", err)
 	}
 
-	s.hub.Broadcast(empresaID.String(), ws.NewAlertEvent(alerta.ID.String(), tipo, turnoStr))
+	s.hub.Broadcast(empresaID.String(), ws.NewAlertEvent(alerta.ID.String(), tipo, turnoStr, postoStr))
 
 	if len(usuarioIDs) > 0 {
 		select {
-		case s.alertChannel <- &model.PendingAlert{Alerta: alerta, UsuarioIDs: usuarioIDs}:
+		case s.alertChannel <- &model.PendingAlert{Alerta: alerta, UsuarioIDs: usuarioIDs, PostoID: postoRef}:
 		default:
 		}
 	}
@@ -220,4 +229,12 @@ func nullableTurno(turnoID uuid.UUID) (*uuid.UUID, string) {
 	}
 	id := turnoID
 	return &id, id.String()
+}
+
+func nullableUUID(id uuid.UUID) (*uuid.UUID, string) {
+	if id == uuid.Nil {
+		return nil, ""
+	}
+	uid := id
+	return &uid, uid.String()
 }

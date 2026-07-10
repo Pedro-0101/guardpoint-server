@@ -27,10 +27,12 @@ func NewAlertaHandler(alertaService *service.AlertaService) *AlertaHandler {
 
 // List godoc
 // @Summary      Lista alertas com filtros e paginacao (admin/supervisor)
+// @Description  Para supervisores, os alertas sao automaticamente filtrados pelos postos aos quais estao vinculados (via posto_supervisores). Admins veem todos os alertas. Os filtros de query sao adicionais — posto_id pode ser usado para refinar a busca.
 // @Tags         alertas
-// @Param        status query string false "Status do alerta"
-// @Param        tipo query string false "Tipo do alerta"
+// @Param        status query string false "Status do alerta (aberto, reconhecido, encerrado)"
+// @Param        tipo query string false "Tipo do alerta (atraso, no_show, senha_emergencia, senha_customizada, sabotagem)"
 // @Param        turno_id query string false "ID do turno (uuid)"
+// @Param        posto_id query string false "ID do posto (uuid)"
 // @Param        limit query int false "Limite de itens (max 100)"
 // @Param        offset query int false "Offset da paginacao"
 // @Success      200 {object} model.AlertaListResponse
@@ -45,6 +47,7 @@ func (h *AlertaHandler) List(w http.ResponseWriter, r *http.Request) {
 		Status:  r.URL.Query().Get("status"),
 		Tipo:    r.URL.Query().Get("tipo"),
 		TurnoID: r.URL.Query().Get("turno_id"),
+		PostoID: r.URL.Query().Get("posto_id"),
 		Limit:   limit,
 		Offset:  offset,
 	}

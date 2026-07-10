@@ -90,11 +90,13 @@ func (h *UsuarioHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 
 // Create godoc
 // @Summary      Cria um usuario (somente admin)
+// @Description  "email" e obrigatorio para cargo "admin"/"supervisor" e opcional para "vigia" (vigia autentica por codigo da empresa + nome + senha). "nome" precisa ser unico dentro da empresa.
 // @Tags         usuarios
 // @Param        request body model.CreateUsuarioRequest true "Dados do usuario"
 // @Success      201 {object} model.UsuarioResponse
 // @Failure      400 {object} model.ErrorResponse
 // @Failure      409 {object} model.ErrorResponse
+// @Failure      422 {object} model.ErrorResponse
 // @Router       /usuarios [post]
 func (h *UsuarioHandler) Create(w http.ResponseWriter, r *http.Request) {
 	empresaID := middleware.GetEmpresaID(r.Context())
@@ -122,6 +124,10 @@ func (h *UsuarioHandler) Create(w http.ResponseWriter, r *http.Request) {
 			writeError(w, http.StatusConflict, "email ja cadastrado")
 			return
 		}
+		if errors.Is(err, service.ErrNomeAlreadyExists) {
+			writeError(w, http.StatusConflict, "nome ja cadastrado")
+			return
+		}
 		slog.Error("create usuario failed", "error", err)
 		writeError(w, http.StatusInternalServerError, "erro ao criar usuario")
 		return
@@ -132,11 +138,14 @@ func (h *UsuarioHandler) Create(w http.ResponseWriter, r *http.Request) {
 
 // Update godoc
 // @Summary      Atualiza um usuario (somente admin)
+// @Description  Se o cargo final (apos aplicar os campos enviados) nao for "vigia", o usuario precisa ter email cadastrado.
 // @Tags         usuarios
 // @Param        id path string true "ID do usuario (uuid)"
 // @Param        request body model.UpdateUsuarioRequest true "Campos a atualizar"
 // @Success      200 {object} model.UsuarioResponse
 // @Failure      400 {object} model.ErrorResponse
+// @Failure      409 {object} model.ErrorResponse
+// @Failure      422 {object} model.ErrorResponse
 // @Failure      500 {object} model.ErrorResponse
 // @Router       /usuarios/{id} [put]
 func (h *UsuarioHandler) Update(w http.ResponseWriter, r *http.Request) {
@@ -167,6 +176,18 @@ func (h *UsuarioHandler) Update(w http.ResponseWriter, r *http.Request) {
 
 	usuario, err := h.usuarioService.Update(r.Context(), parsedEmpresaID, parsedID, req)
 	if err != nil {
+		if errors.Is(err, service.ErrEmailAlreadyExists) {
+			writeError(w, http.StatusConflict, "email ja cadastrado")
+			return
+		}
+		if errors.Is(err, service.ErrNomeAlreadyExists) {
+			writeError(w, http.StatusConflict, "nome ja cadastrado")
+			return
+		}
+		if errors.Is(err, service.ErrEmailRequired) {
+			writeError(w, http.StatusUnprocessableEntity, "email obrigatorio para este cargo")
+			return
+		}
 		slog.Error("update usuario failed", "error", err)
 		writeError(w, http.StatusInternalServerError, "erro ao atualizar usuario")
 		return

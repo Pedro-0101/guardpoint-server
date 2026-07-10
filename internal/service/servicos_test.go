@@ -43,7 +43,7 @@ func TestRealUsuarioService_Create_Success(t *testing.T) {
 func TestRealUsuarioService_Create_DuplicateEmail(t *testing.T) {
 	ctx := context.Background()
 	empresaID := uuid.New()
-	existingUser := &model.User{ID: uuid.New(), Email: "joao@empresa.com"}
+	existingUser := &model.User{ID: uuid.New(), Email: strPtr("joao@empresa.com")}
 
 	svc := NewUsuarioService(&fakeUserRepo{
 		findByEmailFn: func(ctx context.Context, email string) (*model.User, error) {
@@ -58,6 +58,119 @@ func TestRealUsuarioService_Create_DuplicateEmail(t *testing.T) {
 	}
 }
 
+func TestRealUsuarioService_Create_Vigia_SemEmail_Success(t *testing.T) {
+	ctx := context.Background()
+	empresaID := uuid.New()
+
+	svc := NewUsuarioService(&fakeUserRepo{
+		findByEmpresaNomeFn: func(ctx context.Context, eID uuid.UUID, nome string) (*model.User, error) {
+			return nil, fmt.Errorf("usuario nao encontrado")
+		},
+		createFn: func(ctx context.Context, u *model.User) error {
+			u.ID = uuid.New()
+			return nil
+		},
+	})
+
+	req := model.CreateUsuarioRequest{Nome: "Vigia Sem Email", Senha: "123456", Cargo: "vigia"}
+	resp, err := svc.Create(ctx, empresaID, req)
+	if err != nil {
+		t.Fatalf("Create() erro: %v", err)
+	}
+	if resp.Email != nil {
+		t.Errorf("Email deveria ser nil, veio %q", *resp.Email)
+	}
+}
+
+func TestRealUsuarioService_Create_DuplicateNome(t *testing.T) {
+	ctx := context.Background()
+	empresaID := uuid.New()
+	existingUser := &model.User{ID: uuid.New(), Nome: "Joao Silva"}
+
+	svc := NewUsuarioService(&fakeUserRepo{
+		findByEmpresaNomeFn: func(ctx context.Context, eID uuid.UUID, nome string) (*model.User, error) {
+			return existingUser, nil
+		},
+	})
+
+	req := model.CreateUsuarioRequest{Nome: "Joao Silva", Senha: "123456", Cargo: "vigia"}
+	_, err := svc.Create(ctx, empresaID, req)
+	if !errors.Is(err, ErrNomeAlreadyExists) {
+		t.Errorf("erro = %v, esperado ErrNomeAlreadyExists", err)
+	}
+}
+
+func TestRealUsuarioService_Update_PromoverVigiaParaAdmin_SemEmail_Falha(t *testing.T) {
+	ctx := context.Background()
+	empresaID := uuid.New()
+	id := uuid.New()
+
+	svc := NewUsuarioService(&fakeUserRepo{
+		findByIDEmpresaFn: func(ctx context.Context, eID, uID uuid.UUID) (*model.User, error) {
+			return &model.User{ID: id, EmpresaID: eID, Nome: "Vigia Promovido", Email: nil, Role: "vigia", Ativo: true}, nil
+		},
+	})
+
+	cargo := "admin"
+	_, err := svc.Update(ctx, empresaID, id, model.UpdateUsuarioRequest{Cargo: &cargo})
+	if !errors.Is(err, ErrEmailRequired) {
+		t.Errorf("erro = %v, esperado ErrEmailRequired", err)
+	}
+}
+
+func TestRealUsuarioService_Update_PromoverVigiaParaAdmin_ComEmail_Success(t *testing.T) {
+	ctx := context.Background()
+	empresaID := uuid.New()
+	id := uuid.New()
+
+	svc := NewUsuarioService(&fakeUserRepo{
+		findByIDEmpresaFn: func(ctx context.Context, eID, uID uuid.UUID) (*model.User, error) {
+			return &model.User{ID: id, EmpresaID: eID, Nome: "Vigia Promovido", Email: nil, Role: "vigia", Ativo: true}, nil
+		},
+		findByEmailFn: func(ctx context.Context, email string) (*model.User, error) {
+			return nil, fmt.Errorf("usuario nao encontrado")
+		},
+		findByEmpresaNomeFn: func(ctx context.Context, eID uuid.UUID, nome string) (*model.User, error) {
+			return nil, fmt.Errorf("usuario nao encontrado")
+		},
+		updateFn: func(ctx context.Context, eID, uID uuid.UUID, u *model.User) error {
+			return nil
+		},
+	})
+
+	cargo := "admin"
+	email := "promovido@x.com"
+	resp, err := svc.Update(ctx, empresaID, id, model.UpdateUsuarioRequest{Cargo: &cargo, Email: &email})
+	if err != nil {
+		t.Fatalf("Update() erro: %v", err)
+	}
+	if resp.Cargo != "admin" {
+		t.Errorf("Cargo = %q, esperado admin", resp.Cargo)
+	}
+}
+
+func TestRealUsuarioService_Update_DuplicateNome(t *testing.T) {
+	ctx := context.Background()
+	empresaID := uuid.New()
+	id := uuid.New()
+	outroID := uuid.New()
+
+	svc := NewUsuarioService(&fakeUserRepo{
+		findByIDEmpresaFn: func(ctx context.Context, eID, uID uuid.UUID) (*model.User, error) {
+			return &model.User{ID: id, EmpresaID: eID, Nome: "Nome Antigo", Email: strPtr("x@x.com"), Role: "admin", Ativo: true}, nil
+		},
+		findByEmpresaNomeFn: func(ctx context.Context, eID uuid.UUID, nome string) (*model.User, error) {
+			return &model.User{ID: outroID, Nome: nome}, nil
+		},
+	})
+
+	novoNome := "Nome Conflitante"
+	_, err := svc.Update(ctx, empresaID, id, model.UpdateUsuarioRequest{Nome: &novoNome})
+	if !errors.Is(err, ErrNomeAlreadyExists) {
+		t.Errorf("erro = %v, esperado ErrNomeAlreadyExists", err)
+	}
+}
+
 func TestRealUsuarioService_List(t *testing.T) {
 	ctx := context.Background()
 	empresaID := uuid.New()
@@ -66,8 +179,8 @@ func TestRealUsuarioService_List(t *testing.T) {
 	svc := NewUsuarioService(&fakeUserRepo{
 		listByEmpresaFn: func(ctx context.Context, eID uuid.UUID) ([]model.User, error) {
 			return []model.User{
-				{ID: id1, EmpresaID: empresaID, Nome: "Alfa", Email: "alfa@x.com", Role: "admin", Ativo: true},
-				{ID: id2, EmpresaID: empresaID, Nome: "Beta", Email: "beta@x.com", Role: "vigia", Ativo: true},
+				{ID: id1, EmpresaID: empresaID, Nome: "Alfa", Email: strPtr("alfa@x.com"), Role: "admin", Ativo: true},
+				{ID: id2, EmpresaID: empresaID, Nome: "Beta", Email: strPtr("beta@x.com"), Role: "vigia", Ativo: true},
 			}, nil
 		},
 	})
@@ -363,11 +476,12 @@ func TestRealEscalaService_Update(t *testing.T) {
 // =============================================================================
 
 type fakeUserRepo struct {
-	listByEmpresaFn   func(ctx context.Context, empresaID uuid.UUID) ([]model.User, error)
-	findByIDEmpresaFn func(ctx context.Context, empresaID, id uuid.UUID) (*model.User, error)
-	findByEmailFn     func(ctx context.Context, email string) (*model.User, error)
-	createFn          func(ctx context.Context, u *model.User) error
-	updateFn          func(ctx context.Context, empresaID, id uuid.UUID, u *model.User) error
+	listByEmpresaFn     func(ctx context.Context, empresaID uuid.UUID) ([]model.User, error)
+	findByIDEmpresaFn   func(ctx context.Context, empresaID, id uuid.UUID) (*model.User, error)
+	findByEmailFn       func(ctx context.Context, email string) (*model.User, error)
+	findByEmpresaNomeFn func(ctx context.Context, empresaID uuid.UUID, nome string) (*model.User, error)
+	createFn            func(ctx context.Context, u *model.User) error
+	updateFn            func(ctx context.Context, empresaID, id uuid.UUID, u *model.User) error
 }
 
 func (m *fakeUserRepo) ListByEmpresa(ctx context.Context, empresaID uuid.UUID) ([]model.User, error) {
@@ -387,6 +501,13 @@ func (m *fakeUserRepo) FindByIDEmpresa(ctx context.Context, empresaID, id uuid.U
 func (m *fakeUserRepo) FindByEmail(ctx context.Context, email string) (*model.User, error) {
 	if m.findByEmailFn != nil {
 		return m.findByEmailFn(ctx, email)
+	}
+	return nil, fmt.Errorf("usuario nao encontrado")
+}
+
+func (m *fakeUserRepo) FindByEmpresaNome(ctx context.Context, empresaID uuid.UUID, nome string) (*model.User, error) {
+	if m.findByEmpresaNomeFn != nil {
+		return m.findByEmpresaNomeFn(ctx, empresaID, nome)
 	}
 	return nil, fmt.Errorf("usuario nao encontrado")
 }
@@ -438,6 +559,22 @@ func (m *fakePostoRepo) Update(ctx context.Context, empresaID, id uuid.UUID, p *
 		return m.updateFn(ctx, empresaID, id, p)
 	}
 	return nil
+}
+
+func (m *fakePostoRepo) AddSupervisor(ctx context.Context, postoID, supervisorID uuid.UUID) error {
+	return nil
+}
+
+func (m *fakePostoRepo) RemoveSupervisor(ctx context.Context, postoID, supervisorID uuid.UUID) error {
+	return nil
+}
+
+func (m *fakePostoRepo) ListSupervisoresByPosto(ctx context.Context, postoID uuid.UUID) ([]uuid.UUID, error) {
+	return nil, nil
+}
+
+func (m *fakePostoRepo) ListPostosBySupervisor(ctx context.Context, supervisorID uuid.UUID) ([]model.SupervisorPostoResponse, error) {
+	return nil, nil
 }
 
 type fakeEscalaRepo struct {

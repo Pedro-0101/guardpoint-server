@@ -26,6 +26,12 @@ func NewEscalonamentoHandler(svc *service.EscalonamentoService) *EscalonamentoHa
 	}
 }
 
+// List godoc
+// @Summary      Lista as configuracoes de escalonamento da empresa (somente admin)
+// @Tags         escalonamento
+// @Success      200 {array} model.ConfigEscalonamento
+// @Failure      500 {object} model.ErrorResponse
+// @Router       /config/escalonamento [get]
 func (h *EscalonamentoHandler) List(w http.ResponseWriter, r *http.Request) {
 	empresaID := middleware.GetEmpresaID(r.Context())
 
@@ -39,6 +45,15 @@ func (h *EscalonamentoHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, configs)
 }
 
+// Create godoc
+// @Summary      Cria uma configuracao de escalonamento (somente admin)
+// @Tags         escalonamento
+// @Param        request body model.CreateConfigEscalonamentoRequest true "Dados da configuracao"
+// @Success      201 {object} model.ConfigEscalonamento
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      422 {object} model.ErrorResponse
+// @Failure      500 {object} model.ErrorResponse
+// @Router       /config/escalonamento [post]
 func (h *EscalonamentoHandler) Create(w http.ResponseWriter, r *http.Request) {
 	empresaID := middleware.GetEmpresaID(r.Context())
 
@@ -71,6 +86,14 @@ func (h *EscalonamentoHandler) Create(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusCreated, config)
 }
 
+// GetByID godoc
+// @Summary      Busca uma configuracao de escalonamento pelo ID (somente admin)
+// @Tags         escalonamento
+// @Param        id path string true "ID da configuracao (uuid)"
+// @Success      200 {object} model.ConfigEscalonamento
+// @Failure      404 {object} model.ErrorResponse
+// @Failure      500 {object} model.ErrorResponse
+// @Router       /config/escalonamento/{id} [get]
 func (h *EscalonamentoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	empresaID := middleware.GetEmpresaID(r.Context())
 	configID := chi.URLParam(r, "id")
@@ -89,6 +112,17 @@ func (h *EscalonamentoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, config)
 }
 
+// Update godoc
+// @Summary      Atualiza uma configuracao de escalonamento (somente admin)
+// @Tags         escalonamento
+// @Param        id path string true "ID da configuracao (uuid)"
+// @Param        request body model.UpdateConfigEscalonamentoRequest true "Campos a atualizar"
+// @Success      200 {object} model.ConfigEscalonamento
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      404 {object} model.ErrorResponse
+// @Failure      422 {object} model.ErrorResponse
+// @Failure      500 {object} model.ErrorResponse
+// @Router       /config/escalonamento/{id} [put]
 func (h *EscalonamentoHandler) Update(w http.ResponseWriter, r *http.Request) {
 	empresaID := middleware.GetEmpresaID(r.Context())
 	configID := chi.URLParam(r, "id")
@@ -130,6 +164,17 @@ func (h *EscalonamentoHandler) Update(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, config)
 }
 
+// UpdateUsuarios godoc
+// @Summary      Atualiza os destinatarios (usuarios) de uma configuracao de escalonamento (somente admin)
+// @Tags         escalonamento
+// @Param        id path string true "ID da configuracao (uuid)"
+// @Param        request body model.UpdateConfigEscalonamentoUsuariosRequest true "Lista de usuario_ids destinatarios"
+// @Success      200 {object} model.ConfigEscalonamento
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      404 {object} model.ErrorResponse
+// @Failure      422 {object} model.ErrorResponse
+// @Failure      500 {object} model.ErrorResponse
+// @Router       /config/escalonamento/{id}/usuarios [put]
 func (h *EscalonamentoHandler) UpdateUsuarios(w http.ResponseWriter, r *http.Request) {
 	empresaID := middleware.GetEmpresaID(r.Context())
 	configID := chi.URLParam(r, "id")
@@ -167,6 +212,15 @@ func (h *EscalonamentoHandler) UpdateUsuarios(w http.ResponseWriter, r *http.Req
 	writeJSON(w, http.StatusOK, config)
 }
 
+// Delete godoc
+// @Summary      Exclui uma configuracao de escalonamento (somente admin)
+// @Tags         escalonamento
+// @Param        id path string true "ID da configuracao (uuid)"
+// @Success      200 {object} model.StatusResponse
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      404 {object} model.ErrorResponse
+// @Failure      500 {object} model.ErrorResponse
+// @Router       /config/escalonamento/{id} [delete]
 func (h *EscalonamentoHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	empresaID := middleware.GetEmpresaID(r.Context())
 	configID := chi.URLParam(r, "id")

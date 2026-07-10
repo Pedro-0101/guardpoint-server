@@ -1,0 +1,2 @@
+ALTER TABLE empresas DROP CONSTRAINT IF EXISTS empresas_codigo_key;
+ALTER TABLE empresas DROP COLUMN IF EXISTS codigo;

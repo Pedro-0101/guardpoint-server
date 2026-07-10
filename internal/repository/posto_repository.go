@@ -94,3 +94,63 @@ func (r *PostoRepository) Update(ctx context.Context, empresaID, id uuid.UUID, p
 	).Scan(&p.ID, &p.EmpresaID, &p.Nome, &p.Latitude, &p.Longitude,
 		&p.RaioM, &p.Ativo, &p.CreatedAt)
 }
+
+func (r *PostoRepository) AddSupervisor(ctx context.Context, postoID, supervisorID uuid.UUID) error {
+	query := `
+		INSERT INTO posto_supervisores (posto_id, supervisor_id)
+		VALUES ($1, $2)
+		ON CONFLICT DO NOTHING
+	`
+	_, err := r.db.Exec(ctx, query, postoID, supervisorID)
+	return err
+}
+
+func (r *PostoRepository) RemoveSupervisor(ctx context.Context, postoID, supervisorID uuid.UUID) error {
+	query := `DELETE FROM posto_supervisores WHERE posto_id = $1 AND supervisor_id = $2`
+	_, err := r.db.Exec(ctx, query, postoID, supervisorID)
+	return err
+}
+
+func (r *PostoRepository) ListSupervisoresByPosto(ctx context.Context, postoID uuid.UUID) ([]uuid.UUID, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT supervisor_id FROM posto_supervisores WHERE posto_id = $1
+	`, postoID)
+	if err != nil {
+		return nil, fmt.Errorf("listar supervisores do posto: %w", err)
+	}
+	defer rows.Close()
+
+	var ids []uuid.UUID
+	for rows.Next() {
+		var id uuid.UUID
+		if err := rows.Scan(&id); err != nil {
+			return nil, fmt.Errorf("scan supervisor_id: %w", err)
+		}
+		ids = append(ids, id)
+	}
+	return ids, rows.Err()
+}
+
+func (r *PostoRepository) ListPostosBySupervisor(ctx context.Context, supervisorID uuid.UUID) ([]model.SupervisorPostoResponse, error) {
+	rows, err := r.db.Query(ctx, `
+		SELECT ps.posto_id, p.nome
+		FROM posto_supervisores ps
+		JOIN postos p ON p.id = ps.posto_id
+		WHERE ps.supervisor_id = $1
+		ORDER BY p.nome
+	`, supervisorID)
+	if err != nil {
+		return nil, fmt.Errorf("listar postos do supervisor: %w", err)
+	}
+	defer rows.Close()
+
+	var result []model.SupervisorPostoResponse
+	for rows.Next() {
+		var r model.SupervisorPostoResponse
+		if err := rows.Scan(&r.PostoID, &r.PostoNome); err != nil {
+			return nil, fmt.Errorf("scan posto supervisor: %w", err)
+		}
+		result = append(result, r)
+	}
+	return result, rows.Err()
+}

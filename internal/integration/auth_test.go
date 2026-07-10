@@ -63,6 +63,64 @@ func TestAuthFluxos(t *testing.T) {
 			t.Errorf("status = %d, esperado 409", status)
 		}
 	})
+
+	t.Run("register admin sem email retorna 422", func(t *testing.T) {
+		admin := e.login("admin@a.com", "senha123")
+		status, _ := e.request(http.MethodPost, "/api/v1/auth/register", admin.AccessToken, map[string]string{
+			"nome": "Admin Sem Email", "senha": "senha123", "role": "admin",
+		})
+		if status != http.StatusUnprocessableEntity {
+			t.Errorf("status = %d, esperado 422", status)
+		}
+	})
+
+	t.Run("register com nome duplicado retorna 409", func(t *testing.T) {
+		admin := e.login("admin@a.com", "senha123")
+		status, _ := e.request(http.MethodPost, "/api/v1/auth/register", admin.AccessToken, map[string]string{
+			"nome": "Admin", "senha": "senha123", "role": "vigia",
+		})
+		if status != http.StatusConflict {
+			t.Errorf("status = %d, esperado 409", status)
+		}
+	})
+
+	t.Run("vigia sem email loga por codigo da empresa + nome", func(t *testing.T) {
+		e.criarUsuario(empresa.ID, "Vigia Sem Email", "", "senha123", "vigia", true)
+		resp := e.loginVigiaPorNome(empresa.Codigo, "Vigia Sem Email", "senha123")
+		if resp.AccessToken == "" {
+			t.Error("login por nome nao retornou access_token")
+		}
+		if resp.User.Email != nil {
+			t.Errorf("Email deveria ser nil, veio %q", *resp.User.Email)
+		}
+	})
+
+	t.Run("mesmo nome em empresas diferentes nao conflita", func(t *testing.T) {
+		empresaB := e.criarEmpresa("Empresa B Nomes", "33333333000191")
+		e.criarUsuario(empresaB.ID, "Vigia Sem Email", "", "senha123", "vigia", true)
+		resp := e.loginVigiaPorNome(empresaB.Codigo, "Vigia Sem Email", "senha123")
+		if resp.AccessToken == "" {
+			t.Error("login por nome nao retornou access_token")
+		}
+	})
+
+	t.Run("admin nao consegue logar por nome + codigo", func(t *testing.T) {
+		status, _ := e.request(http.MethodPost, "/api/v1/auth/login", "", map[string]string{
+			"codigo_empresa": empresa.Codigo, "nome": "Admin", "senha": "senha123",
+		})
+		if status != http.StatusUnauthorized {
+			t.Errorf("status = %d, esperado 401", status)
+		}
+	})
+
+	t.Run("nome sem codigo da empresa falha na validacao", func(t *testing.T) {
+		status, _ := e.request(http.MethodPost, "/api/v1/auth/login", "", map[string]string{
+			"nome": "Vigia Sem Email", "senha": "senha123",
+		})
+		if status != http.StatusUnprocessableEntity {
+			t.Errorf("status = %d, esperado 422", status)
+		}
+	})
 }
 
 func TestBiometria(t *testing.T) {
@@ -133,7 +191,7 @@ func TestBiometria(t *testing.T) {
 func TestRBAC(t *testing.T) {
 	c := novoCenario(t)
 	supervisor := c.e.criarUsuario(c.empresa.ID, "Supervisor", "sup@a.com", "senha123", "supervisor", true)
-	supToken := c.e.login(supervisor.Email, "senha123").AccessToken
+	supToken := c.e.login(supervisor.EmailOrEmpty(), "senha123").AccessToken
 
 	casos := []struct {
 		nome   string
@@ -176,7 +234,7 @@ func TestMultiTenancy(t *testing.T) {
 
 	empresaB := c.e.criarEmpresa("Empresa B", "22222222000191")
 	adminB := c.e.criarUsuario(empresaB.ID, "Admin B", "admin@b.com", "senha123", "admin", true)
-	tokenB := c.e.login(adminB.Email, "senha123").AccessToken
+	tokenB := c.e.login(adminB.EmailOrEmpty(), "senha123").AccessToken
 
 	t.Run("turno de A invisivel para B", func(t *testing.T) {
 		status, _ := c.e.request(http.MethodGet, "/api/v1/turnos/"+turnoA.ID.String(), tokenB, nil)

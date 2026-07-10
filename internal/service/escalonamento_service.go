@@ -31,17 +31,24 @@ type EscalonamentoConfigRepository interface {
 
 type EscalonamentoUserRepository interface {
 	FindByIDEmpresa(ctx context.Context, empresaID, id uuid.UUID) (*model.User, error)
+	FindAdminIDs(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]bool, error)
+}
+
+type PostoSupervisorRepository interface {
+	ListSupervisoresByPosto(ctx context.Context, postoID uuid.UUID) ([]uuid.UUID, error)
 }
 
 type EscalonamentoService struct {
-	configRepo EscalonamentoConfigRepository
-	userRepo   EscalonamentoUserRepository
+	configRepo  EscalonamentoConfigRepository
+	userRepo    EscalonamentoUserRepository
+	postoRepo   PostoSupervisorRepository
 }
 
-func NewEscalonamentoService(configRepo EscalonamentoConfigRepository, userRepo EscalonamentoUserRepository) *EscalonamentoService {
+func NewEscalonamentoService(configRepo EscalonamentoConfigRepository, userRepo EscalonamentoUserRepository, postoRepo PostoSupervisorRepository) *EscalonamentoService {
 	return &EscalonamentoService{
 		configRepo: configRepo,
 		userRepo:   userRepo,
+		postoRepo:  postoRepo,
 	}
 }
 
@@ -77,6 +84,84 @@ func (s *EscalonamentoService) ResolveDestinatariosPorNivel(ctx context.Context,
 		return nil, ErrEscalonamentoNaoEncontrado
 	}
 	return cfg.UsuarioIDs, nil
+}
+
+func (s *EscalonamentoService) ResolveDestinatariosPorPosto(ctx context.Context, empresaID, postoID uuid.UUID) ([]uuid.UUID, error) {
+	todos, err := s.ResolveDestinatarios(ctx, empresaID)
+	if err != nil {
+		return nil, err
+	}
+
+	if len(todos) == 0 {
+		return nil, nil
+	}
+
+	admins, err := s.userRepo.FindAdminIDs(ctx, todos)
+	if err != nil {
+		return nil, fmt.Errorf("buscar admins: %w", err)
+	}
+
+	supervisoresPosto, err := s.postoRepo.ListSupervisoresByPosto(ctx, postoID)
+	if err != nil {
+		return nil, fmt.Errorf("buscar supervisores do posto: %w", err)
+	}
+
+	supervisorSet := make(map[uuid.UUID]bool, len(supervisoresPosto))
+	for _, sid := range supervisoresPosto {
+		supervisorSet[sid] = true
+	}
+
+	var filtrados []uuid.UUID
+	for _, uid := range todos {
+		if admins[uid] {
+			filtrados = append(filtrados, uid)
+			continue
+		}
+		if supervisorSet[uid] {
+			filtrados = append(filtrados, uid)
+		}
+	}
+
+	return filtrados, nil
+}
+
+func (s *EscalonamentoService) ResolveDestinatariosPorNivelEPosto(ctx context.Context, empresaID uuid.UUID, nivelID *uuid.UUID, postoID uuid.UUID) ([]uuid.UUID, error) {
+	usuarioIDs, err := s.ResolveDestinatariosPorNivel(ctx, empresaID, nivelID)
+	if err != nil {
+		return nil, err
+	}
+
+	if postoID == uuid.Nil || len(usuarioIDs) == 0 {
+		return usuarioIDs, nil
+	}
+
+	admins, err := s.userRepo.FindAdminIDs(ctx, usuarioIDs)
+	if err != nil {
+		return nil, fmt.Errorf("buscar admins: %w", err)
+	}
+
+	supervisoresPosto, err := s.postoRepo.ListSupervisoresByPosto(ctx, postoID)
+	if err != nil {
+		return nil, fmt.Errorf("buscar supervisores do posto: %w", err)
+	}
+
+	supervisorSet := make(map[uuid.UUID]bool, len(supervisoresPosto))
+	for _, sid := range supervisoresPosto {
+		supervisorSet[sid] = true
+	}
+
+	var filtrados []uuid.UUID
+	for _, uid := range usuarioIDs {
+		if admins[uid] {
+			filtrados = append(filtrados, uid)
+			continue
+		}
+		if supervisorSet[uid] {
+			filtrados = append(filtrados, uid)
+		}
+	}
+
+	return filtrados, nil
 }
 
 func (s *EscalonamentoService) GetEscalonamento(ctx context.Context, empresaID string) (*model.ConfigEscalonamento, error) {

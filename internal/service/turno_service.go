@@ -153,7 +153,7 @@ func (s *TurnoService) resolverSenha(ctx context.Context, empresaID, usuarioID u
 // a acao chamadora ja foi ou sera persistida com sucesso independente do resultado.
 // Retorna o *model.SenhaVigia resolvido (ou nil) para popular
 // Checkin.TipoSenha/SenhaVigiaID antes do INSERT.
-func (s *TurnoService) aplicarConsequenciaSenha(ctx context.Context, empresaIDStr string, empresaID, turnoID, usuarioID uuid.UUID, codigo string) *model.SenhaVigia {
+func (s *TurnoService) aplicarConsequenciaSenha(ctx context.Context, empresaIDStr string, empresaID, turnoID, usuarioID, postoID uuid.UUID, codigo string) *model.SenhaVigia {
 	senha, err := s.resolverSenha(ctx, empresaID, usuarioID, codigo)
 	if err != nil {
 		slog.Warn("senha de vigia nao resolvida", "error", err, "turno_id", turnoID, "usuario_id", usuarioID)
@@ -172,7 +172,7 @@ func (s *TurnoService) aplicarConsequenciaSenha(ctx context.Context, empresaIDSt
 		mensagem = "Senha customizada detectada"
 	}
 
-	if _, err := s.alertaService.CreateAlertaImediato(ctx, empresaID, turnoID, tipoAlerta, mensagem, senha.NivelEscalonamentoID); err != nil {
+	if _, err := s.alertaService.CreateAlertaImediato(ctx, empresaID, turnoID, postoID, tipoAlerta, mensagem, senha.NivelEscalonamentoID); err != nil {
 		slog.Error("criar alerta de senha", "error", err, "turno_id", turnoID)
 	}
 	s.hub.Broadcast(empresaIDStr, ws.NewStatusChangeEvent(turnoID.String(), "critico"))
@@ -266,7 +266,7 @@ func (s *TurnoService) Iniciar(ctx context.Context, userID, empresaID string, re
 	s.hub.Broadcast(empresaID, ws.NewStatusChangeEvent(turno.ID.String(), "em_andamento"))
 
 	flagGeofence := s.calcularGeofence(ctx, turno.PostoID, parsedEmpresaID, req.Latitude, req.Longitude)
-	senha := s.aplicarConsequenciaSenha(ctx, empresaID, parsedEmpresaID, turno.ID, parsedUserID, req.Senha)
+	senha := s.aplicarConsequenciaSenha(ctx, empresaID, parsedEmpresaID, turno.ID, parsedUserID, turno.PostoID, req.Senha)
 
 	checkinInicio := &model.Checkin{
 		TurnoID:          turno.ID,
@@ -431,7 +431,7 @@ func (s *TurnoService) Checkin(ctx context.Context, userID, empresaID string, re
 
 	// efeito colateral da senha (status critico + alerta), na mesma posicao
 	// relativa que o antigo bloco de coacao ocupava
-	s.aplicarConsequenciaSenha(ctx, empresaID, parsedEmpresaID, parsedTurnoID, parsedUserID, req.Senha)
+	s.aplicarConsequenciaSenha(ctx, empresaID, parsedEmpresaID, parsedTurnoID, parsedUserID, turno.PostoID, req.Senha)
 
 	s.emitirGPSUpdate(empresaID, req.TurnoID, req.Latitude, req.Longitude, timestampCriacao, flagGeofence)
 
@@ -518,7 +518,7 @@ func (s *TurnoService) Finalizar(ctx context.Context, userID, empresaID string, 
 	// efeito colateral da senha (status critico transitorio + alerta); o status
 	// final do turno e sempre "finalizado" -- e sobrescrito logo abaixo. O
 	// alerta e quem carrega a urgencia, nao o status final do turno.
-	s.aplicarConsequenciaSenha(ctx, empresaID, parsedEmpresaID, parsedTurnoID, parsedUserID, req.Senha)
+	s.aplicarConsequenciaSenha(ctx, empresaID, parsedEmpresaID, parsedTurnoID, parsedUserID, turno.PostoID, req.Senha)
 
 	now := timeutil.NowBRT()
 	if err := s.turnoRepo.UpdateStatus(ctx, parsedTurnoID, parsedEmpresaID, "finalizado", &now); err != nil {
@@ -977,7 +977,7 @@ func (s *TurnoService) Sabotagem(ctx context.Context, userID, empresaID string, 
 
 	s.emitirGPSUpdate(empresaID, req.TurnoID, req.Latitude, req.Longitude, timestampCriacao, flagGeofence)
 
-	alerta, err := s.alertaService.CreateAlertaImediato(ctx, parsedEmpresaID, parsedTurnoID, "sabotagem", "Sabotagem reportada pelo vigia. Motivo: "+req.Motivo, nil)
+	alerta, err := s.alertaService.CreateAlertaImediato(ctx, parsedEmpresaID, parsedTurnoID, turno.PostoID, "sabotagem", "Sabotagem reportada pelo vigia. Motivo: "+req.Motivo, nil)
 	alertaID := ""
 	if err == nil && alerta != nil {
 		alertaID = alerta.ID.String()

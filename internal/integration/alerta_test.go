@@ -142,7 +142,7 @@ func TestTurnoSemPinsConfigurados(t *testing.T) {
 	// vigem novo, sem nenhuma senha cadastrada (novoCenario so cadastra ok/emergencia
 	// para c.vigia, nao para usuarios criados a parte)
 	vigiaSemPin := c.e.criarUsuario(c.empresa.ID, "Vigia Sem Pin", "sempin@a.com", "senha123", "vigia", true)
-	tokenSemPin := c.e.login(vigiaSemPin.Email, "senha123").AccessToken
+	tokenSemPin := c.e.login(vigiaSemPin.EmailOrEmpty(), "senha123").AccessToken
 	deviceSemPin := "device-sem-pin-01"
 
 	var reg model.BiometricRegisterResponse

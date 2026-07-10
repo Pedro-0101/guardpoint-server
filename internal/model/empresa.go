@@ -10,6 +10,7 @@ type Empresa struct {
 	ID           uuid.UUID `json:"id"`
 	Nome         string    `json:"nome"`
 	CNPJ         string    `json:"cnpj"`
+	Codigo       string    `json:"codigo"`
 	Ativa        bool      `json:"ativa"`
 	AlertaSonoro bool      `json:"alerta_sonoro"`
 	CreatedAt    time.Time `json:"created_at"`
