@@ -96,6 +96,94 @@ func (s *SenhaVigiaService) Create(ctx context.Context, empresaID, usuarioID uui
 	return senha, nil
 }
 
+func (s *SenhaVigiaService) CreateBatch(ctx context.Context, empresaID, usuarioID uuid.UUID, reqs []model.CreateSenhaVigiaRequest) ([]model.SenhaVigia, error) {
+	if err := s.validarUsuarioDaEmpresa(ctx, empresaID, usuarioID); err != nil {
+		return nil, err
+	}
+
+	for _, req := range reqs {
+		if err := s.validarNivel(ctx, empresaID, usuarioID, nil, req.Tipo, req.NivelEscalonamentoID); err != nil {
+			return nil, err
+		}
+	}
+
+	existentes, err := s.senhaRepo.ListByUsuario(ctx, empresaID, usuarioID)
+	if err != nil {
+		return nil, err
+	}
+
+	combinadas := make([]model.SenhaVigia, 0, len(existentes)+len(reqs))
+	combinadas = append(combinadas, existentes...)
+	for _, req := range reqs {
+		combinadas = append(combinadas, model.SenhaVigia{
+			Tipo:                 req.Tipo,
+			Codigo:               req.Codigo,
+			NivelEscalonamentoID: req.NivelEscalonamentoID,
+		})
+	}
+
+	tipoCount := make(map[string]int)
+	for _, s := range combinadas {
+		tipoCount[s.Tipo]++
+	}
+	for tipo, count := range tipoCount {
+		if tipo != tipoSenhaCustomizada && count > 1 {
+			return nil, ErrSenhaTipoJaExiste
+		}
+	}
+
+	codigoSet := make(map[string]bool)
+	for _, s := range combinadas {
+		if codigoSet[s.Codigo] {
+			return nil, ErrSenhaCodigoDuplicado
+		}
+		codigoSet[s.Codigo] = true
+	}
+
+	todasEmpresa, err := s.senhaRepo.ListByEmpresa(ctx, empresaID)
+	if err != nil {
+		return nil, err
+	}
+	for _, req := range reqs {
+		if req.Tipo != tipoSenhaCustomizada || req.NivelEscalonamentoID == nil {
+			continue
+		}
+		for _, s := range todasEmpresa {
+			if s.NivelEscalonamentoID != nil && *s.NivelEscalonamentoID == *req.NivelEscalonamentoID {
+				return nil, ErrSenhaNivelDuplicado
+			}
+		}
+	}
+	for i := range reqs {
+		if reqs[i].Tipo != tipoSenhaCustomizada || reqs[i].NivelEscalonamentoID == nil {
+			continue
+		}
+		for j := i + 1; j < len(reqs); j++ {
+			if reqs[j].Tipo == tipoSenhaCustomizada && reqs[j].NivelEscalonamentoID != nil &&
+				*reqs[i].NivelEscalonamentoID == *reqs[j].NivelEscalonamentoID {
+				return nil, ErrSenhaNivelDuplicado
+			}
+		}
+	}
+
+	senhas := make([]model.SenhaVigia, len(reqs))
+	for i, req := range reqs {
+		senhas[i] = model.SenhaVigia{
+			EmpresaID:            empresaID,
+			UsuarioID:            usuarioID,
+			Tipo:                 req.Tipo,
+			Codigo:               req.Codigo,
+			NivelEscalonamentoID: req.NivelEscalonamentoID,
+		}
+	}
+
+	if err := s.senhaRepo.CreateBatch(ctx, senhas); err != nil {
+		return nil, err
+	}
+
+	return senhas, nil
+}
+
 func (s *SenhaVigiaService) Update(ctx context.Context, empresaID, usuarioID, senhaID uuid.UUID, req model.UpdateSenhaVigiaRequest) (*model.SenhaVigia, error) {
 	existing, err := s.senhaRepo.FindByID(ctx, empresaID, senhaID)
 	if err != nil {

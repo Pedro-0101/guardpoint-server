@@ -157,6 +157,29 @@ func (r *SenhaVigiaRepository) Update(ctx context.Context, id, empresaID uuid.UU
 	return nil
 }
 
+func (r *SenhaVigiaRepository) CreateBatch(ctx context.Context, senhas []model.SenhaVigia) error {
+	tx, err := r.db.Begin(ctx)
+	if err != nil {
+		return fmt.Errorf("iniciar transacao batch: %w", err)
+	}
+	defer tx.Rollback(ctx)
+
+	for i := range senhas {
+		query := `
+			INSERT INTO senhas_vigia (empresa_id, usuario_id, tipo, codigo, nivel_escalonamento_id)
+			VALUES ($1, $2, $3, $4, $5)
+			RETURNING id, created_at, updated_at
+		`
+		if err := tx.QueryRow(ctx, query,
+			senhas[i].EmpresaID, senhas[i].UsuarioID, senhas[i].Tipo, senhas[i].Codigo, senhas[i].NivelEscalonamentoID,
+		).Scan(&senhas[i].ID, &senhas[i].CreatedAt, &senhas[i].UpdatedAt); err != nil {
+			return fmt.Errorf("criar senha vigia no lote: %w", err)
+		}
+	}
+
+	return tx.Commit(ctx)
+}
+
 func (r *SenhaVigiaRepository) Delete(ctx context.Context, id, empresaID uuid.UUID) error {
 	query := `DELETE FROM senhas_vigia WHERE id = $1 AND empresa_id = $2`
 	ct, err := r.db.Exec(ctx, query, id, empresaID)

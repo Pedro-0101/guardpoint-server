@@ -27,3 +27,7 @@ type UpdateSenhaVigiaRequest struct {
 	Codigo                *string    `json:"codigo" validate:"omitempty,numeric,min=2,max=6"`
 	NivelEscalonamentoID  *uuid.UUID `json:"nivel_escalonamento_id,omitempty"`
 }
+
+type BatchCreateSenhaVigiaRequest struct {
+	Senhas []CreateSenhaVigiaRequest `json:"senhas" validate:"required,min=1,dive"`
+}

@@ -76,6 +76,54 @@ func (h *SenhaVigiaHandler) List(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, senhas)
 }
 
+// BatchCreate godoc
+// @Summary      Cria multiplas senhas para um vigia em lote (transacional — tudo ou nada)
+// @Tags         usuarios
+// @Param        id path string true "ID do usuario/vigia (uuid)"
+// @Param        request body model.BatchCreateSenhaVigiaRequest true "Array de senhas"
+// @Success      201 {array} model.SenhaVigia
+// @Failure      400 {object} model.ErrorResponse
+// @Failure      404 {object} model.ErrorResponse
+// @Router       /usuarios/{id}/senhas/batch [post]
+func (h *SenhaVigiaHandler) BatchCreate(w http.ResponseWriter, r *http.Request) {
+	empresaID := middleware.GetEmpresaID(r.Context())
+	usuarioID := chi.URLParam(r, "id")
+
+	parsedEmpresaID, err := uuid.Parse(empresaID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "empresa_id invalido")
+		return
+	}
+	parsedUsuarioID, err := uuid.Parse(usuarioID)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "id invalido")
+		return
+	}
+
+	var req model.BatchCreateSenhaVigiaRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "json invalido")
+		return
+	}
+
+	if err := h.validate.Struct(req); err != nil {
+		writeValidationError(w, err)
+		return
+	}
+
+	senhas, err := h.service.CreateBatch(r.Context(), parsedEmpresaID, parsedUsuarioID, req.Senhas)
+	if err != nil {
+		if h.writeSenhaError(w, err) {
+			return
+		}
+		slog.Error("batch create senhas vigia failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "erro ao criar senhas em lote")
+		return
+	}
+
+	writeJSON(w, http.StatusCreated, senhas)
+}
+
 // Create godoc
 // @Summary      Cria uma senha para um vigia (somente admin)
 // @Tags         usuarios

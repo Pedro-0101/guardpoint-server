@@ -182,6 +182,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 				r.Group(func(r chi.Router) {
 					r.Use(middleware.RequireRole("admin"))
 					r.Post("/", senhaVigiaHandler.Create)
+					r.Post("/batch", senhaVigiaHandler.BatchCreate)
 					r.Put("/{senhaId}", senhaVigiaHandler.Update)
 					r.Delete("/{senhaId}", senhaVigiaHandler.Delete)
 				})
