@@ -10,7 +10,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/guardpoint/guardpoint-server/internal/model"
-	"github.com/guardpoint/guardpoint-server/internal/repository"
 	"github.com/guardpoint/guardpoint-server/internal/ws"
 )
 
@@ -24,29 +23,50 @@ var (
 	ErrEscalonamentoSistemaNaoExcluivel = errors.New("config escalonamento do sistema nao pode ser excluida")
 )
 
+type AlertaAlertaRepository interface {
+	Create(ctx context.Context, a *model.Alerta) error
+	FindByID(ctx context.Context, empresaID, id uuid.UUID) (*model.Alerta, error)
+	List(ctx context.Context, empresaID uuid.UUID, filter model.AlertaFilter) ([]model.Alerta, int, error)
+	UpdateStatus(ctx context.Context, id, empresaID uuid.UUID, status string, resolvidoEm *time.Time) error
+	CountByTurnoETipo(ctx context.Context, turnoID uuid.UUID, tipo string) (int, error)
+	CountPorTipo(ctx context.Context, empresaID uuid.UUID) ([]model.AlertaPorTipo, error)
+	CountPorHora(ctx context.Context, empresaID uuid.UUID) ([]model.AlertaPorHora, error)
+	CloseAlertasResolvidoCheckin(ctx context.Context, turnoID uuid.UUID) (int64, error)
+}
+
+type AlertaConfigEscalonamentoRepository interface {
+	ListByEmpresa(ctx context.Context, empresaID uuid.UUID) ([]model.ConfigEscalonamento, error)
+	FindByEmpresa(ctx context.Context, empresaID uuid.UUID) (*model.ConfigEscalonamento, error)
+	FindByIDEmpresa(ctx context.Context, id, empresaID uuid.UUID) (*model.ConfigEscalonamento, error)
+	Create(ctx context.Context, c *model.ConfigEscalonamento) error
+	Update(ctx context.Context, c *model.ConfigEscalonamento) error
+	UpdateUsuarios(ctx context.Context, configID uuid.UUID, usuarioIDs []uuid.UUID) error
+	DeleteByID(ctx context.Context, id, empresaID uuid.UUID) error
+}
+
+type AlertaUserRepository interface {
+	FindByIDEmpresa(ctx context.Context, empresaID, id uuid.UUID) (*model.User, error)
+}
+
 type AlertaService struct {
-	alertaRepo   *repository.AlertaRepository
-	configRepo   *repository.ConfigEscalonamentoRepository
-	turnoRepo    *repository.TurnoRepository
-	checkinRepo  *repository.CheckinRepository
-	userRepo     *repository.UserRepository
+	alertaRepo   AlertaAlertaRepository
+	configRepo   AlertaConfigEscalonamentoRepository
+	userRepo     AlertaUserRepository
 	alertChannel chan *model.PendingAlert
 	hub          *ws.Hub
 }
 
 func NewAlertaService(
-	alertaRepo *repository.AlertaRepository,
-	configRepo *repository.ConfigEscalonamentoRepository,
-	turnoRepo *repository.TurnoRepository,
-	checkinRepo *repository.CheckinRepository,
-	userRepo *repository.UserRepository,
+	alertaRepo AlertaAlertaRepository,
+	configRepo AlertaConfigEscalonamentoRepository,
+	_ interface{},
+	_ interface{},
+	userRepo AlertaUserRepository,
 	hub *ws.Hub,
 ) *AlertaService {
 	return &AlertaService{
 		alertaRepo:   alertaRepo,
 		configRepo:   configRepo,
-		turnoRepo:    turnoRepo,
-		checkinRepo:  checkinRepo,
 		userRepo:     userRepo,
 		alertChannel: make(chan *model.PendingAlert, 100),
 		hub:          hub,

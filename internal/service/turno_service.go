@@ -15,7 +15,6 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/guardpoint/guardpoint-server/internal/model"
-	"github.com/guardpoint/guardpoint-server/internal/repository"
 	"github.com/guardpoint/guardpoint-server/internal/timeutil"
 	"github.com/guardpoint/guardpoint-server/internal/ws"
 )
@@ -40,28 +39,77 @@ var (
 	ErrVigiaSemSenhasConfiguradas = errors.New("vigia sem senhas configuradas")
 )
 
+type TurnoTurnoRepository interface {
+	Create(ctx context.Context, t *model.Turno) error
+	FindAtivoByUsuario(ctx context.Context, empresaID, usuarioID uuid.UUID) (*model.Turno, error)
+	FindByID(ctx context.Context, empresaID, id uuid.UUID) (*model.Turno, error)
+	UpdateStatus(ctx context.Context, id, empresaID uuid.UUID, status string, fimReal *time.Time) error
+	ListAtivos(ctx context.Context, empresaID uuid.UUID) ([]model.Turno, error)
+	ListHistorico(ctx context.Context, empresaID uuid.UUID, filter model.HistoricoFilter) ([]model.Turno, int, error)
+	ListTurnos(ctx context.Context, empresaID uuid.UUID, filter model.TurnoFilter) ([]model.Turno, error)
+	ListTurnosByDateRange(ctx context.Context, empresaID uuid.UUID, dataInicio, dataFim string, usuarioIDs, postoIDs []string) ([]model.Turno, error)
+	RevogarToken(ctx context.Context, id, empresaID uuid.UUID, pin string, pinValidoAte time.Time) error
+	FindAtivoComPinByUsuario(ctx context.Context, empresaID, usuarioID uuid.UUID) (*model.Turno, error)
+	Reassociar(ctx context.Context, id, empresaID uuid.UUID, deviceID, tokenSessao string) error
+}
+
+type TurnoCheckinRepository interface {
+	Create(ctx context.Context, c *model.Checkin) error
+	FindUltimoByTurnoNoError(ctx context.Context, turnoID uuid.UUID) *model.Checkin
+	CountByTurnoHoje(ctx context.Context, turnoID uuid.UUID) (int, error)
+	CreateIdempotent(ctx context.Context, c *model.Checkin) (bool, error)
+	ListByTurno(ctx context.Context, turnoID uuid.UUID) ([]model.Checkin, error)
+}
+
+type TurnoPostoRepository interface {
+	FindByID(ctx context.Context, empresaID, id uuid.UUID) (*model.Posto, error)
+}
+
+type TurnoUserRepository interface {
+	FindByID(ctx context.Context, id uuid.UUID) (*model.User, error)
+}
+
+type TurnoSessaoDispositivoRepository interface {
+	FindByDeviceID(ctx context.Context, empresaID, deviceID string) (*model.SessaoDispositivo, error)
+}
+
+type TurnoEscalaRepository interface {
+	FindAtivaByUsuarioPostoDia(ctx context.Context, empresaID, usuarioID, postoID uuid.UUID, diaSemana int16) (*model.Escala, error)
+	ListAtivasByEmpresa(ctx context.Context, empresaID uuid.UUID, usuarioIDs, postoIDs []string) ([]model.Escala, error)
+}
+
+type TurnoSubstituicaoRepository interface {
+	FindAtivaByUsuarioPostoData(ctx context.Context, empresaID, usuarioID, postoID uuid.UUID, data time.Time) (*model.Substituicao, error)
+	ListAtivasByDateRange(ctx context.Context, empresaID uuid.UUID, dataInicio, dataFim string, usuarioIDs, postoIDs []string) ([]model.Substituicao, error)
+}
+
+type TurnoSenhaVigiaRepository interface {
+	CountByUsuario(ctx context.Context, empresaID, usuarioID uuid.UUID) (int, error)
+	FindByUsuarioECodigo(ctx context.Context, empresaID, usuarioID uuid.UUID, codigo string) (*model.SenhaVigia, error)
+}
+
 type TurnoService struct {
-	turnoRepo             *repository.TurnoRepository
-	checkinRepo           *repository.CheckinRepository
-	postoRepo             *repository.PostoRepository
-	userRepo              *repository.UserRepository
-	sessaoDispositivoRepo *repository.SessaoDispositivoRepository
-	escalaRepo            *repository.EscalaRepository
-	substituicaoRepo      *repository.SubstituicaoRepository
-	senhaVigiaRepo        *repository.SenhaVigiaRepository
+	turnoRepo             TurnoTurnoRepository
+	checkinRepo           TurnoCheckinRepository
+	postoRepo             TurnoPostoRepository
+	userRepo              TurnoUserRepository
+	sessaoDispositivoRepo TurnoSessaoDispositivoRepository
+	escalaRepo            TurnoEscalaRepository
+	substituicaoRepo      TurnoSubstituicaoRepository
+	senhaVigiaRepo        TurnoSenhaVigiaRepository
 	alertaService         *AlertaService
 	hub                   *ws.Hub
 }
 
 func NewTurnoService(
-	turnoRepo *repository.TurnoRepository,
-	checkinRepo *repository.CheckinRepository,
-	postoRepo *repository.PostoRepository,
-	userRepo *repository.UserRepository,
-	sessaoDispositivoRepo *repository.SessaoDispositivoRepository,
-	escalaRepo *repository.EscalaRepository,
-	substituicaoRepo *repository.SubstituicaoRepository,
-	senhaVigiaRepo *repository.SenhaVigiaRepository,
+	turnoRepo TurnoTurnoRepository,
+	checkinRepo TurnoCheckinRepository,
+	postoRepo TurnoPostoRepository,
+	userRepo TurnoUserRepository,
+	sessaoDispositivoRepo TurnoSessaoDispositivoRepository,
+	escalaRepo TurnoEscalaRepository,
+	substituicaoRepo TurnoSubstituicaoRepository,
+	senhaVigiaRepo TurnoSenhaVigiaRepository,
 	alertaService *AlertaService,
 	hub *ws.Hub,
 ) *TurnoService {

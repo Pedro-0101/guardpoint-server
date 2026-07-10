@@ -7,14 +7,20 @@ import (
 	"github.com/google/uuid"
 
 	"github.com/guardpoint/guardpoint-server/internal/model"
-	"github.com/guardpoint/guardpoint-server/internal/repository"
 )
 
-type PostoService struct {
-	postoRepo *repository.PostoRepository
+type PostoRepository interface {
+	Create(ctx context.Context, p *model.Posto) error
+	FindByID(ctx context.Context, empresaID, id uuid.UUID) (*model.Posto, error)
+	List(ctx context.Context, empresaID uuid.UUID, apenasAtivos bool) ([]model.Posto, error)
+	Update(ctx context.Context, empresaID, id uuid.UUID, p *model.Posto) error
 }
 
-func NewPostoService(postoRepo *repository.PostoRepository) *PostoService {
+type PostoService struct {
+	postoRepo PostoRepository
+}
+
+func NewPostoService(postoRepo PostoRepository) *PostoService {
 	return &PostoService{postoRepo: postoRepo}
 }
 

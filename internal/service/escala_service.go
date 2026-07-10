@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 
 	"github.com/guardpoint/guardpoint-server/internal/model"
-	"github.com/guardpoint/guardpoint-server/internal/repository"
 )
 
 var (
@@ -18,11 +18,21 @@ var (
 	ErrEscalaForaTolerancia = errors.New("inicio fora da tolerancia da escala")
 )
 
-type EscalaService struct {
-	escalaRepo *repository.EscalaRepository
+type EscalaRepository interface {
+	Create(ctx context.Context, e *model.Escala) error
+	FindByID(ctx context.Context, empresaID, id uuid.UUID) (*model.Escala, error)
+	List(ctx context.Context, empresaID uuid.UUID, filter model.EscalaFilter) ([]model.Escala, int, error)
+	Update(ctx context.Context, empresaID, id uuid.UUID, e *model.Escala) error
+	BeginTx(ctx context.Context) (pgx.Tx, error)
+	CreateWithTx(ctx context.Context, tx pgx.Tx, e *model.Escala) error
+	DeleteAtivasPorUsuarioPosto(ctx context.Context, tx pgx.Tx, empresaID, usuarioID, postoID uuid.UUID) error
 }
 
-func NewEscalaService(escalaRepo *repository.EscalaRepository) *EscalaService {
+type EscalaService struct {
+	escalaRepo EscalaRepository
+}
+
+func NewEscalaService(escalaRepo EscalaRepository) *EscalaService {
 	return &EscalaService{escalaRepo: escalaRepo}
 }
 

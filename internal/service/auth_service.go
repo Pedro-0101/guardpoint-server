@@ -14,7 +14,6 @@ import (
 
 	"github.com/guardpoint/guardpoint-server/internal/auth"
 	"github.com/guardpoint/guardpoint-server/internal/model"
-	"github.com/guardpoint/guardpoint-server/internal/repository"
 )
 
 var (
@@ -24,23 +23,33 @@ var (
 	ErrDispositivoNaoReconhecido = errors.New("dispositivo nao reconhecido")
 )
 
+type AuthUserRepository interface {
+	FindByEmail(ctx context.Context, email string) (*model.User, error)
+	FindByID(ctx context.Context, id uuid.UUID) (*model.User, error)
+	Create(ctx context.Context, u *model.User) error
+}
+
+type AuthSessaoDispositivoRepository interface {
+	FindByDeviceID(ctx context.Context, empresaID, deviceID string) (*model.SessaoDispositivo, error)
+	Create(ctx context.Context, s *model.SessaoDispositivo) error
+	DeleteByDeviceID(ctx context.Context, empresaID, deviceID string) error
+}
+
 type AuthService struct {
 	jwtService            *auth.JWTService
-	userRepo              *repository.UserRepository
-	empresaRepo           *repository.EmpresaRepository
-	sessaoDispositivoRepo *repository.SessaoDispositivoRepository
+	userRepo              AuthUserRepository
+	sessaoDispositivoRepo AuthSessaoDispositivoRepository
 }
 
 func NewAuthService(
 	jwtService *auth.JWTService,
-	userRepo *repository.UserRepository,
-	empresaRepo *repository.EmpresaRepository,
-	sessaoDispositivoRepo *repository.SessaoDispositivoRepository,
+	userRepo AuthUserRepository,
+	_ interface{},
+	sessaoDispositivoRepo AuthSessaoDispositivoRepository,
 ) *AuthService {
 	return &AuthService{
 		jwtService:            jwtService,
 		userRepo:              userRepo,
-		empresaRepo:           empresaRepo,
 		sessaoDispositivoRepo: sessaoDispositivoRepo,
 	}
 }

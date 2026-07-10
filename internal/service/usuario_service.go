@@ -8,14 +8,21 @@ import (
 	"golang.org/x/crypto/bcrypt"
 
 	"github.com/guardpoint/guardpoint-server/internal/model"
-	"github.com/guardpoint/guardpoint-server/internal/repository"
 )
 
-type UsuarioService struct {
-	userRepo *repository.UserRepository
+type UserRepository interface {
+	ListByEmpresa(ctx context.Context, empresaID uuid.UUID) ([]model.User, error)
+	FindByIDEmpresa(ctx context.Context, empresaID, id uuid.UUID) (*model.User, error)
+	FindByEmail(ctx context.Context, email string) (*model.User, error)
+	Create(ctx context.Context, u *model.User) error
+	Update(ctx context.Context, empresaID, id uuid.UUID, u *model.User) error
 }
 
-func NewUsuarioService(userRepo *repository.UserRepository) *UsuarioService {
+type UsuarioService struct {
+	userRepo UserRepository
+}
+
+func NewUsuarioService(userRepo UserRepository) *UsuarioService {
 	return &UsuarioService{userRepo: userRepo}
 }
 
