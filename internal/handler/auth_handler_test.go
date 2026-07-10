@@ -9,6 +9,8 @@ import (
 	"testing"
 
 	"github.com/go-playground/validator/v10"
+
+	"github.com/guardpoint/guardpoint-server/internal/middleware"
 )
 
 func TestWriteJSON(t *testing.T) {
@@ -135,7 +137,7 @@ func TestAuthHandler_Register_JsonInvalido(t *testing.T) {
 	h := &AuthHandler{validate: validator.New()}
 
 	req := httptest.NewRequest(http.MethodPost, "/auth/register", bytes.NewReader([]byte("{")))
-	ctx := context.WithValue(req.Context(), CtxKeyEmpresaID, "550e8400-e29b-41d4-a716-446655440000")
+	ctx := context.WithValue(req.Context(), middleware.CtxKeyEmpresaID, "550e8400-e29b-41d4-a716-446655440000")
 	req = req.WithContext(ctx)
 
 	rec := httptest.NewRecorder()
@@ -217,8 +219,8 @@ func TestAuthHandler_BiometricRegister_JsonInvalido(t *testing.T) {
 	h := &AuthHandler{validate: validator.New()}
 
 	req := httptest.NewRequest(http.MethodPost, "/auth/biometric/register", bytes.NewReader([]byte("{")))
-	ctx := context.WithValue(req.Context(), CtxKeyEmpresaID, "550e8400-e29b-41d4-a716-446655440000")
-	ctx = context.WithValue(ctx, CtxKeyUserID, "550e8400-e29b-41d4-a716-446655440001")
+	ctx := context.WithValue(req.Context(), middleware.CtxKeyEmpresaID, "550e8400-e29b-41d4-a716-446655440000")
+	ctx = context.WithValue(ctx, middleware.CtxKeyUserID, "550e8400-e29b-41d4-a716-446655440001")
 	req = req.WithContext(ctx)
 
 	rec := httptest.NewRecorder()

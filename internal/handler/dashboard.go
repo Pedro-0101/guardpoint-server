@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/guardpoint/guardpoint-server/internal/middleware"
 	"github.com/guardpoint/guardpoint-server/internal/service"
 )
 
@@ -24,7 +25,7 @@ func NewDashboardHandler(dashboardService *service.DashboardService) *DashboardH
 // @Failure      500 {object} model.ErrorResponse
 // @Router       /dashboard/summary [get]
 func (h *DashboardHandler) Summary(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 
 	summary, err := h.dashboardService.Summary(r.Context(), empresaID)
 	if err != nil {

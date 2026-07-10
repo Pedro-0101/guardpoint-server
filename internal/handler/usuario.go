@@ -10,6 +10,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 
+	"github.com/guardpoint/guardpoint-server/internal/middleware"
 	"github.com/guardpoint/guardpoint-server/internal/model"
 	"github.com/guardpoint/guardpoint-server/internal/service"
 )
@@ -33,7 +34,7 @@ func NewUsuarioHandler(usuarioService *service.UsuarioService) *UsuarioHandler {
 // @Failure      400 {object} model.ErrorResponse
 // @Router       /usuarios [get]
 func (h *UsuarioHandler) List(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 
 	parsedEmpresaID, err := uuid.Parse(empresaID)
 	if err != nil {
@@ -64,7 +65,7 @@ func (h *UsuarioHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Failure      404 {object} model.ErrorResponse
 // @Router       /usuarios/{id} [get]
 func (h *UsuarioHandler) GetByID(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
 
 	parsedEmpresaID, err := uuid.Parse(empresaID)
@@ -96,7 +97,7 @@ func (h *UsuarioHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 // @Failure      409 {object} model.ErrorResponse
 // @Router       /usuarios [post]
 func (h *UsuarioHandler) Create(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 
 	parsedEmpresaID, err := uuid.Parse(empresaID)
 	if err != nil {
@@ -139,7 +140,7 @@ func (h *UsuarioHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Failure      500 {object} model.ErrorResponse
 // @Router       /usuarios/{id} [put]
 func (h *UsuarioHandler) Update(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
 
 	parsedEmpresaID, err := uuid.Parse(empresaID)
@@ -183,7 +184,7 @@ func (h *UsuarioHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Failure      500 {object} model.ErrorResponse
 // @Router       /usuarios/{id} [delete]
 func (h *UsuarioHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
 
 	parsedEmpresaID, err := uuid.Parse(empresaID)

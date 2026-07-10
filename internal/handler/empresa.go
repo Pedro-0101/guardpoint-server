@@ -8,6 +8,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 
+	"github.com/guardpoint/guardpoint-server/internal/middleware"
 	"github.com/guardpoint/guardpoint-server/internal/model"
 	"github.com/guardpoint/guardpoint-server/internal/service"
 )
@@ -29,7 +30,7 @@ func NewEmpresaHandler(empresaService *service.EmpresaService) *EmpresaHandler {
 // @Failure      500 {object} model.ErrorResponse
 // @Router       /empresa [get]
 func (h *EmpresaHandler) Get(w http.ResponseWriter, r *http.Request) {
-	empresaID, err := uuid.Parse(GetEmpresaID(r.Context()))
+	empresaID, err := uuid.Parse(middleware.GetEmpresaID(r.Context()))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "empresa_id invalido")
 		return
@@ -54,7 +55,7 @@ func (h *EmpresaHandler) Get(w http.ResponseWriter, r *http.Request) {
 // @Failure      500 {object} model.ErrorResponse
 // @Router       /empresa [put]
 func (h *EmpresaHandler) Update(w http.ResponseWriter, r *http.Request) {
-	empresaID, err := uuid.Parse(GetEmpresaID(r.Context()))
+	empresaID, err := uuid.Parse(middleware.GetEmpresaID(r.Context()))
 	if err != nil {
 		writeError(w, http.StatusBadRequest, "empresa_id invalido")
 		return

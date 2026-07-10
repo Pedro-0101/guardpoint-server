@@ -1,4 +1,4 @@
-package handler
+package middleware
 
 import (
 	"net/http"
@@ -10,12 +10,12 @@ func RequireRole(roles ...string) func(http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			userRole := GetRole(r.Context())
 			if userRole == "" {
-				writeError(w, http.StatusUnauthorized, "autenticacao necessaria")
+				writeJSONError(w, http.StatusUnauthorized, "autenticacao necessaria")
 				return
 			}
 
 			if !slices.Contains(roles, userRole) {
-				writeError(w, http.StatusForbidden, "acesso negado")
+				writeJSONError(w, http.StatusForbidden, "acesso negado")
 				return
 			}
 

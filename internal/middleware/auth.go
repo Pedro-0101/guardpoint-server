@@ -1,4 +1,4 @@
-package handler
+package middleware
 
 import (
 	"context"
@@ -24,7 +24,7 @@ func AuthMiddleware(jwtService *auth.JWTService) func(http.Handler) http.Handler
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			authHeader := r.Header.Get("Authorization")
 			if authHeader == "" {
-				writeError(w, http.StatusUnauthorized, "token nao fornecido")
+				writeJSONError(w, http.StatusUnauthorized, "token nao fornecido")
 				return
 			}
 
@@ -37,10 +37,10 @@ func AuthMiddleware(jwtService *auth.JWTService) func(http.Handler) http.Handler
 			claims, err := jwtService.ValidateToken(tokenString)
 			if err != nil {
 				if errors.Is(err, auth.ErrTokenExpired) {
-					writeError(w, http.StatusUnauthorized, "token expirado")
+					writeJSONError(w, http.StatusUnauthorized, "token expirado")
 					return
 				}
-				writeError(w, http.StatusUnauthorized, "token invalido")
+				writeJSONError(w, http.StatusUnauthorized, "token invalido")
 				return
 			}
 
@@ -81,4 +81,10 @@ func GetNome(ctx context.Context) string {
 		return v
 	}
 	return ""
+}
+
+func writeJSONError(w http.ResponseWriter, status int, message string) {
+	w.Header().Set("Content-Type", "application/json; charset=utf-8")
+	w.WriteHeader(status)
+	w.Write([]byte(`{"error":"` + message + `"}`))
 }

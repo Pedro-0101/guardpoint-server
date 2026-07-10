@@ -8,6 +8,7 @@ import (
 
 	"github.com/go-playground/validator/v10"
 
+	"github.com/guardpoint/guardpoint-server/internal/middleware"
 	"github.com/guardpoint/guardpoint-server/internal/model"
 	"github.com/guardpoint/guardpoint-server/internal/service"
 )
@@ -74,7 +75,7 @@ func (h *AuthHandler) Login(w http.ResponseWriter, r *http.Request) {
 // @Failure      409 {object} model.ErrorResponse
 // @Router       /auth/register [post]
 func (h *AuthHandler) Register(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 	if empresaID == "" {
 		writeError(w, http.StatusUnauthorized, "autenticacao necessaria")
 		return
@@ -143,7 +144,7 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 // @Failure      500 {object} model.ErrorResponse
 // @Router       /auth/logout [post]
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 
 	var req struct {
 		DeviceID string `json:"device_id"`
@@ -199,8 +200,8 @@ func (h *AuthHandler) BiometricLogin(w http.ResponseWriter, r *http.Request) {
 // @Failure      401 {object} model.ErrorResponse
 // @Router       /auth/biometric/register [post]
 func (h *AuthHandler) BiometricRegister(w http.ResponseWriter, r *http.Request) {
-	userID := GetUserID(r.Context())
-	empresaID := GetEmpresaID(r.Context())
+	userID := middleware.GetUserID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 	if userID == "" || empresaID == "" {
 		writeError(w, http.StatusUnauthorized, "autenticacao necessaria")
 		return
@@ -227,31 +228,4 @@ func (h *AuthHandler) BiometricRegister(w http.ResponseWriter, r *http.Request) 
 	writeJSON(w, http.StatusCreated, sessao)
 }
 
-func writeJSON(w http.ResponseWriter, status int, data interface{}) {
-	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	w.WriteHeader(status)
-	if err := json.NewEncoder(w).Encode(data); err != nil {
-		slog.Error("encode json response", "error", err)
-	}
-}
 
-func writeError(w http.ResponseWriter, status int, message string) {
-	writeJSON(w, status, map[string]string{"error": message})
-}
-
-func writeValidationError(w http.ResponseWriter, err error) {
-	var errMsg string
-	var validationErrors validator.ValidationErrors
-	if errors.As(err, &validationErrors) {
-		errMsg = "validacao falhou: "
-		for i, fe := range validationErrors {
-			if i > 0 {
-				errMsg += "; "
-			}
-			errMsg += fe.Field()
-		}
-	} else {
-		errMsg = err.Error()
-	}
-	writeError(w, http.StatusUnprocessableEntity, errMsg)
-}

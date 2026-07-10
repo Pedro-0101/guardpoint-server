@@ -10,6 +10,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 
+	"github.com/guardpoint/guardpoint-server/internal/middleware"
 	"github.com/guardpoint/guardpoint-server/internal/model"
 	"github.com/guardpoint/guardpoint-server/internal/service"
 )
@@ -35,7 +36,7 @@ func NewEscalaHandler(escalaService *service.EscalaService) *EscalaHandler {
 // @Failure      500 {object} model.ErrorResponse
 // @Router       /escalas [post]
 func (h *EscalaHandler) Create(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 
 	parsedEmpresaID, err := uuid.Parse(empresaID)
 	if err != nil {
@@ -73,7 +74,7 @@ func (h *EscalaHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Failure      500 {object} model.ErrorResponse
 // @Router       /escalas/lote [post]
 func (h *EscalaHandler) CreateLote(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 
 	parsedEmpresaID, err := uuid.Parse(empresaID)
 	if err != nil {
@@ -111,7 +112,7 @@ func (h *EscalaHandler) CreateLote(w http.ResponseWriter, r *http.Request) {
 // @Failure      500 {object} model.ErrorResponse
 // @Router       /escalas/lote [put]
 func (h *EscalaHandler) ReplaceLote(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 
 	parsedEmpresaID, err := uuid.Parse(empresaID)
 	if err != nil {
@@ -149,7 +150,7 @@ func (h *EscalaHandler) ReplaceLote(w http.ResponseWriter, r *http.Request) {
 // @Failure      404 {object} model.ErrorResponse
 // @Router       /escalas/{id} [get]
 func (h *EscalaHandler) GetByID(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
 
 	parsedEmpresaID, err := uuid.Parse(empresaID)
@@ -185,7 +186,7 @@ func (h *EscalaHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 // @Failure      500 {object} model.ErrorResponse
 // @Router       /escalas [get]
 func (h *EscalaHandler) List(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 
 	parsedEmpresaID, err := uuid.Parse(empresaID)
 	if err != nil {
@@ -240,7 +241,7 @@ func (h *EscalaHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Failure      500 {object} model.ErrorResponse
 // @Router       /escalas/{id} [put]
 func (h *EscalaHandler) Update(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
 
 	parsedEmpresaID, err := uuid.Parse(empresaID)
@@ -289,7 +290,7 @@ func (h *EscalaHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Failure      500 {object} model.ErrorResponse
 // @Router       /escalas/{id} [delete]
 func (h *EscalaHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
 
 	parsedEmpresaID, err := uuid.Parse(empresaID)

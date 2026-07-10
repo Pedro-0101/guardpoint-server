@@ -21,6 +21,7 @@ import (
 	"github.com/guardpoint/guardpoint-server/internal/config"
 	"github.com/guardpoint/guardpoint-server/internal/handler"
 	"github.com/guardpoint/guardpoint-server/internal/metrics"
+	"github.com/guardpoint/guardpoint-server/internal/middleware"
 	"github.com/guardpoint/guardpoint-server/internal/repository"
 	"github.com/guardpoint/guardpoint-server/internal/service"
 	"github.com/guardpoint/guardpoint-server/internal/worker"
@@ -62,7 +63,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 	postoService := service.NewPostoService(postoRepo)
 	postoHandler := handler.NewPostoHandler(postoService)
 
-	alertaService := service.NewAlertaService(alertaRepo, configEscalonamentoRepo, turnoRepo, checkinRepo, userRepo, hub)
+	escalonamentoSvc := service.NewEscalonamentoService(configEscalonamentoRepo, userRepo)
+	alertaService := service.NewAlertaService(alertaRepo, escalonamentoSvc, hub)
 
 	turnoService := service.NewTurnoService(turnoRepo, checkinRepo, postoRepo, userRepo, sessaoDispositivoRepo, escalaRepo, substituicaoRepo, senhaVigiaRepo, alertaService, hub)
 	syncReconciler := worker.NewSyncReconciler(alertaRepo, checkinRepo, turnoRepo, hub)
@@ -74,10 +76,12 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 	usuarioService := service.NewUsuarioService(userRepo)
 	usuarioHandler := handler.NewUsuarioHandler(usuarioService)
 
-	dashboardService := service.NewDashboardService(pool, alertaRepo)
+	dashboardRepo := repository.NewDashboardRepository(pool)
+	dashboardService := service.NewDashboardService(dashboardRepo, alertaRepo)
 	dashboardHandler := handler.NewDashboardHandler(dashboardService)
 
 	alertaHandler := handler.NewAlertaHandler(alertaService)
+	escalonamentoHandler := handler.NewEscalonamentoHandler(escalonamentoSvc)
 
 	escalaService := service.NewEscalaService(escalaRepo)
 	escalaHandler := handler.NewEscalaHandler(escalaService)
@@ -111,22 +115,22 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 			r.Post("/biometric/login", authHandler.BiometricLogin)
 
 			r.Group(func(r chi.Router) {
-				r.Use(handler.AuthMiddleware(jwtService))
+				r.Use(middleware.AuthMiddleware(jwtService))
 				r.Post("/logout", authHandler.Logout)
 				r.Post("/biometric/register", authHandler.BiometricRegister)
 
 				r.Group(func(r chi.Router) {
-					r.Use(handler.RequireRole("admin"))
+					r.Use(middleware.RequireRole("admin"))
 					r.Post("/register", authHandler.Register)
 				})
 			})
 		})
 
 		r.Group(func(r chi.Router) {
-			r.Use(handler.AuthMiddleware(jwtService))
+			r.Use(middleware.AuthMiddleware(jwtService))
 
 			r.Group(func(r chi.Router) {
-				r.Use(handler.RequireRole("admin", "supervisor"))
+				r.Use(middleware.RequireRole("admin", "supervisor"))
 				r.Get("/dashboard/summary", dashboardHandler.Summary)
 			})
 
@@ -135,7 +139,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 				r.Get("/{id}", postoHandler.GetByID)
 
 				r.Group(func(r chi.Router) {
-					r.Use(handler.RequireRole("admin"))
+					r.Use(middleware.RequireRole("admin"))
 					r.Post("/", postoHandler.Create)
 					r.Put("/{id}", postoHandler.Update)
 					r.Delete("/{id}", postoHandler.Delete)
@@ -158,12 +162,12 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 
 			r.Route("/usuarios", func(r chi.Router) {
 				r.Group(func(r chi.Router) {
-					r.Use(handler.RequireRole("admin", "supervisor"))
+					r.Use(middleware.RequireRole("admin", "supervisor"))
 					r.Get("/", usuarioHandler.List)
 					r.Get("/{id}", usuarioHandler.GetByID)
 				})
 				r.Group(func(r chi.Router) {
-					r.Use(handler.RequireRole("admin"))
+					r.Use(middleware.RequireRole("admin"))
 					r.Post("/", usuarioHandler.Create)
 					r.Put("/{id}", usuarioHandler.Update)
 					r.Delete("/{id}", usuarioHandler.Delete)
@@ -172,11 +176,11 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 
 			r.Route("/usuarios/{id}/senhas", func(r chi.Router) {
 				r.Group(func(r chi.Router) {
-					r.Use(handler.RequireRole("admin", "supervisor"))
+					r.Use(middleware.RequireRole("admin", "supervisor"))
 					r.Get("/", senhaVigiaHandler.List)
 				})
 				r.Group(func(r chi.Router) {
-					r.Use(handler.RequireRole("admin"))
+					r.Use(middleware.RequireRole("admin"))
 					r.Post("/", senhaVigiaHandler.Create)
 					r.Put("/{senhaId}", senhaVigiaHandler.Update)
 					r.Delete("/{senhaId}", senhaVigiaHandler.Delete)
@@ -184,7 +188,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 			})
 
 			r.Route("/alertas", func(r chi.Router) {
-				r.Use(handler.RequireRole("admin", "supervisor"))
+				r.Use(middleware.RequireRole("admin", "supervisor"))
 				r.Get("/", alertaHandler.List)
 				r.Get("/estatisticas", alertaHandler.Estatisticas)
 				r.Put("/{id}/reconhecer", alertaHandler.Reconhecer)
@@ -192,19 +196,19 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 			})
 
 			r.Route("/config", func(r chi.Router) {
-				r.Use(handler.RequireRole("admin"))
+				r.Use(middleware.RequireRole("admin"))
 				r.Route("/escalonamento", func(r chi.Router) {
-					r.Get("/", alertaHandler.ListEscalonamentos)
-					r.Post("/", alertaHandler.CreateEscalonamento)
-					r.Get("/{id}", alertaHandler.GetEscalonamento)
-					r.Put("/{id}", alertaHandler.UpdateEscalonamento)
-					r.Put("/{id}/usuarios", alertaHandler.UpdateEscalonamentoUsuarios)
-					r.Delete("/{id}", alertaHandler.DeleteEscalonamento)
+					r.Get("/", escalonamentoHandler.List)
+					r.Post("/", escalonamentoHandler.Create)
+					r.Get("/{id}", escalonamentoHandler.GetByID)
+					r.Put("/{id}", escalonamentoHandler.Update)
+					r.Put("/{id}/usuarios", escalonamentoHandler.UpdateUsuarios)
+					r.Delete("/{id}", escalonamentoHandler.Delete)
 				})
 			})
 
 			r.Route("/escalas", func(r chi.Router) {
-				r.Use(handler.RequireRole("admin", "supervisor"))
+				r.Use(middleware.RequireRole("admin", "supervisor"))
 				r.Get("/", escalaHandler.List)
 				r.Post("/", escalaHandler.Create)
 				r.Post("/lote", escalaHandler.CreateLote)
@@ -215,7 +219,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 			})
 
 			r.Route("/substituicoes", func(r chi.Router) {
-				r.Use(handler.RequireRole("admin", "supervisor"))
+				r.Use(middleware.RequireRole("admin", "supervisor"))
 				r.Get("/", substituicaoHandler.List)
 				r.Post("/", substituicaoHandler.Create)
 				r.Get("/{id}", substituicaoHandler.GetByID)
@@ -224,7 +228,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 			})
 
 			r.Route("/empresa", func(r chi.Router) {
-				r.Use(handler.RequireRole("admin"))
+				r.Use(middleware.RequireRole("admin"))
 				r.Get("/", empresaHandler.Get)
 				r.Put("/", empresaHandler.Update)
 			})

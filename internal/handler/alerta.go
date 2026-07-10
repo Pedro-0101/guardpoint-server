@@ -1,7 +1,6 @@
 package handler
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -9,6 +8,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 
+	"github.com/guardpoint/guardpoint-server/internal/middleware"
 	"github.com/guardpoint/guardpoint-server/internal/model"
 	"github.com/guardpoint/guardpoint-server/internal/service"
 )
@@ -37,7 +37,7 @@ func NewAlertaHandler(alertaService *service.AlertaService) *AlertaHandler {
 // @Failure      500 {object} model.ErrorResponse
 // @Router       /alertas [get]
 func (h *AlertaHandler) List(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 
 	limit, offset := parsePagination(r)
 
@@ -75,7 +75,7 @@ func (h *AlertaHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Failure      409 {object} model.ErrorResponse
 // @Router       /alertas/{id}/reconhecer [put]
 func (h *AlertaHandler) Reconhecer(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 	alertaID := chi.URLParam(r, "id")
 
 	if err := h.alertaService.Reconhecer(r.Context(), empresaID, alertaID); err != nil {
@@ -104,7 +104,7 @@ func (h *AlertaHandler) Reconhecer(w http.ResponseWriter, r *http.Request) {
 // @Failure      409 {object} model.ErrorResponse
 // @Router       /alertas/{id}/encerrar [put]
 func (h *AlertaHandler) Encerrar(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 	alertaID := chi.URLParam(r, "id")
 
 	if err := h.alertaService.Encerrar(r.Context(), empresaID, alertaID); err != nil {
@@ -131,7 +131,7 @@ func (h *AlertaHandler) Encerrar(w http.ResponseWriter, r *http.Request) {
 // @Failure      500 {object} model.ErrorResponse
 // @Router       /alertas/estatisticas [get]
 func (h *AlertaHandler) Estatisticas(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 
 	stats, err := h.alertaService.GetEstatisticas(r.Context(), empresaID)
 	if err != nil {
@@ -141,217 +141,4 @@ func (h *AlertaHandler) Estatisticas(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, stats)
-}
-
-// ListEscalonamentos godoc
-// @Summary      Lista todas as configs de escalonamento da empresa (somente admin)
-// @Tags         config
-// @Success      200 {array} model.ConfigEscalonamento
-// @Failure      500 {object} model.ErrorResponse
-// @Router       /config/escalonamento [get]
-func (h *AlertaHandler) ListEscalonamentos(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
-
-	configs, err := h.alertaService.ListEscalonamentos(r.Context(), empresaID)
-	if err != nil {
-		slog.Error("list escalonamento failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "erro ao carregar configs")
-		return
-	}
-
-	writeJSON(w, http.StatusOK, configs)
-}
-
-// CreateEscalonamento godoc
-// @Summary      Cria uma nova config de escalonamento (somente admin)
-// @Tags         config
-// @Param        request body model.CreateConfigEscalonamentoRequest true "Dados da configuracao"
-// @Success      201 {object} model.ConfigEscalonamento
-// @Failure      400 {object} model.ErrorResponse
-// @Failure      500 {object} model.ErrorResponse
-// @Router       /config/escalonamento [post]
-func (h *AlertaHandler) CreateEscalonamento(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
-
-	var req model.CreateConfigEscalonamentoRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "json invalido")
-		return
-	}
-
-	if err := h.validate.Struct(req); err != nil {
-		writeValidationError(w, err)
-		return
-	}
-
-	config, err := h.alertaService.CreateEscalonamento(r.Context(), empresaID, req)
-	if err != nil {
-		if errors.Is(err, service.ErrUsuarioNaoPertenceAEmpresa) {
-			writeError(w, http.StatusBadRequest, "usuario_id invalido para esta empresa")
-			return
-		}
-		if errors.Is(err, service.ErrUsuarioNaoAdminOuSupervisor) {
-			writeError(w, http.StatusBadRequest, "apenas administradores ou supervisores podem ser destinatarios")
-			return
-		}
-		slog.Error("create escalonamento failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "erro ao criar configuracao")
-		return
-	}
-
-	writeJSON(w, http.StatusCreated, config)
-}
-
-// GetEscalonamento godoc
-// @Summary      Retorna uma config de escalonamento por ID (somente admin)
-// @Tags         config
-// @Param        id path string true "ID da config (uuid)"
-// @Success      200 {object} model.ConfigEscalonamento
-// @Failure      404 {object} model.ErrorResponse
-// @Failure      500 {object} model.ErrorResponse
-// @Router       /config/escalonamento/{id} [get]
-func (h *AlertaHandler) GetEscalonamento(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
-	configID := chi.URLParam(r, "id")
-
-	config, err := h.alertaService.GetEscalonamentoByID(r.Context(), empresaID, configID)
-	if err != nil {
-		if errors.Is(err, service.ErrEscalonamentoNaoEncontrado) {
-			writeError(w, http.StatusNotFound, "config nao encontrada")
-			return
-		}
-		slog.Error("get escalonamento failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "erro ao carregar configuracao")
-		return
-	}
-
-	writeJSON(w, http.StatusOK, config)
-}
-
-// UpdateEscalonamento godoc
-// @Summary      Atualiza uma config de escalonamento (somente admin, apenas sistema=false)
-// @Tags         config
-// @Param        id path string true "ID da config (uuid)"
-// @Param        request body model.UpdateConfigEscalonamentoRequest true "Dados da configuracao"
-// @Success      200 {object} model.ConfigEscalonamento
-// @Failure      400 {object} model.ErrorResponse
-// @Failure      404 {object} model.ErrorResponse
-// @Failure      500 {object} model.ErrorResponse
-// @Router       /config/escalonamento/{id} [put]
-func (h *AlertaHandler) UpdateEscalonamento(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
-	configID := chi.URLParam(r, "id")
-
-	var req model.UpdateConfigEscalonamentoRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "json invalido")
-		return
-	}
-
-	if err := h.validate.Struct(req); err != nil {
-		writeValidationError(w, err)
-		return
-	}
-
-	config, err := h.alertaService.UpdateEscalonamento(r.Context(), empresaID, configID, req)
-	if err != nil {
-		if errors.Is(err, service.ErrEscalonamentoNaoEncontrado) {
-			writeError(w, http.StatusNotFound, "config nao encontrada")
-			return
-		}
-		if errors.Is(err, service.ErrEscalonamentoSistemaNaoEditavel) {
-			writeError(w, http.StatusBadRequest, "config do sistema nao pode ser alterada")
-			return
-		}
-		if errors.Is(err, service.ErrUsuarioNaoPertenceAEmpresa) {
-			writeError(w, http.StatusBadRequest, "usuario_id invalido para esta empresa")
-			return
-		}
-		if errors.Is(err, service.ErrUsuarioNaoAdminOuSupervisor) {
-			writeError(w, http.StatusBadRequest, "apenas administradores ou supervisores podem ser destinatarios")
-			return
-		}
-		slog.Error("update escalonamento failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "erro ao atualizar configuracao")
-		return
-	}
-
-	writeJSON(w, http.StatusOK, config)
-}
-
-// UpdateEscalonamentoUsuarios godoc
-// @Summary      Atualiza apenas os destinatarios de uma config de escalonamento (somente admin)
-// @Tags         config
-// @Param        id path string true "ID da config (uuid)"
-// @Param        request body model.UpdateConfigEscalonamentoUsuariosRequest true "Lista de usuarios"
-// @Success      200 {object} model.ConfigEscalonamento
-// @Failure      400 {object} model.ErrorResponse
-// @Failure      404 {object} model.ErrorResponse
-// @Failure      500 {object} model.ErrorResponse
-// @Router       /config/escalonamento/{id}/usuarios [put]
-func (h *AlertaHandler) UpdateEscalonamentoUsuarios(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
-	configID := chi.URLParam(r, "id")
-
-	var req model.UpdateConfigEscalonamentoUsuariosRequest
-	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
-		writeError(w, http.StatusBadRequest, "json invalido")
-		return
-	}
-
-	if err := h.validate.Struct(req); err != nil {
-		writeValidationError(w, err)
-		return
-	}
-
-	config, err := h.alertaService.UpdateEscalonamentoUsuarios(r.Context(), empresaID, configID, req)
-	if err != nil {
-		if errors.Is(err, service.ErrEscalonamentoNaoEncontrado) {
-			writeError(w, http.StatusNotFound, "config nao encontrada")
-			return
-		}
-		if errors.Is(err, service.ErrUsuarioNaoPertenceAEmpresa) {
-			writeError(w, http.StatusBadRequest, "usuario_id invalido para esta empresa")
-			return
-		}
-		if errors.Is(err, service.ErrUsuarioNaoAdminOuSupervisor) {
-			writeError(w, http.StatusBadRequest, "apenas administradores ou supervisores podem ser destinatarios")
-			return
-		}
-		slog.Error("update escalonamento usuarios failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "erro ao atualizar destinatarios")
-		return
-	}
-
-	writeJSON(w, http.StatusOK, config)
-}
-
-// DeleteEscalonamento godoc
-// @Summary      Exclui uma config de escalonamento (somente admin, apenas sistema=false)
-// @Tags         config
-// @Param        id path string true "ID da config (uuid)"
-// @Success      200 {object} model.StatusResponse
-// @Failure      400 {object} model.ErrorResponse
-// @Failure      404 {object} model.ErrorResponse
-// @Failure      500 {object} model.ErrorResponse
-// @Router       /config/escalonamento/{id} [delete]
-func (h *AlertaHandler) DeleteEscalonamento(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
-	configID := chi.URLParam(r, "id")
-
-	if err := h.alertaService.DeleteEscalonamento(r.Context(), empresaID, configID); err != nil {
-		if errors.Is(err, service.ErrEscalonamentoNaoEncontrado) {
-			writeError(w, http.StatusNotFound, "config nao encontrada")
-			return
-		}
-		if errors.Is(err, service.ErrEscalonamentoSistemaNaoExcluivel) {
-			writeError(w, http.StatusBadRequest, "config do sistema nao pode ser excluida")
-			return
-		}
-		slog.Error("delete escalonamento failed", "error", err)
-		writeError(w, http.StatusInternalServerError, "erro ao excluir configuracao")
-		return
-	}
-
-	writeJSON(w, http.StatusOK, map[string]string{"status": "excluido"})
 }

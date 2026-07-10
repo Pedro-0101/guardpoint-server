@@ -10,6 +10,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 
+	"github.com/guardpoint/guardpoint-server/internal/middleware"
 	"github.com/guardpoint/guardpoint-server/internal/model"
 	"github.com/guardpoint/guardpoint-server/internal/service"
 )
@@ -35,9 +36,9 @@ func NewSenhaVigiaHandler(s *service.SenhaVigiaService) *SenhaVigiaHandler {
 // @Failure      404 {object} model.ErrorResponse
 // @Router       /usuarios/{id}/senhas [get]
 func (h *SenhaVigiaHandler) List(w http.ResponseWriter, r *http.Request) {
-	role := GetRole(r.Context())
+	role := middleware.GetRole(r.Context())
 
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 	usuarioID := chi.URLParam(r, "id")
 
 	parsedEmpresaID, err := uuid.Parse(empresaID)
@@ -85,7 +86,7 @@ func (h *SenhaVigiaHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Failure      404 {object} model.ErrorResponse
 // @Router       /usuarios/{id}/senhas [post]
 func (h *SenhaVigiaHandler) Create(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 	usuarioID := chi.URLParam(r, "id")
 
 	parsedEmpresaID, err := uuid.Parse(empresaID)
@@ -134,7 +135,7 @@ func (h *SenhaVigiaHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Failure      404 {object} model.ErrorResponse
 // @Router       /usuarios/{id}/senhas/{senhaId} [put]
 func (h *SenhaVigiaHandler) Update(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 	usuarioID := chi.URLParam(r, "id")
 	senhaID := chi.URLParam(r, "senhaId")
 
@@ -189,7 +190,7 @@ func (h *SenhaVigiaHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Failure      409 {object} model.ErrorResponse
 // @Router       /usuarios/{id}/senhas/{senhaId} [delete]
 func (h *SenhaVigiaHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 	usuarioID := chi.URLParam(r, "id")
 	senhaID := chi.URLParam(r, "senhaId")
 

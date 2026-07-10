@@ -87,8 +87,13 @@ func (m *fakeAlertaUserRepo) FindByIDEmpresa(ctx context.Context, empresaID, id 
 	return nil, nil
 }
 
-func makeAlertaService(alertaRepo AlertaAlertaRepository, configRepo AlertaConfigEscalonamentoRepository, userRepo AlertaUserRepository) *AlertaService {
-	return NewAlertaService(alertaRepo, configRepo, nil, nil, userRepo, nil)
+func makeAlertaService(alertaRepo AlertaAlertaRepository, configRepo EscalonamentoConfigRepository, userRepo EscalonamentoUserRepository) *AlertaService {
+	escSvc := NewEscalonamentoService(configRepo, userRepo)
+	return NewAlertaService(alertaRepo, escSvc, nil)
+}
+
+func makeEscalonamentoService(configRepo EscalonamentoConfigRepository, userRepo EscalonamentoUserRepository) *EscalonamentoService {
+	return NewEscalonamentoService(configRepo, userRepo)
 }
 
 func TestAlertaService_Reconhecer_Success(t *testing.T) {
@@ -225,7 +230,7 @@ func TestAlertaService_ValidarUsuariosDaEmpresa(t *testing.T) {
 		},
 	}
 
-	svc := makeAlertaService(nil, nil, userRepo)
+	svc := makeEscalonamentoService(nil, userRepo)
 
 	t.Run("supervisor valido", func(t *testing.T) {
 		sv := uuid.New()
@@ -234,7 +239,7 @@ func TestAlertaService_ValidarUsuariosDaEmpresa(t *testing.T) {
 				return &model.User{ID: sv, Role: "supervisor"}, nil
 			},
 		}
-		s := makeAlertaService(nil, nil, repo)
+		s := makeEscalonamentoService(nil, repo)
 		err := s.validarUsuariosDaEmpresa(ctx, empresaID, []uuid.UUID{sv})
 		if err != nil {
 			t.Errorf("supervisor deveria ser valido: %v", err)
@@ -261,7 +266,7 @@ func TestAlertaService_GetEscalonamentoByID(t *testing.T) {
 	empresaID := uuid.New()
 	configID := uuid.New()
 
-	svc := makeAlertaService(nil,
+	svc := makeEscalonamentoService(
 		&fakeAlertaConfigRepo{
 			findByIDEmpresaFn: func(ctx context.Context, id, eID uuid.UUID) (*model.ConfigEscalonamento, error) {
 				return &model.ConfigEscalonamento{ID: configID, AtrasoMinutos: 10}, nil
@@ -288,7 +293,7 @@ func TestAlertaService_CreateEscalonamento(t *testing.T) {
 	usuarioID := uuid.New()
 
 	createCalled := false
-	svc := makeAlertaService(nil,
+	svc := makeEscalonamentoService(
 		&fakeAlertaConfigRepo{
 			createFn: func(ctx context.Context, c *model.ConfigEscalonamento) error {
 				createCalled = true
@@ -325,7 +330,7 @@ func TestAlertaService_DeleteEscalonamento_Success(t *testing.T) {
 	configID := uuid.New()
 
 	deleteCalled := false
-	svc := makeAlertaService(nil,
+	svc := makeEscalonamentoService(
 		&fakeAlertaConfigRepo{
 			findByIDEmpresaFn: func(ctx context.Context, id, eID uuid.UUID) (*model.ConfigEscalonamento, error) {
 				return &model.ConfigEscalonamento{ID: configID, Sistema: false}, nil
@@ -352,7 +357,7 @@ func TestAlertaService_DeleteEscalonamento_SistemaNaoExcluivel(t *testing.T) {
 	empresaID := uuid.New()
 	configID := uuid.New()
 
-	svc := makeAlertaService(nil,
+	svc := makeEscalonamentoService(
 		&fakeAlertaConfigRepo{
 			findByIDEmpresaFn: func(ctx context.Context, id, eID uuid.UUID) (*model.ConfigEscalonamento, error) {
 				return &model.ConfigEscalonamento{ID: configID, Sistema: true}, nil
@@ -372,7 +377,7 @@ func TestAlertaService_UpdateEscalonamento_SistemaNaoEditavel(t *testing.T) {
 	empresaID := uuid.New()
 	configID := uuid.New()
 
-	svc := makeAlertaService(nil,
+	svc := makeEscalonamentoService(
 		&fakeAlertaConfigRepo{
 			findByIDEmpresaFn: func(ctx context.Context, id, eID uuid.UUID) (*model.ConfigEscalonamento, error) {
 				return &model.ConfigEscalonamento{ID: configID, Sistema: true}, nil
@@ -400,7 +405,7 @@ func TestAlertaService_UpdateEscalonamentoUsuarios_Success(t *testing.T) {
 	usuarioID := uuid.New()
 
 	updateCalled := false
-	svc := makeAlertaService(nil,
+	svc := makeEscalonamentoService(
 		&fakeAlertaConfigRepo{
 			findByIDEmpresaFn: func(ctx context.Context, id, eID uuid.UUID) (*model.ConfigEscalonamento, error) {
 				return &model.ConfigEscalonamento{ID: configID}, nil
@@ -461,7 +466,7 @@ func TestAlertaService_ListEscalonamentos(t *testing.T) {
 	ctx := context.Background()
 	empresaID := uuid.New()
 
-	svc := makeAlertaService(nil,
+	svc := makeEscalonamentoService(
 		&fakeAlertaConfigRepo{
 			listByEmpresaFn: func(ctx context.Context, eID uuid.UUID) ([]model.ConfigEscalonamento, error) {
 				return []model.ConfigEscalonamento{

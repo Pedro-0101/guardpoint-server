@@ -5,12 +5,12 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"strings"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 
+	"github.com/guardpoint/guardpoint-server/internal/middleware"
 	"github.com/guardpoint/guardpoint-server/internal/model"
 	"github.com/guardpoint/guardpoint-server/internal/service"
 	"github.com/guardpoint/guardpoint-server/internal/worker"
@@ -41,8 +41,8 @@ func NewTurnoHandler(turnoService *service.TurnoService, syncReconciler *worker.
 // @Failure      409 {object} model.ErrorResponse
 // @Router       /turnos/iniciar [post]
 func (h *TurnoHandler) Iniciar(w http.ResponseWriter, r *http.Request) {
-	userID := GetUserID(r.Context())
-	empresaID := GetEmpresaID(r.Context())
+	userID := middleware.GetUserID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 
 	var req model.IniciarTurnoRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -96,8 +96,8 @@ func (h *TurnoHandler) Iniciar(w http.ResponseWriter, r *http.Request) {
 // @Failure      409 {object} model.ErrorResponse
 // @Router       /turnos/checkin [post]
 func (h *TurnoHandler) Checkin(w http.ResponseWriter, r *http.Request) {
-	userID := GetUserID(r.Context())
-	empresaID := GetEmpresaID(r.Context())
+	userID := middleware.GetUserID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 
 	var req model.CheckinRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -146,8 +146,8 @@ func (h *TurnoHandler) Checkin(w http.ResponseWriter, r *http.Request) {
 // @Failure      409 {object} model.ErrorResponse
 // @Router       /turnos/finalizar [post]
 func (h *TurnoHandler) Finalizar(w http.ResponseWriter, r *http.Request) {
-	userID := GetUserID(r.Context())
-	empresaID := GetEmpresaID(r.Context())
+	userID := middleware.GetUserID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 
 	var req model.FinalizarTurnoRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -192,8 +192,8 @@ func (h *TurnoHandler) Finalizar(w http.ResponseWriter, r *http.Request) {
 // @Failure      404 {object} model.ErrorResponse
 // @Router       /turnos/status [get]
 func (h *TurnoHandler) Status(w http.ResponseWriter, r *http.Request) {
-	userID := GetUserID(r.Context())
-	empresaID := GetEmpresaID(r.Context())
+	userID := middleware.GetUserID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 
 	status, err := h.turnoService.GetStatus(r.Context(), userID, empresaID)
 	if err != nil {
@@ -227,9 +227,9 @@ func (h *TurnoHandler) Status(w http.ResponseWriter, r *http.Request) {
 // @Failure      500 {object} model.ErrorResponse
 // @Router       /turnos [get]
 func (h *TurnoHandler) List(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
-	userID := GetUserID(r.Context())
-	role := GetRole(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
+	userID := middleware.GetUserID(r.Context())
+	role := middleware.GetRole(r.Context())
 
 	limit, offset := parsePagination(r)
 
@@ -276,7 +276,7 @@ func (h *TurnoHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Failure      404 {object} model.ErrorResponse
 // @Router       /turnos/{id} [get]
 func (h *TurnoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
 
 	detalhe, err := h.turnoService.GetByID(r.Context(), empresaID, id)
@@ -297,7 +297,7 @@ func (h *TurnoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 // @Failure      409 {object} model.ErrorResponse
 // @Router       /turnos/{id}/revogar [post]
 func (h *TurnoHandler) Revogar(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
 
 	resp, err := h.turnoService.Revogar(r.Context(), empresaID, id)
@@ -342,8 +342,8 @@ func writeSessaoError(w http.ResponseWriter, err error) bool {
 // @Failure      404 {object} model.ErrorResponse
 // @Router       /turnos/reassociar [post]
 func (h *TurnoHandler) Reassociar(w http.ResponseWriter, r *http.Request) {
-	userID := GetUserID(r.Context())
-	empresaID := GetEmpresaID(r.Context())
+	userID := middleware.GetUserID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 
 	var req model.ReassociarRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -393,8 +393,8 @@ func (h *TurnoHandler) Reassociar(w http.ResponseWriter, r *http.Request) {
 // @Failure      409 {object} model.ErrorResponse
 // @Router       /turnos/sabotagem [post]
 func (h *TurnoHandler) Sabotagem(w http.ResponseWriter, r *http.Request) {
-	userID := GetUserID(r.Context())
-	empresaID := GetEmpresaID(r.Context())
+	userID := middleware.GetUserID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 
 	var req model.SabotagemRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -441,8 +441,8 @@ func (h *TurnoHandler) Sabotagem(w http.ResponseWriter, r *http.Request) {
 // @Failure      500 {object} model.ErrorResponse
 // @Router       /checkins/lote [post]
 func (h *TurnoHandler) Lote(w http.ResponseWriter, r *http.Request) {
-	userID := GetUserID(r.Context())
-	empresaID := GetEmpresaID(r.Context())
+	userID := middleware.GetUserID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 
 	var reqs []model.CheckinRequest
 	if err := json.NewDecoder(r.Body).Decode(&reqs); err != nil {
@@ -506,17 +506,4 @@ func collectUniqueTurnoIDs(reqs []model.CheckinRequest) []uuid.UUID {
 	return ids
 }
 
-func parseCSV(raw string) []string {
-	if raw == "" {
-		return nil
-	}
-	parts := strings.Split(raw, ",")
-	result := make([]string, 0, len(parts))
-	for _, s := range parts {
-		s = strings.TrimSpace(s)
-		if s != "" {
-			result = append(result, s)
-		}
-	}
-	return result
-}
+

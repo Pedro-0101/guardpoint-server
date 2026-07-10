@@ -10,6 +10,7 @@ import (
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 
+	"github.com/guardpoint/guardpoint-server/internal/middleware"
 	"github.com/guardpoint/guardpoint-server/internal/model"
 	"github.com/guardpoint/guardpoint-server/internal/service"
 )
@@ -34,7 +35,7 @@ func NewSubstituicaoHandler(service *service.SubstituicaoService) *SubstituicaoH
 // @Failure      400 {object} model.ErrorResponse
 // @Router       /substituicoes [post]
 func (h *SubstituicaoHandler) Create(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 
 	parsedEmpresaID, err := uuid.Parse(empresaID)
 	if err != nil {
@@ -71,7 +72,7 @@ func (h *SubstituicaoHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Failure      404 {object} model.ErrorResponse
 // @Router       /substituicoes/{id} [get]
 func (h *SubstituicaoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
 
 	parsedEmpresaID, err := uuid.Parse(empresaID)
@@ -106,7 +107,7 @@ func (h *SubstituicaoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 // @Success      200 {object} model.SubstituicaoListResponse
 // @Router       /substituicoes [get]
 func (h *SubstituicaoHandler) List(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 
 	parsedEmpresaID, err := uuid.Parse(empresaID)
 	if err != nil {
@@ -160,7 +161,7 @@ func (h *SubstituicaoHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Failure      404 {object} model.ErrorResponse
 // @Router       /substituicoes/{id} [put]
 func (h *SubstituicaoHandler) Update(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
 
 	parsedEmpresaID, err := uuid.Parse(empresaID)
@@ -207,7 +208,7 @@ func (h *SubstituicaoHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Failure      404 {object} model.ErrorResponse
 // @Router       /substituicoes/{id} [delete]
 func (h *SubstituicaoHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
 
 	parsedEmpresaID, err := uuid.Parse(empresaID)

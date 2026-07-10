@@ -4,12 +4,12 @@ import (
 	"encoding/json"
 	"log/slog"
 	"net/http"
-	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
 
+	"github.com/guardpoint/guardpoint-server/internal/middleware"
 	"github.com/guardpoint/guardpoint-server/internal/model"
 	"github.com/guardpoint/guardpoint-server/internal/service"
 )
@@ -34,7 +34,7 @@ func NewPostoHandler(postoService *service.PostoService) *PostoHandler {
 // @Failure      400 {object} model.ErrorResponse
 // @Router       /postos [post]
 func (h *PostoHandler) Create(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 
 	var req model.CreatePostoRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -84,7 +84,7 @@ func (h *PostoHandler) Create(w http.ResponseWriter, r *http.Request) {
 // @Failure      404 {object} model.ErrorResponse
 // @Router       /postos/{id} [get]
 func (h *PostoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
 
 	parsedEmpresaID, err := uuid.Parse(empresaID)
@@ -115,7 +115,7 @@ func (h *PostoHandler) GetByID(w http.ResponseWriter, r *http.Request) {
 // @Failure      400 {object} model.ErrorResponse
 // @Router       /postos [get]
 func (h *PostoHandler) List(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 
 	parsedEmpresaID, err := uuid.Parse(empresaID)
 	if err != nil {
@@ -149,7 +149,7 @@ func (h *PostoHandler) List(w http.ResponseWriter, r *http.Request) {
 // @Failure      404 {object} model.ErrorResponse
 // @Router       /postos/{id} [put]
 func (h *PostoHandler) Update(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
 
 	parsedEmpresaID, err := uuid.Parse(empresaID)
@@ -214,7 +214,7 @@ func (h *PostoHandler) Update(w http.ResponseWriter, r *http.Request) {
 // @Failure      500 {object} model.ErrorResponse
 // @Router       /postos/{id} [delete]
 func (h *PostoHandler) Delete(w http.ResponseWriter, r *http.Request) {
-	empresaID := GetEmpresaID(r.Context())
+	empresaID := middleware.GetEmpresaID(r.Context())
 	id := chi.URLParam(r, "id")
 
 	parsedEmpresaID, err := uuid.Parse(empresaID)
@@ -237,20 +237,4 @@ func (h *PostoHandler) Delete(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]string{"message": "posto desativado"})
 }
 
-func parsePagination(r *http.Request) (int, int) {
-	limit := 20
-	offset := 0
 
-	if l := r.URL.Query().Get("limit"); l != "" {
-		if parsed, err := strconv.Atoi(l); err == nil && parsed > 0 && parsed <= 100 {
-			limit = parsed
-		}
-	}
-	if o := r.URL.Query().Get("offset"); o != "" {
-		if parsed, err := strconv.Atoi(o); err == nil && parsed >= 0 {
-			offset = parsed
-		}
-	}
-
-	return limit, offset
-}

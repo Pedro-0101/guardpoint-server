@@ -9,7 +9,6 @@ import (
 	"math"
 	"math/big"
 	"sort"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -855,193 +854,58 @@ func (s *TurnoService) GetTurnos(ctx context.Context, empresaID string, filter m
 	return allTurnos[filter.Offset:end], total, nil
 }
 
-func (s *TurnoService) gerarTurnosAgendados(ctx context.Context, empresaID uuid.UUID, filter model.TurnoFilter) ([]model.Turno, error) {
-	if filter.DataInicio == "" || filter.DataFim == "" {
-		return nil, nil
-	}
-
-	dataInicio, err := time.ParseInLocation("2006-01-02", filter.DataInicio, timeutil.BRT)
+func (s *TurnoService) calcularGeofence(ctx context.Context, postoID, empresaID uuid.UUID, lat, lon float64) *string {
+	posto, err := s.postoRepo.FindByID(ctx, empresaID, postoID)
 	if err != nil {
-		return nil, fmt.Errorf("data_inicio invalida: %w", err)
-	}
-	dataFim, err := time.ParseInLocation("2006-01-02", filter.DataFim, timeutil.BRT)
-	if err != nil {
-		return nil, fmt.Errorf("data_fim invalida: %w", err)
+		geofence := "ok"
+		return &geofence
 	}
 
-	escalas, err := s.escalaRepo.ListAtivasByEmpresa(ctx, empresaID, filter.UsuarioID, filter.PostoID)
-	if err != nil {
-		return nil, fmt.Errorf("listar escalas: %w", err)
+	geofence := classificarGeofence(lat, lon, posto.Latitude, posto.Longitude, posto.RaioM)
+	return &geofence
+}
+
+func classificarGeofence(lat, lon, postoLat, postoLon float64, raioM int) string {
+	if haversine(lat, lon, postoLat, postoLon) > float64(raioM) {
+		return "desvio_rota"
 	}
+	return "ok"
+}
 
-	subs, err := s.substituicaoRepo.ListAtivasByDateRange(ctx, empresaID, filter.DataInicio, filter.DataFim, filter.UsuarioID, filter.PostoID)
-	if err != nil {
-		return nil, fmt.Errorf("listar substituicoes: %w", err)
+// checkinAtrasado indica se um check-in em `ts` estourou a janela deslizante.
+// A ancora e o check-in imediatamente anterior ou, no primeiro check-in do
+// turno, o inicio real.
+func checkinAtrasado(anterior, inicioReal *time.Time, intervaloMin int, ts time.Time) bool {
+	ancora := anterior
+	if ancora == nil {
+		ancora = inicioReal
 	}
-
-	reais, err := s.turnoRepo.ListTurnosByDateRange(ctx, empresaID, filter.DataInicio, filter.DataFim, filter.UsuarioID, filter.PostoID)
-	if err != nil {
-		return nil, fmt.Errorf("listar turnos reais: %w", err)
+	if ancora == nil {
+		return false
 	}
+	return ts.After(ancora.Add(time.Duration(intervaloMin) * time.Minute))
+}
 
-	realByUserPostoDate := make(map[string]bool)
-	for _, t := range reais {
-		dateStr := t.InicioPrevisto.In(timeutil.BRT).Format("2006-01-02")
-		key := t.UsuarioID.String() + "|" + t.PostoID.String() + "|" + dateStr
-		realByUserPostoDate[key] = true
+func haversine(lat1, lon1, lat2, lon2 float64) float64 {
+	const earthRadius = 6371000.0
+
+	dLat := (lat2 - lat1) * (math.Pi / 180.0)
+	dLon := (lon2 - lon1) * (math.Pi / 180.0)
+
+	a := math.Sin(dLat/2)*math.Sin(dLat/2) +
+		math.Cos(lat1*(math.Pi/180.0))*math.Cos(lat2*(math.Pi/180.0))*
+			math.Sin(dLon/2)*math.Sin(dLon/2)
+
+	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
+
+	return earthRadius * c
+}
+
+func (s *TurnoService) emitirGPSUpdate(empresaID, turnoID string, lat, lon float64, ts time.Time, flagGeofence *string) {
+	if s.hub == nil {
+		return
 	}
-
-	subByUserPostoDate := make(map[string]*model.Substituicao)
-	for i := range subs {
-		sub := &subs[i]
-		current := sub.DataInicio
-		for !current.After(sub.DataFim) {
-			dateStr := current.Format("2006-01-02")
-			key := sub.UsuarioID.String() + "|" + sub.PostoID.String() + "|" + dateStr
-			subByUserPostoDate[key] = sub
-			current = current.AddDate(0, 0, 1)
-		}
-	}
-
-	subPostoDate := make(map[string]bool)
-	for key := range subByUserPostoDate {
-		parts := strings.SplitN(key, "|", 3)
-		if len(parts) == 3 {
-			subPostoDate[parts[1]+"|"+parts[2]] = true
-		}
-	}
-
-	var turnos []model.Turno
-
-	for d := dataInicio; !d.After(dataFim); d = d.AddDate(0, 0, 1) {
-		diaSemana := int16(d.Weekday())
-		dateStr := d.Format("2006-01-02")
-
-		for _, esc := range escalas {
-			if esc.DiaSemanaInicio != diaSemana {
-				continue
-			}
-
-			key := esc.UsuarioID.String() + "|" + esc.PostoID.String() + "|" + dateStr
-			if realByUserPostoDate[key] {
-				continue
-			}
-
-			_, hasSubForSameUser := subByUserPostoDate[key]
-			postoDateKey := esc.PostoID.String() + "|" + dateStr
-			if !hasSubForSameUser && subPostoDate[postoDateKey] {
-				continue
-			}
-
-			horaInicio := esc.HoraInicio
-			horaFim := esc.HoraFim
-			usuarioNome := esc.UsuarioNome
-			postoNome := esc.PostoNome
-
-			var substituicaoID *uuid.UUID
-		if sub, ok := subByUserPostoDate[key]; ok {
-			horaInicio = sub.HoraInicio
-			horaFim = sub.HoraFim
-			usuarioNome = sub.UsuarioNome
-			postoNome = sub.PostoNome
-			substituicaoID = &sub.ID
-		}
-
-		inicioPrevisto, err := parseHoraData(dateStr, horaInicio)
-		if err != nil {
-			continue
-		}
-		fimPrevisto, err := parseHoraData(dateStr, horaFim)
-		if err != nil {
-			continue
-		}
-
-		if !fimPrevisto.After(inicioPrevisto) {
-			fimPrevisto = fimPrevisto.AddDate(0, 0, 1)
-		}
-
-		turno := model.Turno{
-			EmpresaID:      empresaID,
-			UsuarioID:      esc.UsuarioID,
-			PostoID:        esc.PostoID,
-			PostoNome:      postoNome,
-			UsuarioNome:    usuarioNome,
-			Status:         "agendado",
-			InicioPrevisto: inicioPrevisto,
-			FimPrevisto:    fimPrevisto,
-			SubstituicaoID: substituicaoID,
-		}
-			turnos = append(turnos, turno)
-		}
-	}
-
-	generatedKeys := make(map[string]bool)
-	for _, t := range turnos {
-		key := t.UsuarioID.String() + "|" + t.PostoID.String() + "|" + t.InicioPrevisto.In(timeutil.BRT).Format("2006-01-02")
-		generatedKeys[key] = true
-	}
-
-	escalaPostoDate := make(map[string]bool)
-	for d := dataInicio; !d.After(dataFim); d = d.AddDate(0, 0, 1) {
-		diaSemana := int16(d.Weekday())
-		dateStr := d.Format("2006-01-02")
-		for _, esc := range escalas {
-			if esc.DiaSemanaInicio == diaSemana {
-				escalaPostoDate[esc.PostoID.String()+"|"+dateStr] = true
-			}
-		}
-	}
-
-	for _, sub := range subs {
-		current := sub.DataInicio
-		for !current.After(sub.DataFim) {
-			dateStr := current.Format("2006-01-02")
-			key := sub.UsuarioID.String() + "|" + sub.PostoID.String() + "|" + dateStr
-
-			if realByUserPostoDate[key] {
-				current = current.AddDate(0, 0, 1)
-				continue
-			}
-			if generatedKeys[key] {
-				current = current.AddDate(0, 0, 1)
-				continue
-			}
-			if !escalaPostoDate[sub.PostoID.String()+"|"+dateStr] {
-				current = current.AddDate(0, 0, 1)
-				continue
-			}
-
-			inicioPrevisto, err := parseHoraData(dateStr, sub.HoraInicio)
-			if err != nil {
-				current = current.AddDate(0, 0, 1)
-				continue
-			}
-			fimPrevisto, err := parseHoraData(dateStr, sub.HoraFim)
-			if err != nil {
-				current = current.AddDate(0, 0, 1)
-				continue
-			}
-			if !fimPrevisto.After(inicioPrevisto) {
-				fimPrevisto = fimPrevisto.AddDate(0, 0, 1)
-			}
-
-			turno := model.Turno{
-				EmpresaID:      empresaID,
-				UsuarioID:      sub.UsuarioID,
-				PostoID:        sub.PostoID,
-				PostoNome:      sub.PostoNome,
-				UsuarioNome:    sub.UsuarioNome,
-				Status:         "agendado",
-				InicioPrevisto: inicioPrevisto,
-				FimPrevisto:    fimPrevisto,
-				SubstituicaoID: &sub.ID,
-			}
-			turnos = append(turnos, turno)
-			current = current.AddDate(0, 0, 1)
-		}
-	}
-
-	return turnos, nil
+	s.hub.Broadcast(empresaID, ws.NewGPSUpdateEvent(turnoID, ts.UTC().Format(time.RFC3339), lat, lon, flagGeofence))
 }
 
 func parseHoraData(dateStr, hora string) (time.Time, error) {
@@ -1126,168 +990,4 @@ func (s *TurnoService) Sabotagem(ctx context.Context, userID, empresaID string, 
 		Status:   "registrado",
 		Mensagem: "sabotagem reportada com sucesso",
 	}, nil
-}
-
-func (s *TurnoService) ProcessarLote(ctx context.Context, userID, empresaID string, checkins []model.CheckinRequest) ([]model.CheckinResponse, error) {
-	parsedUserID, err := uuid.Parse(userID)
-	if err != nil {
-		return nil, fmt.Errorf("user_id invalido: %w", err)
-	}
-	parsedEmpresaID, err := uuid.Parse(empresaID)
-	if err != nil {
-		return nil, fmt.Errorf("empresa_id invalido: %w", err)
-	}
-
-	resultados := make([]model.CheckinResponse, 0, len(checkins))
-
-	for _, req := range checkins {
-		parsedTurnoID, err := uuid.Parse(req.TurnoID)
-		if err != nil {
-			continue
-		}
-
-		turno, err := s.turnoRepo.FindByID(ctx, parsedEmpresaID, parsedTurnoID)
-		if err != nil {
-			continue
-		}
-
-		if turno.UsuarioID != parsedUserID {
-			continue
-		}
-
-		if turno.Status == "finalizado" {
-			continue
-		}
-
-		if err := validarSessaoTurno(turno, req.DeviceID); err != nil {
-			continue
-		}
-
-		timestampCriacao, err := time.Parse(time.RFC3339, req.Timestamp)
-		if err != nil {
-			timestampCriacao = timeutil.NowBRT()
-		}
-
-		flagGeofence := s.calcularGeofence(ctx, turno.PostoID, parsedEmpresaID, req.Latitude, req.Longitude)
-
-		origemRede := "offline_sincronizado"
-
-		senhaResolvida, err := s.resolverSenha(ctx, parsedEmpresaID, parsedUserID, req.Senha)
-		if err != nil {
-			slog.Warn("senha de vigia nao resolvida", "error", err, "turno_id", parsedTurnoID, "usuario_id", parsedUserID)
-			senhaResolvida = nil
-		}
-
-		checkin := &model.Checkin{
-			TurnoID:          parsedTurnoID,
-			EmpresaID:        parsedEmpresaID,
-			Latitude:         req.Latitude,
-			Longitude:        req.Longitude,
-			TimestampCriacao: timestampCriacao,
-			Evento:           "checkin",
-			FlagGeofence:     flagGeofence,
-			OrigemRede:       origemRede,
-		}
-		if senhaResolvida != nil {
-			tipoSenha := senhaResolvida.Tipo
-			checkin.TipoSenha = &tipoSenha
-			senhaID := senhaResolvida.ID
-			checkin.SenhaVigiaID = &senhaID
-		}
-
-		var anterior *time.Time
-		if ultimo := s.checkinRepo.FindUltimoByTurnoNoError(ctx, turno.ID); ultimo != nil {
-			anterior = &ultimo.TimestampCriacao
-		}
-
-		if req.ClienteCheckinID != "" {
-			cid := req.ClienteCheckinID
-			checkin.ClienteCheckinID = &cid
-			if _, err := s.checkinRepo.CreateIdempotent(ctx, checkin); err != nil {
-				continue
-			}
-		} else {
-			if err := s.checkinRepo.Create(ctx, checkin); err != nil {
-				continue
-			}
-		}
-
-		s.aplicarConsequenciaSenha(ctx, empresaID, parsedEmpresaID, parsedTurnoID, parsedUserID, req.Senha)
-
-		s.emitirGPSUpdate(empresaID, req.TurnoID, req.Latitude, req.Longitude, timestampCriacao, flagGeofence)
-
-		atrasado := checkinAtrasado(anterior, turno.InicioReal, turno.IntervaloMin, timestampCriacao)
-		dl := timestampCriacao.Add(time.Duration(turno.IntervaloMin) * time.Minute)
-		proximoDeadline := &dl
-
-		posto, err := s.postoRepo.FindByID(ctx, parsedEmpresaID, turno.PostoID)
-		postoNome := ""
-		if err == nil {
-			postoNome = posto.Nome
-		}
-
-		resultados = append(resultados, model.CheckinResponse{
-			Checkin:         *checkin,
-			Status:          turno.Status,
-			PostoNome:       postoNome,
-			ProximoDeadline: proximoDeadline,
-			Atrasado:        atrasado,
-		})
-	}
-
-	return resultados, nil
-}
-
-func (s *TurnoService) calcularGeofence(ctx context.Context, postoID, empresaID uuid.UUID, lat, lon float64) *string {
-	posto, err := s.postoRepo.FindByID(ctx, empresaID, postoID)
-	if err != nil {
-		geofence := "ok"
-		return &geofence
-	}
-
-	geofence := classificarGeofence(lat, lon, posto.Latitude, posto.Longitude, posto.RaioM)
-	return &geofence
-}
-
-func classificarGeofence(lat, lon, postoLat, postoLon float64, raioM int) string {
-	if haversine(lat, lon, postoLat, postoLon) > float64(raioM) {
-		return "desvio_rota"
-	}
-	return "ok"
-}
-
-// checkinAtrasado indica se um check-in em `ts` estourou a janela deslizante.
-// A ancora e o check-in imediatamente anterior ou, no primeiro check-in do
-// turno, o inicio real.
-func checkinAtrasado(anterior, inicioReal *time.Time, intervaloMin int, ts time.Time) bool {
-	ancora := anterior
-	if ancora == nil {
-		ancora = inicioReal
-	}
-	if ancora == nil {
-		return false
-	}
-	return ts.After(ancora.Add(time.Duration(intervaloMin) * time.Minute))
-}
-
-func haversine(lat1, lon1, lat2, lon2 float64) float64 {
-	const earthRadius = 6371000.0
-
-	dLat := (lat2 - lat1) * (math.Pi / 180.0)
-	dLon := (lon2 - lon1) * (math.Pi / 180.0)
-
-	a := math.Sin(dLat/2)*math.Sin(dLat/2) +
-		math.Cos(lat1*(math.Pi/180.0))*math.Cos(lat2*(math.Pi/180.0))*
-			math.Sin(dLon/2)*math.Sin(dLon/2)
-
-	c := 2 * math.Atan2(math.Sqrt(a), math.Sqrt(1-a))
-
-	return earthRadius * c
-}
-
-func (s *TurnoService) emitirGPSUpdate(empresaID, turnoID string, lat, lon float64, ts time.Time, flagGeofence *string) {
-	if s.hub == nil {
-		return
-	}
-	s.hub.Broadcast(empresaID, ws.NewGPSUpdateEvent(turnoID, ts.UTC().Format(time.RFC3339), lat, lon, flagGeofence))
 }
