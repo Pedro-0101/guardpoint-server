@@ -912,6 +912,57 @@ func (s *TurnoService) gerarTurnosAgendados(ctx context.Context, empresaID uuid.
 		}
 	}
 
+	generatedKeys := make(map[string]bool)
+	for _, t := range turnos {
+		key := t.UsuarioID.String() + "|" + t.PostoID.String() + "|" + t.InicioPrevisto.In(timeutil.BRT).Format("2006-01-02")
+		generatedKeys[key] = true
+	}
+
+	for _, sub := range subs {
+		current := sub.DataInicio
+		for !current.After(sub.DataFim) {
+			dateStr := current.Format("2006-01-02")
+			key := sub.UsuarioID.String() + "|" + sub.PostoID.String() + "|" + dateStr
+
+			if realByUserPostoDate[key] {
+				current = current.AddDate(0, 0, 1)
+				continue
+			}
+			if generatedKeys[key] {
+				current = current.AddDate(0, 0, 1)
+				continue
+			}
+
+			inicioPrevisto, err := parseHoraData(dateStr, sub.HoraInicio)
+			if err != nil {
+				current = current.AddDate(0, 0, 1)
+				continue
+			}
+			fimPrevisto, err := parseHoraData(dateStr, sub.HoraFim)
+			if err != nil {
+				current = current.AddDate(0, 0, 1)
+				continue
+			}
+			if !fimPrevisto.After(inicioPrevisto) {
+				fimPrevisto = fimPrevisto.AddDate(0, 0, 1)
+			}
+
+			turno := model.Turno{
+				EmpresaID:      empresaID,
+				UsuarioID:      sub.UsuarioID,
+				PostoID:        sub.PostoID,
+				PostoNome:      sub.PostoNome,
+				UsuarioNome:    sub.UsuarioNome,
+				Status:         "agendado",
+				InicioPrevisto: inicioPrevisto,
+				FimPrevisto:    fimPrevisto,
+				SubstituicaoID: &sub.ID,
+			}
+			turnos = append(turnos, turno)
+			current = current.AddDate(0, 0, 1)
+		}
+	}
+
 	return turnos, nil
 }
 

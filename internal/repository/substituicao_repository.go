@@ -168,8 +168,8 @@ func (r *SubstituicaoRepository) FindAtivaByUsuarioPostoData(ctx context.Context
 		  AND usuario_id = $2
 		  AND posto_id = $3
 		  AND ativo = true
-		  AND data_inicio <= $4::date
-		  AND data_fim >= $4::date
+		  AND data_inicio <= ($4 AT TIME ZONE 'America/Sao_Paulo')::date
+		  AND data_fim >= ($4 AT TIME ZONE 'America/Sao_Paulo')::date
 		LIMIT 1
 	`
 	var sub model.Substituicao

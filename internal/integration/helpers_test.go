@@ -311,6 +311,21 @@ func (c *cenario) getTurno(turnoID uuid.UUID) model.TurnoDetalhe {
 	return det
 }
 
+// criarSubstituicao cria uma substituicao via API e retorna o struct completo.
+func (c *cenario) criarSubstituicao(usuarioID, postoID uuid.UUID, dataInicio, dataFim string, horaInicio, horaFim string) *model.Substituicao {
+	c.e.t.Helper()
+	var sub model.Substituicao
+	c.e.reqJSON(http.MethodPost, "/api/v1/substituicoes", c.adminToken, map[string]any{
+		"usuario_id":  usuarioID.String(),
+		"posto_id":    postoID.String(),
+		"data_inicio": dataInicio,
+		"data_fim":    dataFim,
+		"hora_inicio": horaInicio,
+		"hora_fim":    horaFim,
+	}, http.StatusCreated, &sub)
+	return &sub
+}
+
 func (c *cenario) contarAlertas(tipo string) int {
 	c.e.t.Helper()
 	var resp struct {
