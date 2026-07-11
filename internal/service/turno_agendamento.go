@@ -13,8 +13,11 @@ import (
 )
 
 func (s *TurnoService) gerarTurnosAgendados(ctx context.Context, empresaID uuid.UUID, filter model.TurnoFilter) ([]model.Turno, error) {
-	if filter.DataInicio == "" || filter.DataFim == "" {
-		return nil, nil
+	if filter.DataInicio == "" {
+		filter.DataInicio = time.Now().In(timeutil.BRT).Format("2006-01-02")
+	}
+	if filter.DataFim == "" {
+		filter.DataFim = time.Now().In(timeutil.BRT).Format("2006-01-02")
 	}
 
 	dataInicio, err := time.ParseInLocation("2006-01-02", filter.DataInicio, timeutil.BRT)
