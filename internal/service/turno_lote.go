@@ -39,7 +39,7 @@ func (s *TurnoService) ProcessarLote(ctx context.Context, userID, empresaID stri
 			continue
 		}
 
-		if turno.Status == "finalizado" {
+		if turno.Status == "finalizado" || turno.Status == "atrasado" {
 			continue
 		}
 

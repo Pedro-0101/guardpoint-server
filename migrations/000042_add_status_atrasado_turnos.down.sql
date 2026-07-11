@@ -1,0 +1,1 @@
+ALTER TABLE turnos DROP CONSTRAINT IF EXISTS ck_turnos_status;

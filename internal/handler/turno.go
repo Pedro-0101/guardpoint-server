@@ -214,7 +214,7 @@ func (h *TurnoHandler) Status(w http.ResponseWriter, r *http.Request) {
 // @Description  Para vigias, retorna apenas os turnos do proprio usuario autenticado.
 // @Description  Admin e supervisores podem filtrar por qualquer usuario/posto.
 // @Tags         turnos
-// @Param        status query string false "Status (agendado,em_andamento,pausado,critico,finalizado) - multiplos separados por virgula"
+// @Param        status query string false "Status (agendado,em_andamento,pausado,critico,finalizado,atrasado) - multiplos separados por virgula"
 // @Param        data_inicio query string false "Data inicial (YYYY-MM-DD)"
 // @Param        data_fim query string false "Data final (YYYY-MM-DD)"
 // @Param        usuario_id query string false "ID(s) do(s) vigia(s) (uuid) - multiplos separados por virgula"

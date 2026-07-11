@@ -370,7 +370,7 @@ func (s *TurnoService) Checkin(ctx context.Context, userID, empresaID string, re
 		return nil, ErrTurnoNaoPertenceAoUsuario
 	}
 
-	if turno.Status == "finalizado" {
+	if turno.Status == "finalizado" || turno.Status == "atrasado" {
 		return nil, ErrTurnoJaFinalizado
 	}
 
@@ -473,7 +473,7 @@ func (s *TurnoService) Finalizar(ctx context.Context, userID, empresaID string, 
 		return nil, ErrTurnoNaoPertenceAoUsuario
 	}
 
-	if turno.Status == "finalizado" {
+	if turno.Status == "finalizado" || turno.Status == "atrasado" {
 		return nil, ErrTurnoJaFinalizado
 	}
 
@@ -684,7 +684,7 @@ func (s *TurnoService) Revogar(ctx context.Context, empresaID, turnoID string) (
 	if err != nil {
 		return nil, fmt.Errorf("turno: %w", ErrTurnoNaoEncontrado)
 	}
-	if turno.Status == "finalizado" {
+	if turno.Status == "finalizado" || turno.Status == "atrasado" {
 		return nil, ErrTurnoJaFinalizado
 	}
 
@@ -945,7 +945,7 @@ func (s *TurnoService) Sabotagem(ctx context.Context, userID, empresaID string, 
 		return nil, ErrTurnoNaoPertenceAoUsuario
 	}
 
-	if turno.Status == "finalizado" {
+	if turno.Status == "finalizado" || turno.Status == "atrasado" {
 		return nil, ErrTurnoJaFinalizado
 	}
 

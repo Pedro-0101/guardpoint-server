@@ -271,7 +271,7 @@ func (r *EscalaRepository) FindAtivaByUsuarioPostoDia(ctx context.Context, empre
 func (r *EscalaRepository) FindEscalasSemTurno(ctx context.Context, horaCorte time.Time) ([]EscalaSemTurno, error) {
 	ontem := horaCorte.AddDate(0, 0, -1)
 	query := `
-		SELECT e.id, e.empresa_id, e.usuario_id, e.posto_id, e.hora_inicio::text, e.tolerancia_min
+		SELECT e.id, e.empresa_id, e.usuario_id, e.posto_id, e.hora_inicio::text, e.hora_fim::text, e.tolerancia_min
 		FROM escalas e
 		WHERE e.ativo = true
 		  AND (
@@ -293,7 +293,7 @@ func (r *EscalaRepository) FindEscalasSemTurno(ctx context.Context, horaCorte ti
 		      WHERE t.usuario_id = e.usuario_id
 		        AND t.posto_id = e.posto_id
 		        AND t.empresa_id = e.empresa_id
-		        AND t.status IN ('em_andamento', 'pausado', 'critico')
+		        AND t.status IN ('em_andamento', 'pausado', 'critico', 'atrasado')
 		  )
 	`
 	rows, err := r.db.Query(ctx, query,
@@ -308,7 +308,7 @@ func (r *EscalaRepository) FindEscalasSemTurno(ctx context.Context, horaCorte ti
 	var result []EscalaSemTurno
 	for rows.Next() {
 		var e EscalaSemTurno
-		if err := rows.Scan(&e.ID, &e.EmpresaID, &e.UsuarioID, &e.PostoID, &e.HoraInicio, &e.ToleranciaMin); err != nil {
+		if err := rows.Scan(&e.ID, &e.EmpresaID, &e.UsuarioID, &e.PostoID, &e.HoraInicio, &e.HoraFim, &e.ToleranciaMin); err != nil {
 			return nil, fmt.Errorf("scan escala sem turno: %w", err)
 		}
 		result = append(result, e)
@@ -324,5 +324,6 @@ type EscalaSemTurno struct {
 	UsuarioID     uuid.UUID
 	PostoID       uuid.UUID
 	HoraInicio    string
+	HoraFim       string
 	ToleranciaMin int
 }

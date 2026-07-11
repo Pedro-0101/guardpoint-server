@@ -193,6 +193,7 @@ func (w *TimeoutChecker) checkNoShow(ctx context.Context) {
 			usuarioID:     e.UsuarioID,
 			postoID:       e.PostoID,
 			horaInicio:    e.HoraInicio,
+			horaFim:       e.HoraFim,
 			toleranciaMin: e.ToleranciaMin,
 		})
 	}
@@ -202,6 +203,7 @@ func (w *TimeoutChecker) checkNoShow(ctx context.Context) {
 			usuarioID:     s.UsuarioID,
 			postoID:       s.PostoID,
 			horaInicio:    s.HoraInicio,
+			horaFim:       s.HoraFim,
 			toleranciaMin: s.ToleranciaMin,
 		})
 	}
@@ -237,6 +239,8 @@ func (w *TimeoutChecker) checkNoShow(ctx context.Context) {
 			"posto_id", e.postoID.String(),
 			"hora_inicio", e.horaInicio,
 		)
+
+		w.criarTurnoAtrasado(ctx, e, now)
 	}
 }
 
@@ -245,7 +249,55 @@ type noShowEntry struct {
 	usuarioID     uuid.UUID
 	postoID       uuid.UUID
 	horaInicio    string
+	horaFim       string
 	toleranciaMin int
+}
+
+func (w *TimeoutChecker) criarTurnoAtrasado(ctx context.Context, e noShowEntry, now time.Time) {
+	dateStr := now.Format("2006-01-02")
+	inicioPrevisto, err := parseHoraData(dateStr, e.horaInicio)
+	if err != nil {
+		slog.Error("timeout checker: parse hora_inicio", "error", err, "hora", e.horaInicio)
+		return
+	}
+	fimPrevisto, err := parseHoraData(dateStr, e.horaFim)
+	if err != nil {
+		slog.Error("timeout checker: parse hora_fim", "error", err, "hora", e.horaFim)
+		return
+	}
+	if !fimPrevisto.After(inicioPrevisto) {
+		fimPrevisto = fimPrevisto.AddDate(0, 0, 1)
+	}
+
+	_, err = w.db.Exec(ctx, `
+		INSERT INTO turnos (empresa_id, usuario_id, posto_id, status, inicio_previsto, fim_previsto, intervalo_min)
+		VALUES ($1, $2, $3, 'atrasado', $4, $5, 30)
+	`, e.empresaID, e.usuarioID, e.postoID, inicioPrevisto, fimPrevisto)
+	if err != nil {
+		slog.Error("timeout checker: criar turno atrasado", "error", err, "usuario_id", e.usuarioID)
+		return
+	}
+
+	slog.Info("timeout checker: turno atrasado criado",
+		"usuario_id", e.usuarioID.String(),
+		"posto_id", e.postoID.String(),
+		"inicio_previsto", inicioPrevisto,
+		"fim_previsto", fimPrevisto,
+	)
+}
+
+func parseHoraData(dateStr, hora string) (time.Time, error) {
+	formats := []string{
+		"2006-01-02 15:04:05",
+		"2006-01-02 15:04",
+	}
+	for _, f := range formats {
+		t, err := time.ParseInLocation(f, dateStr+" "+hora, timeutil.BRT)
+		if err == nil {
+			return t, nil
+		}
+	}
+	return time.Time{}, fmt.Errorf("formato de hora invalido: %s", hora)
 }
 
 func (w *TimeoutChecker) alertaJaExiste(ctx context.Context, empresaID, usuarioID uuid.UUID, data time.Time) (bool, error) {

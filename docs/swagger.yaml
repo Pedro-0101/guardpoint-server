@@ -2182,8 +2182,8 @@ paths:
         Para vigias, retorna apenas os turnos do proprio usuario autenticado.
         Admin e supervisores podem filtrar por qualquer usuario/posto.
       parameters:
-      - description: Status (agendado,em_andamento,pausado,critico,finalizado) - multiplos
-          separados por virgula
+      - description: Status (agendado,em_andamento,pausado,critico,finalizado,atrasado)
+          - multiplos separados por virgula
         in: query
         name: status
         type: string

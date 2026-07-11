@@ -258,12 +258,13 @@ type SubstituicaoSemTurno struct {
 	UsuarioID     uuid.UUID
 	PostoID       uuid.UUID
 	HoraInicio    string
+	HoraFim       string
 	ToleranciaMin int
 }
 
 func (r *SubstituicaoRepository) FindSubstituicoesSemTurno(ctx context.Context, horaCorte time.Time) ([]SubstituicaoSemTurno, error) {
 	query := `
-		SELECT s.id, s.empresa_id, s.usuario_id, s.posto_id, s.hora_inicio::text, s.tolerancia_min
+		SELECT s.id, s.empresa_id, s.usuario_id, s.posto_id, s.hora_inicio::text, s.hora_fim::text, s.tolerancia_min
 		FROM substituicoes s
 		WHERE s.ativo = true
 		  AND s.data_inicio <= $1::date AND s.data_fim >= $1::date
@@ -273,7 +274,7 @@ func (r *SubstituicaoRepository) FindSubstituicoesSemTurno(ctx context.Context, 
 		      WHERE t.usuario_id = s.usuario_id
 		        AND t.posto_id = s.posto_id
 		        AND t.empresa_id = s.empresa_id
-		        AND t.status IN ('em_andamento', 'pausado', 'critico')
+		        AND t.status IN ('em_andamento', 'pausado', 'critico', 'atrasado')
 		  )
 	`
 	rows, err := r.db.Query(ctx, query,
@@ -287,7 +288,7 @@ func (r *SubstituicaoRepository) FindSubstituicoesSemTurno(ctx context.Context, 
 	var result []SubstituicaoSemTurno
 	for rows.Next() {
 		var s SubstituicaoSemTurno
-		if err := rows.Scan(&s.ID, &s.EmpresaID, &s.UsuarioID, &s.PostoID, &s.HoraInicio, &s.ToleranciaMin); err != nil {
+		if err := rows.Scan(&s.ID, &s.EmpresaID, &s.UsuarioID, &s.PostoID, &s.HoraInicio, &s.HoraFim, &s.ToleranciaMin); err != nil {
 			return nil, fmt.Errorf("scan substituicao sem turno: %w", err)
 		}
 		result = append(result, s)
