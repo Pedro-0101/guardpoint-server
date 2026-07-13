@@ -126,6 +126,20 @@ type TurnoListResponse struct {
 	Total int            `json:"total"`
 }
 
+type TurnoMapa struct {
+	ID             uuid.UUID `json:"id"`
+	UsuarioNome    string    `json:"usuario_nome"`
+	PostoID        uuid.UUID `json:"posto_id"`
+	PostoNome      string    `json:"posto_nome"`
+	Status         string    `json:"status"`
+	InicioPrevisto time.Time `json:"inicio_previsto"`
+	FimPrevisto    time.Time `json:"fim_previsto"`
+	PostoLatitude  float64   `json:"posto_latitude"`
+	PostoLongitude float64   `json:"posto_longitude"`
+	PostoRaioM     int       `json:"posto_raio_m"`
+	UltimoCheckin  *Checkin  `json:"ultimo_checkin,omitempty"`
+}
+
 type LoteCheckinResponse struct {
 	Recebidos   int              `json:"recebidos"`
 	Processados int              `json:"processados"`

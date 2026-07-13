@@ -42,6 +42,9 @@ func (m *fakeAlertaAlertaRepo) CountPorTipo(ctx context.Context, empresaID uuid.
 func (m *fakeAlertaAlertaRepo) CountPorHora(ctx context.Context, empresaID uuid.UUID) ([]model.AlertaPorHora, error) {
 	if m.countPorHoraFn != nil { return m.countPorHoraFn(ctx, empresaID) }; return nil, nil
 }
+func (m *fakeAlertaAlertaRepo) UpdateStatusBatch(ctx context.Context, ids []uuid.UUID, empresaID uuid.UUID, status string, resolvidoEm *time.Time) (int64, error) {
+	return int64(len(ids)), nil
+}
 func (m *fakeAlertaAlertaRepo) CloseAlertasResolvidoCheckin(ctx context.Context, turnoID uuid.UUID) (int64, error) {
 	if m.closeFn != nil { return m.closeFn(ctx, turnoID) }; return 0, nil
 }

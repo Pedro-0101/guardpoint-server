@@ -155,6 +155,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 
 			r.Route("/turnos", func(r chi.Router) {
 				r.Get("/", turnoHandler.List)
+				r.Get("/mapa", turnoHandler.Mapa)
 				r.Post("/iniciar", turnoHandler.Iniciar)
 				r.Post("/checkin", turnoHandler.Checkin)
 				r.Post("/finalizar", turnoHandler.Finalizar)

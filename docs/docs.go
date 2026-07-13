@@ -1944,6 +1944,31 @@ const docTemplate = `{
                 }
             }
         },
+        "/turnos/mapa": {
+            "get": {
+                "tags": [
+                    "turnos"
+                ],
+                "summary": "Retorna turnos ativos com dados do posto e ultimo check-in para exibicao no mapa",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "array",
+                            "items": {
+                                "$ref": "#/definitions/model.TurnoMapa"
+                            }
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/turnos/reassociar": {
             "post": {
                 "tags": [
@@ -3950,6 +3975,44 @@ const docTemplate = `{
                 },
                 "total": {
                     "type": "integer"
+                }
+            }
+        },
+        "model.TurnoMapa": {
+            "type": "object",
+            "properties": {
+                "fim_previsto": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "inicio_previsto": {
+                    "type": "string"
+                },
+                "posto_id": {
+                    "type": "string"
+                },
+                "posto_latitude": {
+                    "type": "number"
+                },
+                "posto_longitude": {
+                    "type": "number"
+                },
+                "posto_nome": {
+                    "type": "string"
+                },
+                "posto_raio_m": {
+                    "type": "integer"
+                },
+                "status": {
+                    "type": "string"
+                },
+                "ultimo_checkin": {
+                    "$ref": "#/definitions/model.Checkin"
+                },
+                "usuario_nome": {
+                    "type": "string"
                 }
             }
         },

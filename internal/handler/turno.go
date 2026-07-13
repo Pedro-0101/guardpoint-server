@@ -209,6 +209,29 @@ func (h *TurnoHandler) Status(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, status)
 }
 
+// Mapa godoc
+// @Summary      Retorna turnos ativos com dados do posto e ultimo check-in para exibicao no mapa
+// @Tags         turnos
+// @Success      200 {array} model.TurnoMapa
+// @Failure      500 {object} model.ErrorResponse
+// @Router       /turnos/mapa [get]
+func (h *TurnoHandler) Mapa(w http.ResponseWriter, r *http.Request) {
+	empresaID := middleware.GetEmpresaID(r.Context())
+
+	turnos, err := h.turnoService.GetTurnosMapa(r.Context(), empresaID)
+	if err != nil {
+		slog.Error("mapa turnos failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "erro ao buscar dados do mapa")
+		return
+	}
+
+	if turnos == nil {
+		turnos = []model.TurnoMapa{}
+	}
+
+	writeJSON(w, http.StatusOK, turnos)
+}
+
 // List godoc
 // @Summary      Lista turnos com filtros unificados, ordenacao e paginacao
 // @Description  Para vigias, retorna apenas os turnos do proprio usuario autenticado.

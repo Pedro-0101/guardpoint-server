@@ -640,6 +640,47 @@ func (s *TurnoService) GetAtivos(ctx context.Context, empresaID string) ([]model
 	return result, nil
 }
 
+func (s *TurnoService) GetTurnosMapa(ctx context.Context, empresaID string) ([]model.TurnoMapa, error) {
+	parsedEmpresaID, err := uuid.Parse(empresaID)
+	if err != nil {
+		return nil, fmt.Errorf("empresa_id invalido: %w", err)
+	}
+
+	turnos, err := s.turnoRepo.ListAtivos(ctx, parsedEmpresaID)
+	if err != nil {
+		return nil, fmt.Errorf("listar ativos: %w", err)
+	}
+
+	result := make([]model.TurnoMapa, 0, len(turnos))
+	for _, t := range turnos {
+		item := model.TurnoMapa{
+			ID:             t.ID,
+			UsuarioNome:    t.UsuarioNome,
+			PostoID:        t.PostoID,
+			PostoNome:      t.PostoNome,
+			Status:         t.Status,
+			InicioPrevisto: t.InicioPrevisto,
+			FimPrevisto:    t.FimPrevisto,
+		}
+
+		posto, err := s.postoRepo.FindByID(ctx, parsedEmpresaID, t.PostoID)
+		if err == nil {
+			item.PostoLatitude = posto.Latitude
+			item.PostoLongitude = posto.Longitude
+			item.PostoRaioM = posto.RaioM
+			if item.PostoNome == "" {
+				item.PostoNome = posto.Nome
+			}
+		}
+
+		item.UltimoCheckin = s.checkinRepo.FindUltimoByTurnoNoError(ctx, t.ID)
+
+		result = append(result, item)
+	}
+
+	return result, nil
+}
+
 func (s *TurnoService) GetByID(ctx context.Context, empresaID, turnoID string) (*model.TurnoDetalhe, error) {
 	parsedEmpresaID, err := uuid.Parse(empresaID)
 	if err != nil {

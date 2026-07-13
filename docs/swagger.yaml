@@ -934,6 +934,31 @@ definitions:
       total:
         type: integer
     type: object
+  model.TurnoMapa:
+    properties:
+      fim_previsto:
+        type: string
+      id:
+        type: string
+      inicio_previsto:
+        type: string
+      posto_id:
+        type: string
+      posto_latitude:
+        type: number
+      posto_longitude:
+        type: number
+      posto_nome:
+        type: string
+      posto_raio_m:
+        type: integer
+      status:
+        type: string
+      ultimo_checkin:
+        $ref: '#/definitions/model.Checkin'
+      usuario_nome:
+        type: string
+    type: object
   model.TurnoPorPosto:
     properties:
       posto_id:
@@ -2460,6 +2485,23 @@ paths:
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       summary: Inicia um turno no posto informado
+      tags:
+      - turnos
+  /turnos/mapa:
+    get:
+      responses:
+        "200":
+          description: OK
+          schema:
+            items:
+              $ref: '#/definitions/model.TurnoMapa'
+            type: array
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Retorna turnos ativos com dados do posto e ultimo check-in para exibicao
+        no mapa
       tags:
       - turnos
   /turnos/reassociar:
