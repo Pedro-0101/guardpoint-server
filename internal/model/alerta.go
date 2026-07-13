@@ -83,3 +83,13 @@ type PendingAlert struct {
 	UsuarioIDs []uuid.UUID `json:"usuario_ids"`
 	PostoID    *uuid.UUID  `json:"posto_id,omitempty"`
 }
+
+type BatchAlertaRequest struct {
+	IDs []uuid.UUID `json:"ids" validate:"required,min=1,max=100"`
+}
+
+type BatchAlertaResponse struct {
+	Reconhecidos int `json:"reconhecidos" example:"3"`
+	Encerrados   int `json:"encerrados" example:"5"`
+	Erros        int `json:"erros" example:"0"`
+}

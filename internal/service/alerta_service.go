@@ -22,6 +22,7 @@ type AlertaAlertaRepository interface {
 	FindByID(ctx context.Context, empresaID, id uuid.UUID) (*model.Alerta, error)
 	List(ctx context.Context, empresaID uuid.UUID, filter model.AlertaFilter) ([]model.Alerta, int, error)
 	UpdateStatus(ctx context.Context, id, empresaID uuid.UUID, status string, resolvidoEm *time.Time) error
+	UpdateStatusBatch(ctx context.Context, ids []uuid.UUID, empresaID uuid.UUID, status string, resolvidoEm *time.Time) (int64, error)
 	CountByTurnoETipo(ctx context.Context, turnoID uuid.UUID, tipo string) (int, error)
 	CountPorTipo(ctx context.Context, empresaID uuid.UUID) ([]model.AlertaPorTipo, error)
 	CountPorHora(ctx context.Context, empresaID uuid.UUID) ([]model.AlertaPorHora, error)
@@ -183,6 +184,33 @@ func (s *AlertaService) Encerrar(ctx context.Context, empresaID, alertaID string
 		return fmt.Errorf("encerrar alerta: %w", err)
 	}
 	return nil
+}
+
+func (s *AlertaService) ReconhecerEmLote(ctx context.Context, empresaID string, ids []uuid.UUID) (int64, error) {
+	parsedEmpresaID, err := uuid.Parse(empresaID)
+	if err != nil {
+		return 0, fmt.Errorf("empresa_id invalido: %w", err)
+	}
+
+	affected, err := s.alertaRepo.UpdateStatusBatch(ctx, ids, parsedEmpresaID, "reconhecido", nil)
+	if err != nil {
+		return 0, fmt.Errorf("reconhecer alertas em lote: %w", err)
+	}
+	return affected, nil
+}
+
+func (s *AlertaService) EncerrarEmLote(ctx context.Context, empresaID string, ids []uuid.UUID) (int64, error) {
+	parsedEmpresaID, err := uuid.Parse(empresaID)
+	if err != nil {
+		return 0, fmt.Errorf("empresa_id invalido: %w", err)
+	}
+
+	now := time.Now()
+	affected, err := s.alertaRepo.UpdateStatusBatch(ctx, ids, parsedEmpresaID, "encerrado", &now)
+	if err != nil {
+		return 0, fmt.Errorf("encerrar alertas em lote: %w", err)
+	}
+	return affected, nil
 }
 
 func (s *AlertaService) GetEstatisticas(ctx context.Context, empresaID string) (*model.AlertStatistics, error) {

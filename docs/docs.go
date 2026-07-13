@@ -82,6 +82,52 @@ const docTemplate = `{
                 }
             }
         },
+        "/alertas/encerrar": {
+            "post": {
+                "description": "Altera o status dos alertas informados para \"encerrado\" com a data/hora atual. Retorna a quantidade de alertas afetados.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "alertas"
+                ],
+                "summary": "Encerra alertas em lote (admin/supervisor)",
+                "parameters": [
+                    {
+                        "description": "Lista de IDs dos alertas",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.BatchAlertaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.MessageResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
         "/alertas/estatisticas": {
             "get": {
                 "tags": [
@@ -93,6 +139,52 @@ const docTemplate = `{
                         "description": "OK",
                         "schema": {
                             "$ref": "#/definitions/model.AlertStatistics"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
+                        }
+                    }
+                }
+            }
+        },
+        "/alertas/reconhecer": {
+            "post": {
+                "description": "Altera o status dos alertas informados para \"reconhecido\". Retorna a quantidade de alertas afetados.",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "alertas"
+                ],
+                "summary": "Reconhece alertas em lote (admin/supervisor)",
+                "parameters": [
+                    {
+                        "description": "Lista de IDs dos alertas",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.BatchAlertaRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.MessageResponse"
+                        }
+                    },
+                    "422": {
+                        "description": "Unprocessable Entity",
+                        "schema": {
+                            "$ref": "#/definitions/model.ErrorResponse"
                         }
                     },
                     "500": {
@@ -2652,6 +2744,22 @@ const docTemplate = `{
                 "turno_id": {
                     "type": "string",
                     "example": "770e8400-e29b-41d4-a716-446655440000"
+                }
+            }
+        },
+        "model.BatchAlertaRequest": {
+            "type": "object",
+            "required": [
+                "ids"
+            ],
+            "properties": {
+                "ids": {
+                    "type": "array",
+                    "maxItems": 100,
+                    "minItems": 1,
+                    "items": {
+                        "type": "string"
+                    }
                 }
             }
         },

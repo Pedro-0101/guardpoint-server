@@ -200,6 +200,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 				r.Use(middleware.RequireRole("admin", "supervisor"))
 				r.Get("/", alertaHandler.List)
 				r.Get("/estatisticas", alertaHandler.Estatisticas)
+				r.Post("/reconhecer", alertaHandler.ReconhecerEmLote)
+				r.Post("/encerrar", alertaHandler.EncerrarEmLote)
 				r.Put("/{id}/reconhecer", alertaHandler.Reconhecer)
 				r.Put("/{id}/encerrar", alertaHandler.Encerrar)
 			})

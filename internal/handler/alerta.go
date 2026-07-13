@@ -1,6 +1,7 @@
 package handler
 
 import (
+	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -125,6 +126,80 @@ func (h *AlertaHandler) Encerrar(w http.ResponseWriter, r *http.Request) {
 	}
 
 	writeJSON(w, http.StatusOK, map[string]string{"status": "encerrado"})
+}
+
+// ReconhecerEmLote godoc
+// @Summary      Reconhece alertas em lote (admin/supervisor)
+// @Description  Altera o status dos alertas informados para "reconhecido". Retorna a quantidade de alertas afetados.
+// @Tags         alertas
+// @Accept       json
+// @Produce      json
+// @Param        body body model.BatchAlertaRequest true "Lista de IDs dos alertas"
+// @Success      200 {object} model.MessageResponse
+// @Failure      422 {object} model.ErrorResponse
+// @Failure      500 {object} model.ErrorResponse
+// @Router       /alertas/reconhecer [post]
+func (h *AlertaHandler) ReconhecerEmLote(w http.ResponseWriter, r *http.Request) {
+	empresaID := middleware.GetEmpresaID(r.Context())
+
+	var req model.BatchAlertaRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "json invalido")
+		return
+	}
+	if err := h.validate.Struct(req); err != nil {
+		writeValidationError(w, err)
+		return
+	}
+
+	affected, err := h.alertaService.ReconhecerEmLote(r.Context(), empresaID, req.IDs)
+	if err != nil {
+		slog.Error("reconhecer alertas em lote failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "erro ao reconhecer alertas em lote")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"message":      "alertas reconhecidos com sucesso",
+		"reconhecidos": affected,
+	})
+}
+
+// EncerrarEmLote godoc
+// @Summary      Encerra alertas em lote (admin/supervisor)
+// @Description  Altera o status dos alertas informados para "encerrado" com a data/hora atual. Retorna a quantidade de alertas afetados.
+// @Tags         alertas
+// @Accept       json
+// @Produce      json
+// @Param        body body model.BatchAlertaRequest true "Lista de IDs dos alertas"
+// @Success      200 {object} model.MessageResponse
+// @Failure      422 {object} model.ErrorResponse
+// @Failure      500 {object} model.ErrorResponse
+// @Router       /alertas/encerrar [post]
+func (h *AlertaHandler) EncerrarEmLote(w http.ResponseWriter, r *http.Request) {
+	empresaID := middleware.GetEmpresaID(r.Context())
+
+	var req model.BatchAlertaRequest
+	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
+		writeError(w, http.StatusBadRequest, "json invalido")
+		return
+	}
+	if err := h.validate.Struct(req); err != nil {
+		writeValidationError(w, err)
+		return
+	}
+
+	affected, err := h.alertaService.EncerrarEmLote(r.Context(), empresaID, req.IDs)
+	if err != nil {
+		slog.Error("encerrar alertas em lote failed", "error", err)
+		writeError(w, http.StatusInternalServerError, "erro ao encerrar alertas em lote")
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]interface{}{
+		"message":    "alertas encerrados com sucesso",
+		"encerrados": affected,
+	})
 }
 
 // Estatisticas godoc

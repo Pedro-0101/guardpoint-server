@@ -117,6 +117,18 @@ func (r *AlertaRepository) List(ctx context.Context, empresaID uuid.UUID, filter
 	return alertas, total, rows.Err()
 }
 
+func (r *AlertaRepository) UpdateStatusBatch(ctx context.Context, ids []uuid.UUID, empresaID uuid.UUID, status string, resolvidoEm *time.Time) (int64, error) {
+	if len(ids) == 0 {
+		return 0, nil
+	}
+	query := `UPDATE alertas SET status = $1, resolvido_em = $2 WHERE id = ANY($3) AND empresa_id = $4`
+	ct, err := r.db.Exec(ctx, query, status, resolvidoEm, ids, empresaID)
+	if err != nil {
+		return 0, fmt.Errorf("atualizar alertas em lote: %w", err)
+	}
+	return ct.RowsAffected(), nil
+}
+
 func (r *AlertaRepository) UpdateStatus(ctx context.Context, id, empresaID uuid.UUID, status string, resolvidoEm *time.Time) error {
 	query := `UPDATE alertas SET status = $1, resolvido_em = $2 WHERE id = $3 AND empresa_id = $4`
 	ct, err := r.db.Exec(ctx, query, status, resolvidoEm, id, empresaID)

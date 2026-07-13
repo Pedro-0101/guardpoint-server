@@ -102,6 +102,17 @@ definitions:
         example: 770e8400-e29b-41d4-a716-446655440000
         type: string
     type: object
+  model.BatchAlertaRequest:
+    properties:
+      ids:
+        items:
+          type: string
+        maxItems: 100
+        minItems: 1
+        type: array
+    required:
+    - ids
+    type: object
   model.BatchCreateSenhaVigiaRequest:
     properties:
       senhas:
@@ -1210,6 +1221,37 @@ paths:
       summary: Reconhece um alerta aberto (admin/supervisor)
       tags:
       - alertas
+  /alertas/encerrar:
+    post:
+      consumes:
+      - application/json
+      description: Altera o status dos alertas informados para "encerrado" com a data/hora
+        atual. Retorna a quantidade de alertas afetados.
+      parameters:
+      - description: Lista de IDs dos alertas
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.BatchAlertaRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.MessageResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Encerra alertas em lote (admin/supervisor)
+      tags:
+      - alertas
   /alertas/estatisticas:
     get:
       responses:
@@ -1222,6 +1264,37 @@ paths:
           schema:
             $ref: '#/definitions/model.ErrorResponse'
       summary: Estatisticas agregadas de alertas (admin/supervisor)
+      tags:
+      - alertas
+  /alertas/reconhecer:
+    post:
+      consumes:
+      - application/json
+      description: Altera o status dos alertas informados para "reconhecido". Retorna
+        a quantidade de alertas afetados.
+      parameters:
+      - description: Lista de IDs dos alertas
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/model.BatchAlertaRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.MessageResponse'
+        "422":
+          description: Unprocessable Entity
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Reconhece alertas em lote (admin/supervisor)
       tags:
       - alertas
   /auth/biometric/login:
