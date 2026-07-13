@@ -34,7 +34,7 @@ func NewTurnoHandler(turnoService *service.TurnoService, syncReconciler *worker.
 // @Summary      Inicia um turno no posto informado
 // @Tags         turnos
 // @Param        request body model.IniciarTurnoRequest true "Dados de inicio"
-// @Success      201 {object} model.Turno
+// @Success      201 {object} model.IniciarResponse
 // @Failure      400 {object} model.ErrorResponse
 // @Failure      403 {object} model.ErrorResponse
 // @Failure      404 {object} model.ErrorResponse
@@ -55,7 +55,7 @@ func (h *TurnoHandler) Iniciar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	turno, err := h.turnoService.Iniciar(r.Context(), userID, empresaID, req)
+	resp, err := h.turnoService.Iniciar(r.Context(), userID, empresaID, req)
 	if err != nil {
 		if errors.Is(err, service.ErrTurnoJaAtivo) {
 			writeError(w, http.StatusConflict, "usuario ja possui um turno em andamento")
@@ -82,7 +82,7 @@ func (h *TurnoHandler) Iniciar(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	writeJSON(w, http.StatusCreated, turno)
+	writeJSON(w, http.StatusCreated, resp)
 }
 
 // Checkin godoc

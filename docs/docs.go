@@ -1914,7 +1914,7 @@ const docTemplate = `{
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.Turno"
+                            "$ref": "#/definitions/model.IniciarResponse"
                         }
                     },
                     "400": {
@@ -2933,6 +2933,9 @@ const docTemplate = `{
                 },
                 "status": {
                     "type": "string"
+                },
+                "tipo_proximo_deadline": {
+                    "type": "string"
                 }
             }
         },
@@ -3403,6 +3406,23 @@ const docTemplate = `{
                 },
                 "turno_id": {
                     "type": "string"
+                }
+            }
+        },
+        "model.IniciarResponse": {
+            "type": "object",
+            "properties": {
+                "atrasado": {
+                    "type": "boolean"
+                },
+                "proximo_deadline": {
+                    "type": "string"
+                },
+                "tipo_proximo_deadline": {
+                    "type": "string"
+                },
+                "turno": {
+                    "$ref": "#/definitions/model.Turno"
                 }
             }
         },
@@ -3957,6 +3977,9 @@ const docTemplate = `{
                     "type": "integer"
                 },
                 "proximo_deadline": {
+                    "type": "string"
+                },
+                "tipo_proximo_deadline": {
                     "type": "string"
                 },
                 "turno": {

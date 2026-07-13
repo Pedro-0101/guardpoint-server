@@ -101,7 +101,7 @@ func (s *TurnoService) ProcessarLote(ctx context.Context, userID, empresaID stri
 		s.emitirGPSUpdate(empresaID, req.TurnoID, req.Latitude, req.Longitude, timestampCriacao, flagGeofence)
 
 		atrasado := checkinAtrasado(anterior, turno.InicioReal, turno.IntervaloMin, timestampCriacao)
-		dl := timestampCriacao.Add(time.Duration(turno.IntervaloMin) * time.Minute)
+		dl, tipoProximo := calcularProximoDeadline(timestampCriacao, turno.IntervaloMin, turno.FimPrevisto)
 		proximoDeadline := &dl
 
 		posto, err := s.postoRepo.FindByID(ctx, parsedEmpresaID, turno.PostoID)
@@ -111,11 +111,12 @@ func (s *TurnoService) ProcessarLote(ctx context.Context, userID, empresaID stri
 		}
 
 		resultados = append(resultados, model.CheckinResponse{
-			Checkin:         *checkin,
-			Status:          turno.Status,
-			PostoNome:       postoNome,
-			ProximoDeadline: proximoDeadline,
-			Atrasado:        atrasado,
+			Checkin:             *checkin,
+			Status:              turno.Status,
+			PostoNome:           postoNome,
+			ProximoDeadline:     proximoDeadline,
+			TipoProximoDeadline: tipoProximo,
+			Atrasado:            atrasado,
 		})
 	}
 

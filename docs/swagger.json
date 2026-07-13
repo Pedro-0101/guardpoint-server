@@ -1907,7 +1907,7 @@
                     "201": {
                         "description": "Created",
                         "schema": {
-                            "$ref": "#/definitions/model.Turno"
+                            "$ref": "#/definitions/model.IniciarResponse"
                         }
                     },
                     "400": {
@@ -2926,6 +2926,9 @@
                 },
                 "status": {
                     "type": "string"
+                },
+                "tipo_proximo_deadline": {
+                    "type": "string"
                 }
             }
         },
@@ -3396,6 +3399,23 @@
                 },
                 "turno_id": {
                     "type": "string"
+                }
+            }
+        },
+        "model.IniciarResponse": {
+            "type": "object",
+            "properties": {
+                "atrasado": {
+                    "type": "boolean"
+                },
+                "proximo_deadline": {
+                    "type": "string"
+                },
+                "tipo_proximo_deadline": {
+                    "type": "string"
+                },
+                "turno": {
+                    "$ref": "#/definitions/model.Turno"
                 }
             }
         },
@@ -3950,6 +3970,9 @@
                     "type": "integer"
                 },
                 "proximo_deadline": {
+                    "type": "string"
+                },
+                "tipo_proximo_deadline": {
                     "type": "string"
                 },
                 "turno": {

@@ -2,6 +2,7 @@ package service
 
 import (
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 
@@ -114,6 +115,80 @@ func TestValidarSessaoTurno(t *testing.T) {
 			err := validarSessaoTurno(tt.turno, tt.deviceID)
 			if err != tt.wantErr {
 				t.Errorf("validarSessaoTurno() = %v, esperado %v", err, tt.wantErr)
+			}
+		})
+	}
+}
+
+func TestCalcularProximoDeadline(t *testing.T) {
+	base := time.Date(2026, 7, 1, 8, 0, 0, 0, time.UTC)
+	fimPrevisto := time.Date(2026, 7, 1, 12, 0, 0, 0, time.UTC)
+
+	tests := []struct {
+		name         string
+		ancora       time.Time
+		intervaloMin int
+		fimPrevisto  time.Time
+		wantDl      time.Time
+		wantTipo    string
+	}{
+		{
+			name:         "checkin com folga -> proximo deadline checkin",
+			ancora:       base,
+			intervaloMin: 30,
+			fimPrevisto:  fimPrevisto,
+			wantDl:      base.Add(30 * time.Minute),
+			wantTipo:    "checkin",
+		},
+		{
+			name:         "checkin com deadline exato no fim -> finalizar",
+			ancora:       fimPrevisto.Add(-30 * time.Minute),
+			intervaloMin: 30,
+			fimPrevisto:  fimPrevisto,
+			wantDl:      fimPrevisto,
+			wantTipo:    "finalizar",
+		},
+		{
+			name:         "checkin com deadline ultrapassando fim -> finalizar",
+			ancora:       fimPrevisto.Add(-25 * time.Minute),
+			intervaloMin: 30,
+			fimPrevisto:  fimPrevisto,
+			wantDl:      fimPrevisto,
+			wantTipo:    "finalizar",
+		},
+		{
+			name:         "checkin faltando 1 minuto -> finalizar",
+			ancora:       fimPrevisto.Add(-1 * time.Minute),
+			intervaloMin: 30,
+			fimPrevisto:  fimPrevisto,
+			wantDl:      fimPrevisto,
+			wantTipo:    "finalizar",
+		},
+		{
+			name:         "inicio do turno com escala longa -> checkin",
+			ancora:       base,
+			intervaloMin: 60,
+			fimPrevisto:  fimPrevisto,
+			wantDl:      base.Add(60 * time.Minute),
+			wantTipo:    "checkin",
+		},
+		{
+			name:         "fim igual a ancora (ja passou) -> finalizar",
+			ancora:       fimPrevisto,
+			intervaloMin: 30,
+			fimPrevisto:  fimPrevisto,
+			wantDl:      fimPrevisto,
+			wantTipo:    "finalizar",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			dl, tipo := calcularProximoDeadline(tt.ancora, tt.intervaloMin, tt.fimPrevisto)
+			if !dl.Equal(tt.wantDl) {
+				t.Errorf("calcularProximoDeadline() dl = %v, esperado %v", dl, tt.wantDl)
+			}
+			if tipo != tt.wantTipo {
+				t.Errorf("calcularProximoDeadline() tipo = %q, esperado %q", tipo, tt.wantTipo)
 			}
 		})
 	}

@@ -274,12 +274,12 @@ func (c *cenario) criarEscala(usuarioID, postoID uuid.UUID, inicio time.Time, to
 
 func (c *cenario) iniciarTurno() model.Turno {
 	c.e.t.Helper()
-	var turno model.Turno
+	var resp model.IniciarResponse
 	c.e.reqJSON(http.MethodPost, "/api/v1/turnos/iniciar", c.vigiaToken, map[string]any{
 		"posto_id": c.posto.ID.String(), "device_id": c.deviceID, "intervalo_min": 30,
 		"latitude": postoLat, "longitude": postoLon, "senha": SenhaOK,
-	}, http.StatusCreated, &turno)
-	return turno
+	}, http.StatusCreated, &resp)
+	return resp.Turno
 }
 
 // checkinBody monta o corpo de um checkin/iniciar/finalizar de turno. senha e

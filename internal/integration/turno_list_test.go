@@ -112,12 +112,12 @@ func (c *cenarioLista) criarSubstituicao(usuarioID, postoID uuid.UUID, dataInici
 
 func (c *cenarioLista) iniciarTurno() model.Turno {
 	c.e.t.Helper()
-	var turno model.Turno
+	var resp model.IniciarResponse
 	c.e.reqJSON(http.MethodPost, "/api/v1/turnos/iniciar", c.vigiaToken, map[string]any{
 		"posto_id": c.posto.ID.String(), "device_id": c.deviceID, "intervalo_min": 30,
 		"latitude": postoLat, "longitude": postoLon, "senha": "1234",
-	}, http.StatusCreated, &turno)
-	return turno
+	}, http.StatusCreated, &resp)
+	return resp.Turno
 }
 
 func hojeStr() string {

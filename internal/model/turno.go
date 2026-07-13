@@ -62,19 +62,28 @@ type FinalizarTurnoRequest struct {
 	Timestamp string  `json:"timestamp" validate:"required"`
 }
 
+type IniciarResponse struct {
+	Turno               Turno     `json:"turno"`
+	ProximoDeadline     time.Time `json:"proximo_deadline"`
+	TipoProximoDeadline string    `json:"tipo_proximo_deadline"`
+	Atrasado            bool      `json:"atrasado"`
+}
+
 type TurnoStatusResponse struct {
-	Turno           Turno      `json:"turno"`
-	UltimoCheckin   *Checkin   `json:"ultimo_checkin,omitempty"`
-	ProximoDeadline *time.Time `json:"proximo_deadline,omitempty"`
-	CheckinsHoje    int        `json:"checkins_hoje"`
+	Turno                Turno      `json:"turno"`
+	UltimoCheckin        *Checkin   `json:"ultimo_checkin,omitempty"`
+	ProximoDeadline      *time.Time `json:"proximo_deadline,omitempty"`
+	TipoProximoDeadline  string     `json:"tipo_proximo_deadline,omitempty"`
+	CheckinsHoje         int        `json:"checkins_hoje"`
 }
 
 type CheckinResponse struct {
-	Checkin         Checkin    `json:"checkin"`
-	Status          string     `json:"status"`
-	PostoNome       string     `json:"posto_nome,omitempty"`
-	ProximoDeadline *time.Time `json:"proximo_deadline,omitempty"`
-	Atrasado        bool       `json:"atrasado"`
+	Checkin              Checkin    `json:"checkin"`
+	Status               string     `json:"status"`
+	PostoNome            string     `json:"posto_nome,omitempty"`
+	ProximoDeadline      *time.Time `json:"proximo_deadline,omitempty"`
+	TipoProximoDeadline  string     `json:"tipo_proximo_deadline,omitempty"`
+	Atrasado             bool       `json:"atrasado"`
 }
 
 type SabotagemRequest struct {

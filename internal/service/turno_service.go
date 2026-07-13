@@ -179,7 +179,20 @@ func (s *TurnoService) aplicarConsequenciaSenha(ctx context.Context, empresaIDSt
 	return senha
 }
 
-func (s *TurnoService) Iniciar(ctx context.Context, userID, empresaID string, req model.IniciarTurnoRequest) (*model.Turno, error) {
+// calcularProximoDeadline determina o proximo deadline e seu tipo a partir da
+// ancora (timestamp do checkin atual ou inicio do turno). Se ancora + intervaloMin
+// alcanca ou ultrapassa o fim previsto do turno, o deadline vira o proprio
+// fim do turno com tipo "finalizar" — senao, vira ancora + intervaloMin com
+// tipo "checkin".
+func calcularProximoDeadline(ancora time.Time, intervaloMin int, fimPrevisto time.Time) (time.Time, string) {
+	dl := ancora.Add(time.Duration(intervaloMin) * time.Minute)
+	if !dl.Before(fimPrevisto) {
+		return fimPrevisto, "finalizar"
+	}
+	return dl, "checkin"
+}
+
+func (s *TurnoService) Iniciar(ctx context.Context, userID, empresaID string, req model.IniciarTurnoRequest) (*model.IniciarResponse, error) {
 	parsedUserID, err := uuid.Parse(userID)
 	if err != nil {
 		return nil, fmt.Errorf("user_id invalido: %w", err)
@@ -293,7 +306,14 @@ func (s *TurnoService) Iniciar(ctx context.Context, userID, empresaID string, re
 		turno.Status = "critico"
 	}
 
-	return turno, nil
+	dl, tipo := calcularProximoDeadline(now, intervaloMin, fimPrevisto)
+
+	return &model.IniciarResponse{
+		Turno:               *turno,
+		ProximoDeadline:     dl,
+		TipoProximoDeadline: tipo,
+		Atrasado:            false,
+	}, nil
 }
 
 // buscarEscalaParaInicio procura a escala ativa compativel com o inicio de turno
@@ -426,7 +446,7 @@ func (s *TurnoService) Checkin(ctx context.Context, userID, empresaID string, re
 	}
 
 	atrasado := checkinAtrasado(anterior, turno.InicioReal, turno.IntervaloMin, timestampCriacao)
-	dl := timestampCriacao.Add(time.Duration(turno.IntervaloMin) * time.Minute)
+	dl, tipoProximo := calcularProximoDeadline(timestampCriacao, turno.IntervaloMin, turno.FimPrevisto)
 	proximoDeadline := &dl
 
 	// efeito colateral da senha (status critico + alerta), na mesma posicao
@@ -442,11 +462,12 @@ func (s *TurnoService) Checkin(ctx context.Context, userID, empresaID string, re
 	}
 
 	return &model.CheckinResponse{
-		Checkin:         *checkin,
-		Status:          turno.Status,
-		PostoNome:       postoNome,
-		ProximoDeadline: proximoDeadline,
-		Atrasado:        atrasado,
+		Checkin:             *checkin,
+		Status:              turno.Status,
+		PostoNome:           postoNome,
+		ProximoDeadline:     proximoDeadline,
+		TipoProximoDeadline: tipoProximo,
+		Atrasado:            atrasado,
 	}, nil
 }
 
@@ -555,12 +576,15 @@ func (s *TurnoService) GetStatus(ctx context.Context, userID, empresaID string) 
 	ultimoCheckin := s.checkinRepo.FindUltimoByTurnoNoError(ctx, turno.ID)
 
 	var proximoDeadline *time.Time
+	tipoProximoDeadline := ""
 	if ultimoCheckin != nil {
-		dl := ultimoCheckin.TimestampCriacao.Add(time.Duration(turno.IntervaloMin) * time.Minute)
+		dl, tipo := calcularProximoDeadline(ultimoCheckin.TimestampCriacao, turno.IntervaloMin, turno.FimPrevisto)
 		proximoDeadline = &dl
+		tipoProximoDeadline = tipo
 	} else if turno.InicioReal != nil {
-		dl := turno.InicioReal.Add(time.Duration(turno.IntervaloMin) * time.Minute)
+		dl, tipo := calcularProximoDeadline(*turno.InicioReal, turno.IntervaloMin, turno.FimPrevisto)
 		proximoDeadline = &dl
+		tipoProximoDeadline = tipo
 	}
 
 	checkinsHoje, err := s.checkinRepo.CountByTurnoHoje(ctx, turno.ID)
@@ -569,10 +593,11 @@ func (s *TurnoService) GetStatus(ctx context.Context, userID, empresaID string) 
 	}
 
 	return &model.TurnoStatusResponse{
-		Turno:           *turno,
-		UltimoCheckin:   ultimoCheckin,
-		ProximoDeadline: proximoDeadline,
-		CheckinsHoje:    checkinsHoje,
+		Turno:               *turno,
+		UltimoCheckin:       ultimoCheckin,
+		ProximoDeadline:     proximoDeadline,
+		TipoProximoDeadline: tipoProximoDeadline,
+		CheckinsHoje:        checkinsHoje,
 	}, nil
 }
 
