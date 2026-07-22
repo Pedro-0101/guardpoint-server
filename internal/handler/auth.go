@@ -153,13 +153,14 @@ func (h *AuthHandler) Refresh(w http.ResponseWriter, r *http.Request) {
 // @Router       /auth/logout [post]
 func (h *AuthHandler) Logout(w http.ResponseWriter, r *http.Request) {
 	empresaID := middleware.GetEmpresaID(r.Context())
+	userID := middleware.GetUserID(r.Context())
 
 	var req struct {
 		DeviceID string `json:"device_id"`
 	}
 	_ = json.NewDecoder(r.Body).Decode(&req)
 
-	if err := h.authService.Logout(r.Context(), empresaID, req.DeviceID); err != nil {
+	if err := h.authService.Logout(r.Context(), empresaID, userID, req.DeviceID); err != nil {
 		slog.Error("logout failed", "error", err)
 		writeError(w, http.StatusInternalServerError, "erro ao processar logout")
 		return

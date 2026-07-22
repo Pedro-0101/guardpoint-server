@@ -973,6 +973,8 @@ definitions:
     type: object
   model.TurnoStatusResponse:
     properties:
+      atrasado:
+        type: boolean
       checkins_hoje:
         type: integer
       proximo_deadline:
@@ -1162,6 +1164,59 @@ definitions:
         type: string
       updatedAt:
         type: string
+    type: object
+  model.VigiaProximoTurno:
+    properties:
+      data:
+        type: string
+      fim_previsto:
+        type: string
+      hora_fim:
+        type: string
+      hora_inicio:
+        type: string
+      inicio_previsto:
+        type: string
+      posto:
+        $ref: '#/definitions/model.Posto'
+    type: object
+  model.VigiaTurnoInfo:
+    properties:
+      atrasado:
+        type: boolean
+      checkins_hoje:
+        type: integer
+      fim_previsto:
+        type: string
+      id:
+        type: string
+      inicio_previsto:
+        type: string
+      inicio_real:
+        type: string
+      intervalo_min:
+        type: integer
+      posto:
+        $ref: '#/definitions/model.Posto'
+      proximo_deadline:
+        type: string
+      status:
+        type: string
+      tipo_proximo_deadline:
+        type: string
+      ultimo_checkin:
+        $ref: '#/definitions/model.Checkin'
+    type: object
+  model.VigiaTurnoResponse:
+    properties:
+      mensagem:
+        type: string
+      proximo_turno:
+        $ref: '#/definitions/model.VigiaProximoTurno'
+      tem_turno_ativo:
+        type: boolean
+      turno:
+        $ref: '#/definitions/model.VigiaTurnoInfo'
     type: object
 info:
   contact: {}
@@ -2896,6 +2951,24 @@ paths:
       summary: Lista os postos vinculados a um supervisor (admin/supervisor)
       tags:
       - postos
+  /vigia/turno:
+    get:
+      description: Se houver turno ativo, retorna todas as informacoes (status, posto,
+        proximo deadline, checkins, etc). Se nao houver turno ativo, retorna o proximo
+        turno agendado mais proximo. Unifica os endpoints /turnos/status, /turnos
+        e /postos/{id} em uma unica chamada.
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.VigiaTurnoResponse'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/model.ErrorResponse'
+      summary: Retorna o turno ativo ou o proximo turno agendado do vigia autenticado
+      tags:
+      - vigia
 produces:
 - application/json
 security:

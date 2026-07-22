@@ -40,6 +40,7 @@ type AuthSessaoDispositivoRepository interface {
 	FindByDeviceID(ctx context.Context, empresaID, deviceID string) (*model.SessaoDispositivo, error)
 	Create(ctx context.Context, s *model.SessaoDispositivo) error
 	DeleteByDeviceID(ctx context.Context, empresaID, deviceID string) error
+	DeleteByUsuario(ctx context.Context, empresaID, usuarioID uuid.UUID) error
 }
 
 type AuthService struct {
@@ -191,11 +192,23 @@ func (s *AuthService) Refresh(ctx context.Context, req model.RefreshRequest) (*m
 	}, nil
 }
 
-func (s *AuthService) Logout(ctx context.Context, empresaID, deviceID string) error {
+func (s *AuthService) Logout(ctx context.Context, empresaID, userID, deviceID string) error {
 	if deviceID != "" {
 		if err := s.sessaoDispositivoRepo.DeleteByDeviceID(ctx, empresaID, deviceID); err != nil {
 			return fmt.Errorf("logout: %w", err)
 		}
+		return nil
+	}
+	parsedUserID, err := uuid.Parse(userID)
+	if err != nil {
+		return fmt.Errorf("user_id invalido: %w", err)
+	}
+	parsedEmpresaID, err := uuid.Parse(empresaID)
+	if err != nil {
+		return fmt.Errorf("empresa_id invalido: %w", err)
+	}
+	if err := s.sessaoDispositivoRepo.DeleteByUsuario(ctx, parsedEmpresaID, parsedUserID); err != nil {
+		return fmt.Errorf("logout: %w", err)
 	}
 	return nil
 }

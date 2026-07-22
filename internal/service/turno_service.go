@@ -592,12 +592,214 @@ func (s *TurnoService) GetStatus(ctx context.Context, userID, empresaID string) 
 		checkinsHoje = 0
 	}
 
+	atrasado := false
+	if proximoDeadline != nil && timeutil.NowBRT().After(*proximoDeadline) {
+		atrasado = true
+	}
+
 	return &model.TurnoStatusResponse{
 		Turno:               *turno,
 		UltimoCheckin:       ultimoCheckin,
 		ProximoDeadline:     proximoDeadline,
 		TipoProximoDeadline: tipoProximoDeadline,
 		CheckinsHoje:        checkinsHoje,
+		Atrasado:            atrasado,
+	}, nil
+}
+
+func (s *TurnoService) GetVigiaTurno(ctx context.Context, userID, empresaID string) (*model.VigiaTurnoResponse, error) {
+	parsedUserID, err := uuid.Parse(userID)
+	if err != nil {
+		return nil, fmt.Errorf("user_id invalido: %w", err)
+	}
+	parsedEmpresaID, err := uuid.Parse(empresaID)
+	if err != nil {
+		return nil, fmt.Errorf("empresa_id invalido: %w", err)
+	}
+
+	turno, err := s.turnoRepo.FindAtivoByUsuario(ctx, parsedEmpresaID, parsedUserID)
+	if err != nil {
+		return nil, fmt.Errorf("buscar turno ativo: %w", err)
+	}
+
+	if turno != nil {
+		posto, _ := s.postoRepo.FindByID(ctx, parsedEmpresaID, turno.PostoID)
+
+		ultimoCheckin := s.checkinRepo.FindUltimoByTurnoNoError(ctx, turno.ID)
+
+		var proximoDeadline *time.Time
+		tipoProximoDeadline := ""
+		if ultimoCheckin != nil {
+			dl, tipo := calcularProximoDeadline(ultimoCheckin.TimestampCriacao, turno.IntervaloMin, turno.FimPrevisto)
+			proximoDeadline = &dl
+			tipoProximoDeadline = tipo
+		} else if turno.InicioReal != nil {
+			dl, tipo := calcularProximoDeadline(*turno.InicioReal, turno.IntervaloMin, turno.FimPrevisto)
+			proximoDeadline = &dl
+			tipoProximoDeadline = tipo
+		}
+
+		atrasado := false
+		if proximoDeadline != nil && timeutil.NowBRT().After(*proximoDeadline) {
+			atrasado = true
+		}
+
+		checkinsHoje, _ := s.checkinRepo.CountByTurnoHoje(ctx, turno.ID)
+
+		postoNome := ""
+		if posto != nil {
+			postoNome = posto.Nome
+		} else if turno.PostoNome != "" {
+			postoNome = turno.PostoNome
+		}
+
+		return &model.VigiaTurnoResponse{
+			TemTurnoAtivo: true,
+			Mensagem:      "turno em andamento",
+			Turno: &model.VigiaTurnoInfo{
+				ID:                  turno.ID,
+				Status:              turno.Status,
+				Posto:               posto,
+				PostoNome:           postoNome,
+				TokenSessao:         turno.TokenSessao,
+				InicioPrevisto:      turno.InicioPrevisto,
+				FimPrevisto:         turno.FimPrevisto,
+				InicioReal:          turno.InicioReal,
+				IntervaloMin:        turno.IntervaloMin,
+				ProximoDeadline:     proximoDeadline,
+				TipoProximoDeadline: tipoProximoDeadline,
+				Atrasado:            atrasado,
+				CheckinsHoje:        checkinsHoje,
+				UltimoCheckin:       ultimoCheckin,
+			},
+		}, nil
+	}
+
+	proximo, err := s.buscarProximoTurnoAgendado(ctx, parsedEmpresaID, parsedUserID)
+	if err != nil {
+		return nil, fmt.Errorf("buscar proximo turno: %w", err)
+	}
+	if proximo != nil {
+		return &model.VigiaTurnoResponse{
+			TemTurnoAtivo: false,
+			Mensagem:      "nenhum turno ativo",
+			ProximoTurno:  proximo,
+		}, nil
+	}
+
+	return &model.VigiaTurnoResponse{
+		TemTurnoAtivo: false,
+		Mensagem:      "nenhum turno ativo ou agendado encontrado",
+	}, nil
+}
+
+func (s *TurnoService) buscarProximoTurnoAgendado(ctx context.Context, empresaID, usuarioID uuid.UUID) (*model.VigiaProximoTurno, error) {
+	now := timeutil.NowBRT()
+	dataInicio := now.Format("2006-01-02")
+	dataFim := now.AddDate(0, 0, 7).Format("2006-01-02")
+
+	escalas, err := s.escalaRepo.ListAtivasByEmpresa(ctx, empresaID, []string{usuarioID.String()}, nil)
+	if err != nil {
+		return nil, fmt.Errorf("listar escalas: %w", err)
+	}
+
+	subs, err := s.substituicaoRepo.ListAtivasByDateRange(ctx, empresaID, dataInicio, dataFim, []string{usuarioID.String()}, nil)
+	if err != nil {
+		return nil, fmt.Errorf("listar substituicoes: %w", err)
+	}
+
+	subByUserPostoDate := make(map[string]*model.Substituicao)
+	for i := range subs {
+		sub := &subs[i]
+		current := sub.DataInicio
+		for !current.After(sub.DataFim) {
+			dateStr := current.Format("2006-01-02")
+			key := sub.UsuarioID.String() + "|" + sub.PostoID.String() + "|" + dateStr
+			subByUserPostoDate[key] = sub
+			current = current.AddDate(0, 0, 1)
+		}
+	}
+
+	type candidato struct {
+		inicio time.Time
+		fim    time.Time
+		posto  *model.Posto
+		horaInicio string
+		horaFim    string
+	}
+
+	var candidatos []candidato
+
+	for d := now; !d.After(now.AddDate(0, 0, 7)); d = d.AddDate(0, 0, 1) {
+		diaSemana := int16(d.Weekday())
+		dateStr := d.Format("2006-01-02")
+
+		for _, esc := range escalas {
+			if esc.UsuarioID != usuarioID {
+				continue
+			}
+			if esc.DiaSemanaInicio != diaSemana {
+				continue
+			}
+
+			key := usuarioID.String() + "|" + esc.PostoID.String() + "|" + dateStr
+			horaInicio := esc.HoraInicio
+			horaFim := esc.HoraFim
+
+			if sub, ok := subByUserPostoDate[key]; ok {
+				horaInicio = sub.HoraInicio
+				horaFim = sub.HoraFim
+			}
+
+			inicio, err := parseHoraData(dateStr, horaInicio)
+			if err != nil {
+				continue
+			}
+			fim, err := parseHoraData(dateStr, horaFim)
+			if err != nil {
+				continue
+			}
+			if !fim.After(inicio) {
+				fim = fim.AddDate(0, 0, 1)
+			}
+
+			if inicio.Before(now) {
+				continue
+			}
+
+			posto, err := s.postoRepo.FindByID(ctx, empresaID, esc.PostoID)
+			if err != nil {
+				continue
+			}
+
+			candidatos = append(candidatos, candidato{
+				inicio:     inicio,
+				fim:        fim,
+				posto:      posto,
+				horaInicio: horaInicio,
+				horaFim:    horaFim,
+			})
+		}
+	}
+
+	if len(candidatos) == 0 {
+		return nil, nil
+	}
+
+	maisProximo := candidatos[0]
+	for _, c := range candidatos[1:] {
+		if c.inicio.Before(maisProximo.inicio) {
+			maisProximo = c
+		}
+	}
+
+	return &model.VigiaProximoTurno{
+		Posto:          maisProximo.posto,
+		InicioPrevisto: maisProximo.inicio,
+		FimPrevisto:    maisProximo.fim,
+		Data:           maisProximo.inicio.Format("2006-01-02"),
+		HoraInicio:     maisProximo.horaInicio,
+		HoraFim:        maisProximo.horaFim,
 	}, nil
 }
 

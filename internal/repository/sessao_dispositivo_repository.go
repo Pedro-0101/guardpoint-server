@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
@@ -70,5 +71,17 @@ func (r *SessaoDispositivoRepository) DeleteByDeviceID(ctx context.Context, empr
 		return fmt.Errorf("sessao dispositivo nao encontrada")
 	}
 
+	return nil
+}
+
+func (r *SessaoDispositivoRepository) DeleteByUsuario(ctx context.Context, empresaID, usuarioID uuid.UUID) error {
+	query := `DELETE FROM sessoes_dispositivo WHERE usuario_id = $1 AND empresa_id = $2`
+
+	ct, err := r.db.Exec(ctx, query, usuarioID, empresaID)
+	if err != nil {
+		return fmt.Errorf("remover sessoes do usuario: %w", err)
+	}
+
+	_ = ct.RowsAffected()
 	return nil
 }

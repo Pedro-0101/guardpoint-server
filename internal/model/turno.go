@@ -75,6 +75,7 @@ type TurnoStatusResponse struct {
 	ProximoDeadline      *time.Time `json:"proximo_deadline,omitempty"`
 	TipoProximoDeadline  string     `json:"tipo_proximo_deadline,omitempty"`
 	CheckinsHoje         int        `json:"checkins_hoje"`
+	Atrasado             bool       `json:"atrasado"`
 }
 
 type CheckinResponse struct {

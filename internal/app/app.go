@@ -69,6 +69,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 	turnoService := service.NewTurnoService(turnoRepo, checkinRepo, postoRepo, userRepo, sessaoDispositivoRepo, escalaRepo, substituicaoRepo, senhaVigiaRepo, alertaService, hub)
 	syncReconciler := worker.NewSyncReconciler(alertaRepo, checkinRepo, turnoRepo, hub)
 	turnoHandler := handler.NewTurnoHandler(turnoService, syncReconciler)
+	vigiaHandler := handler.NewVigiaHandler(turnoService)
 
 	senhaVigiaService := service.NewSenhaVigiaService(senhaVigiaRepo, userRepo, configEscalonamentoRepo)
 	senhaVigiaHandler := handler.NewSenhaVigiaHandler(senhaVigiaService)
@@ -165,6 +166,8 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 				r.Get("/{id}", turnoHandler.GetByID)
 				r.Post("/{id}/revogar", turnoHandler.Revogar)
 			})
+
+			r.Get("/vigia/turno", vigiaHandler.Turno)
 
 			r.Post("/checkins/lote", turnoHandler.Lote)
 
