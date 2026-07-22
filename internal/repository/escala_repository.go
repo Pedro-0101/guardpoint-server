@@ -105,17 +105,99 @@ func (r *EscalaRepository) List(ctx context.Context, empresaID uuid.UUID, filter
 		argIdx++
 	}
 
-	var total int
-	countQuery := fmt.Sprintf("SELECT COUNT(*) FROM escalas e %s", where)
-	if err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
-		return nil, 0, fmt.Errorf("contar escalas: %w", err)
-	}
-
 	if filter.Limit <= 0 {
 		filter.Limit = 20
 	}
 	if filter.Offset < 0 {
 		filter.Offset = 0
+	}
+
+	// When filtering by a specific user, fall back to row-based pagination
+	if filter.UsuarioID != "" {
+		var total int
+		countQuery := fmt.Sprintf("SELECT COUNT(*) FROM escalas e %s", where)
+		if err := r.db.QueryRow(ctx, countQuery, args...).Scan(&total); err != nil {
+			return nil, 0, fmt.Errorf("contar escalas: %w", err)
+		}
+
+		dataQuery := fmt.Sprintf(`
+			SELECT e.id, e.empresa_id, e.usuario_id, e.posto_id,
+			       e.dia_semana_inicio, e.dia_semana_fim, e.hora_inicio::text, e.hora_fim::text,
+			       e.tolerancia_min, e.ativo, e.created_at, e.updated_at,
+			       u.nome AS usuario_nome, p.nome AS posto_nome
+			FROM escalas e
+			LEFT JOIN usuarios u ON u.id = e.usuario_id
+			LEFT JOIN postos p ON p.id = e.posto_id
+			%s
+			ORDER BY e.created_at DESC
+			LIMIT $%d OFFSET $%d
+		`, where, argIdx, argIdx+1)
+		dataArgs := append(args, filter.Limit, filter.Offset)
+
+		rows, err := r.db.Query(ctx, dataQuery, dataArgs...)
+		if err != nil {
+			return nil, 0, fmt.Errorf("listar escalas: %w", err)
+		}
+		defer rows.Close()
+
+		var escalas []model.Escala
+		for rows.Next() {
+			var esc model.Escala
+			if err := rows.Scan(
+				&esc.ID, &esc.EmpresaID, &esc.UsuarioID, &esc.PostoID,
+				&esc.DiaSemanaInicio, &esc.DiaSemanaFim, &esc.HoraInicio, &esc.HoraFim,
+				&esc.ToleranciaMin, &esc.Ativo, &esc.CreatedAt, &esc.UpdatedAt,
+				&esc.UsuarioNome, &esc.PostoNome,
+			); err != nil {
+				return nil, 0, fmt.Errorf("scan escala: %w", err)
+			}
+			escalas = append(escalas, esc)
+		}
+		return escalas, total, rows.Err()
+	}
+
+	// Paginate by distinct user: count total users, fetch paginated user IDs,
+	// then return ALL escalas for those users.
+	var totalUsers int
+	countQuery := fmt.Sprintf("SELECT COUNT(DISTINCT e.usuario_id) FROM escalas e %s", where)
+	if err := r.db.QueryRow(ctx, countQuery, args...).Scan(&totalUsers); err != nil {
+		return nil, 0, fmt.Errorf("contar usuarios: %w", err)
+	}
+
+	if totalUsers == 0 {
+		return []model.Escala{}, 0, nil
+	}
+
+	userQuery := fmt.Sprintf(`
+		SELECT e.usuario_id
+		FROM escalas e
+		%s
+		GROUP BY e.usuario_id
+		ORDER BY MAX(e.created_at) DESC
+		LIMIT $%d OFFSET $%d
+	`, where, argIdx, argIdx+1)
+	userArgs := append(args, filter.Limit, filter.Offset)
+
+	uRows, err := r.db.Query(ctx, userQuery, userArgs...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("listar usuarios de escala: %w", err)
+	}
+	defer uRows.Close()
+
+	var userIDs []uuid.UUID
+	for uRows.Next() {
+		var uid uuid.UUID
+		if err := uRows.Scan(&uid); err != nil {
+			return nil, 0, fmt.Errorf("scan usuario_id: %w", err)
+		}
+		userIDs = append(userIDs, uid)
+	}
+	if err := uRows.Err(); err != nil {
+		return nil, 0, err
+	}
+
+	if len(userIDs) == 0 {
+		return []model.Escala{}, totalUsers, nil
 	}
 
 	dataQuery := fmt.Sprintf(`
@@ -126,13 +208,12 @@ func (r *EscalaRepository) List(ctx context.Context, empresaID uuid.UUID, filter
 		FROM escalas e
 		LEFT JOIN usuarios u ON u.id = e.usuario_id
 		LEFT JOIN postos p ON p.id = e.posto_id
-		%s
-		ORDER BY e.created_at DESC
-		LIMIT $%d OFFSET $%d
-	`, where, argIdx, argIdx+1)
-	args = append(args, filter.Limit, filter.Offset)
+		%s AND e.usuario_id = ANY($%d)
+		ORDER BY e.usuario_id, e.created_at DESC
+	`, where, argIdx)
+	dataArgs := append(args, userIDs)
 
-	rows, err := r.db.Query(ctx, dataQuery, args...)
+	rows, err := r.db.Query(ctx, dataQuery, dataArgs...)
 	if err != nil {
 		return nil, 0, fmt.Errorf("listar escalas: %w", err)
 	}
@@ -151,7 +232,7 @@ func (r *EscalaRepository) List(ctx context.Context, empresaID uuid.UUID, filter
 		}
 		escalas = append(escalas, esc)
 	}
-	return escalas, total, rows.Err()
+	return escalas, totalUsers, rows.Err()
 }
 
 func (r *EscalaRepository) ListAtivasByEmpresa(ctx context.Context, empresaID uuid.UUID, usuarioIDs, postoIDs []string) ([]model.Escala, error) {

@@ -120,21 +120,31 @@ func (m *fakeTurnoSessaoDispositivoRepo) FindByDeviceID(ctx context.Context, emp
 	return nil, nil
 }
 
-type fakeTurnoEscalaRepo struct{}
+type fakeTurnoEscalaRepo struct {
+	listAtivasByEmpresaFn func(ctx context.Context, empresaID uuid.UUID, usuarioIDs, postoIDs []string) ([]model.Escala, error)
+}
 
 func (m *fakeTurnoEscalaRepo) FindAtivaByUsuarioPostoDia(ctx context.Context, empresaID, usuarioID, postoID uuid.UUID, diaSemana int16) (*model.Escala, error) {
 	return nil, nil
 }
 func (m *fakeTurnoEscalaRepo) ListAtivasByEmpresa(ctx context.Context, empresaID uuid.UUID, usuarioIDs, postoIDs []string) ([]model.Escala, error) {
+	if m.listAtivasByEmpresaFn != nil {
+		return m.listAtivasByEmpresaFn(ctx, empresaID, usuarioIDs, postoIDs)
+	}
 	return nil, nil
 }
 
-type fakeTurnoSubstituicaoRepo struct{}
+type fakeTurnoSubstituicaoRepo struct {
+	listAtivasByDateRangeFn func(ctx context.Context, empresaID uuid.UUID, dataInicio, dataFim string, usuarioIDs, postoIDs []string) ([]model.Substituicao, error)
+}
 
 func (m *fakeTurnoSubstituicaoRepo) FindAtivaByUsuarioPostoData(ctx context.Context, empresaID, usuarioID, postoID uuid.UUID, data time.Time) (*model.Substituicao, error) {
 	return nil, nil
 }
 func (m *fakeTurnoSubstituicaoRepo) ListAtivasByDateRange(ctx context.Context, empresaID uuid.UUID, dataInicio, dataFim string, usuarioIDs, postoIDs []string) ([]model.Substituicao, error) {
+	if m.listAtivasByDateRangeFn != nil {
+		return m.listAtivasByDateRangeFn(ctx, empresaID, dataInicio, dataFim, usuarioIDs, postoIDs)
+	}
 	return nil, nil
 }
 
@@ -161,6 +171,28 @@ func newTestTurnoService(
 		&fakeTurnoSessaoDispositivoRepo{},
 		&fakeTurnoEscalaRepo{},
 		&fakeTurnoSubstituicaoRepo{},
+		&fakeTurnoSenhaVigiaRepo{},
+		nil,
+		nil,
+	)
+}
+
+func newTestTurnoServiceFull(
+	turnoRepo *fakeTurnoTurnoRepo,
+	checkinRepo *fakeTurnoCheckinRepo,
+	postoRepo *fakeTurnoPostoRepo,
+	userRepo *fakeTurnoUserRepo,
+	escalaRepo *fakeTurnoEscalaRepo,
+	substituicaoRepo *fakeTurnoSubstituicaoRepo,
+) *TurnoService {
+	return NewTurnoService(
+		turnoRepo,
+		checkinRepo,
+		postoRepo,
+		userRepo,
+		&fakeTurnoSessaoDispositivoRepo{},
+		escalaRepo,
+		substituicaoRepo,
 		&fakeTurnoSenhaVigiaRepo{},
 		nil,
 		nil,
