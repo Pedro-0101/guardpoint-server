@@ -292,6 +292,97 @@ func TestGetVigiaTurno_ComTurnoAtivo_RetornaTurno(t *testing.T) {
 	}
 }
 
+func TestGetVigiaTurno_TurnoAtivoExpirado_AutoFinalizaERetornaProximoAgendado(t *testing.T) {
+	ctx := context.Background()
+	empresaID := uuid.New()
+	userID := uuid.New()
+	turnoID := uuid.New()
+	postoID := uuid.New()
+	now := timeutil.NowBRT()
+
+	turnoExpirado := &model.Turno{
+		ID:             turnoID,
+		EmpresaID:      empresaID,
+		UsuarioID:      userID,
+		PostoID:        postoID,
+		PostoNome:      "Posto Antigo",
+		Status:         "em_andamento",
+		InicioPrevisto: now.Add(-24 * time.Hour),
+		FimPrevisto:    now.Add(-1 * time.Hour),
+		InicioReal:     ptrTime(now.Add(-24 * time.Hour)),
+		IntervaloMin:   30,
+	}
+
+	updateStatusCalled := false
+	turnoRepo := &fakeTurnoTurnoRepo{
+		findAtivoByUsuarioFn: func(ctx context.Context, eID, uID uuid.UUID) (*model.Turno, error) {
+			return turnoExpirado, nil
+		},
+		updateStatusFn: func(ctx context.Context, id, eID uuid.UUID, status string, fimReal *time.Time) error {
+			updateStatusCalled = true
+			if status != "finalizado" {
+				t.Errorf("UpdateStatus status = %q, esperado 'finalizado'", status)
+			}
+			if fimReal == nil {
+				t.Error("UpdateStatus fimReal = nil, esperado time.Time")
+			}
+			return nil
+		},
+	}
+
+	amanha := now.AddDate(0, 0, 1)
+	diaSemanaAmanha := int16(amanha.Weekday())
+	escalaRepo := &fakeTurnoEscalaRepo{
+		listAtivasByEmpresaFn: func(ctx context.Context, empresaID uuid.UUID, usuarioIDs, postoIDs []string) ([]model.Escala, error) {
+			return []model.Escala{
+				{
+					ID:              uuid.New(),
+					EmpresaID:       empresaID,
+					UsuarioID:       userID,
+					PostoID:         postoID,
+					DiaSemanaInicio: diaSemanaAmanha,
+					HoraInicio:      "08:00",
+					DiaSemanaFim:    diaSemanaAmanha,
+					HoraFim:         "17:00",
+					Ativo:           true,
+				},
+			}, nil
+		},
+	}
+	substituicaoRepo := &fakeTurnoSubstituicaoRepo{
+		listAtivasByDateRangeFn: func(ctx context.Context, empresaID uuid.UUID, dataInicio, dataFim string, usuarioIDs, postoIDs []string) ([]model.Substituicao, error) {
+			return nil, nil
+		},
+	}
+	postoRepo := &fakeTurnoPostoRepo{
+		findByIDFn: func(ctx context.Context, eID, id uuid.UUID) (*model.Posto, error) {
+			return &model.Posto{ID: postoID, Nome: "Posto Novo"}, nil
+		},
+	}
+
+	svc := newTestTurnoServiceFull(turnoRepo, &fakeTurnoCheckinRepo{}, postoRepo, &fakeTurnoUserRepo{}, escalaRepo, substituicaoRepo)
+
+	resp, err := svc.GetVigiaTurno(ctx, userID.String(), empresaID.String())
+	if err != nil {
+		t.Fatalf("GetVigiaTurno() erro inesperado: %v", err)
+	}
+	if !updateStatusCalled {
+		t.Error("UpdateStatus nao foi chamado — turno expirado deveria ser auto-finalizado")
+	}
+	if resp.TemTurnoAtivo {
+		t.Error("TemTurnoAtivo = true, esperado false (turno expirado foi auto-finalizado)")
+	}
+	if resp.Turno != nil {
+		t.Error("Turno deveria ser nil (turno expirado foi auto-finalizado)")
+	}
+	if resp.ProximoTurno == nil {
+		t.Fatal("ProximoTurno nao deveria ser nil (escala futura existe)")
+	}
+	if resp.Mensagem != "nenhum turno ativo" {
+		t.Errorf("Mensagem = %q, esperado 'nenhum turno ativo'", resp.Mensagem)
+	}
+}
+
 func TestBuscarProximoTurnoAgendado_SemEscalas_RetornaNil(t *testing.T) {
 	ctx := context.Background()
 	empresaID := uuid.New()
@@ -367,6 +458,113 @@ func TestBuscarProximoTurnoAgendado_ComEscalaFutura_RetornaTurno(t *testing.T) {
 	}
 	if result.Posto == nil || result.Posto.ID != postoID {
 		t.Errorf("Posto.ID = %v, esperado %v", result.Posto.ID, postoID)
+	}
+}
+
+func TestBuscarProximoTurnoAgendado_TurnoHojeEmAndamento_RetornaTurno(t *testing.T) {
+	ctx := context.Background()
+	empresaID := uuid.New()
+	userID := uuid.New()
+	postoID := uuid.New()
+
+	now := time.Date(2026, 7, 25, 1, 0, 0, 0, timeutil.BRT)
+	diaSemana := int16(now.Weekday())
+
+	escalaRepo := &fakeTurnoEscalaRepo{
+		listAtivasByEmpresaFn: func(ctx context.Context, empresaID uuid.UUID, usuarioIDs, postoIDs []string) ([]model.Escala, error) {
+			return []model.Escala{
+				{
+					ID:              uuid.New(),
+					EmpresaID:       empresaID,
+					UsuarioID:       userID,
+					PostoID:         postoID,
+					DiaSemanaInicio: diaSemana,
+					HoraInicio:      "00:00",
+					DiaSemanaFim:    diaSemana,
+					HoraFim:         "02:00",
+					Ativo:           true,
+				},
+			}, nil
+		},
+	}
+	substituicaoRepo := &fakeTurnoSubstituicaoRepo{
+		listAtivasByDateRangeFn: func(ctx context.Context, empresaID uuid.UUID, dataInicio, dataFim string, usuarioIDs, postoIDs []string) ([]model.Substituicao, error) {
+			return nil, nil
+		},
+	}
+	postoRepo := &fakeTurnoPostoRepo{
+		findByIDFn: func(ctx context.Context, eID, id uuid.UUID) (*model.Posto, error) {
+			return &model.Posto{ID: postoID, Nome: "Posto Diurno"}, nil
+		},
+	}
+
+	svc := newTestTurnoServiceFull(&fakeTurnoTurnoRepo{}, &fakeTurnoCheckinRepo{}, postoRepo, &fakeTurnoUserRepo{}, escalaRepo, substituicaoRepo)
+
+	result, err := svc.buscarProximoTurnoAgendadoEm(ctx, empresaID, userID, now)
+	if err != nil {
+		t.Fatalf("buscarProximoTurnoAgendadoEm() erro inesperado: %v", err)
+	}
+	if result == nil {
+		t.Fatal("resultado nao deveria ser nil — turno de hoje esta em andamento (vigia atrasado)")
+	}
+	if result.Posto == nil || result.Posto.ID != postoID {
+		t.Errorf("Posto.ID = %v, esperado %v", result.Posto.ID, postoID)
+	}
+	dataEsperada := now.Format("2006-01-02")
+	if result.Data != dataEsperada {
+		t.Errorf("Data = %q, esperado %q (turno de hoje ainda em andamento)", result.Data, dataEsperada)
+	}
+}
+
+func TestBuscarProximoTurnoAgendado_TurnoHojeJaPassou_PulaParaProximo(t *testing.T) {
+	ctx := context.Background()
+	empresaID := uuid.New()
+	userID := uuid.New()
+	postoID := uuid.New()
+
+	now := time.Date(2026, 7, 25, 3, 0, 0, 0, timeutil.BRT)
+	diaSemana := int16(now.Weekday())
+
+	escalaRepo := &fakeTurnoEscalaRepo{
+		listAtivasByEmpresaFn: func(ctx context.Context, empresaID uuid.UUID, usuarioIDs, postoIDs []string) ([]model.Escala, error) {
+			return []model.Escala{
+				{
+					ID:              uuid.New(),
+					EmpresaID:       empresaID,
+					UsuarioID:       userID,
+					PostoID:         postoID,
+					DiaSemanaInicio: diaSemana,
+					HoraInicio:      "00:00",
+					DiaSemanaFim:    diaSemana,
+					HoraFim:         "02:00",
+					Ativo:           true,
+				},
+			}, nil
+		},
+	}
+	substituicaoRepo := &fakeTurnoSubstituicaoRepo{
+		listAtivasByDateRangeFn: func(ctx context.Context, empresaID uuid.UUID, dataInicio, dataFim string, usuarioIDs, postoIDs []string) ([]model.Substituicao, error) {
+			return nil, nil
+		},
+	}
+	postoRepo := &fakeTurnoPostoRepo{
+		findByIDFn: func(ctx context.Context, eID, id uuid.UUID) (*model.Posto, error) {
+			return &model.Posto{ID: postoID, Nome: "Posto Semanal"}, nil
+		},
+	}
+
+	svc := newTestTurnoServiceFull(&fakeTurnoTurnoRepo{}, &fakeTurnoCheckinRepo{}, postoRepo, &fakeTurnoUserRepo{}, escalaRepo, substituicaoRepo)
+
+	result, err := svc.buscarProximoTurnoAgendadoEm(ctx, empresaID, userID, now)
+	if err != nil {
+		t.Fatalf("buscarProximoTurnoAgendadoEm() erro inesperado: %v", err)
+	}
+	if result == nil {
+		t.Fatal("resultado nao deveria ser nil — deve retornar o turno da proxima semana")
+	}
+	dataHoje := now.Format("2006-01-02")
+	if result.Data == dataHoje {
+		t.Error("resultado nao deveria ser o turno de hoje (ja terminou as 02:00)")
 	}
 }
 

@@ -17,6 +17,7 @@ type fakeTurnoTurnoRepo struct {
 	findByIDFn           func(ctx context.Context, empresaID, id uuid.UUID) (*model.Turno, error)
 	listAtivosFn         func(ctx context.Context, empresaID uuid.UUID) ([]model.Turno, error)
 	listHistoricoFn      func(ctx context.Context, empresaID uuid.UUID, filter model.HistoricoFilter) ([]model.Turno, int, error)
+	updateStatusFn       func(ctx context.Context, id, empresaID uuid.UUID, status string, fimReal *time.Time) error
 }
 
 func (m *fakeTurnoTurnoRepo) Create(ctx context.Context, t *model.Turno) error { return nil }
@@ -33,6 +34,9 @@ func (m *fakeTurnoTurnoRepo) FindByID(ctx context.Context, empresaID, id uuid.UU
 	return nil, nil
 }
 func (m *fakeTurnoTurnoRepo) UpdateStatus(ctx context.Context, id, empresaID uuid.UUID, status string, fimReal *time.Time) error {
+	if m.updateStatusFn != nil {
+		return m.updateStatusFn(ctx, id, empresaID, status, fimReal)
+	}
 	return nil
 }
 func (m *fakeTurnoTurnoRepo) ListAtivos(ctx context.Context, empresaID uuid.UUID) ([]model.Turno, error) {
