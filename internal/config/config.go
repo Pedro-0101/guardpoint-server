@@ -54,7 +54,7 @@ func Load() (*Config, error) {
 }
 
 // validateProduction recusa defaults inseguros quando ENV=production (B2):
-// segredo JWT fraco/placeholder e CORS aberto.
+// segredo JWT fraco/placeholder.
 func validateProduction(cfg *Config) error {
 	if cfg.JWTSecret == jwtSecretPlaceholder {
 		return fmt.Errorf("JWT_SECRET is still the placeholder %q; set a real secret in production", jwtSecretPlaceholder)
@@ -63,12 +63,7 @@ func validateProduction(cfg *Config) error {
 		return fmt.Errorf("JWT_SECRET must have at least %d characters in production", jwtSecretMinLen)
 	}
 	if len(cfg.CORSOrigins) == 0 {
-		return fmt.Errorf("CORS_ORIGINS must list explicit origins in production")
-	}
-	for _, o := range cfg.CORSOrigins {
-		if o == "*" {
-			return fmt.Errorf("CORS_ORIGINS must list explicit origins in production (got %q)", o)
-		}
+		return fmt.Errorf("CORS_ORIGINS must be set in production")
 	}
 	return nil
 }

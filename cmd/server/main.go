@@ -24,6 +24,8 @@ import (
 	"syscall"
 	"time"
 
+	"github.com/jackc/pgx/v5/pgxpool"
+
 	_ "github.com/guardpoint/guardpoint-server/docs"
 	"github.com/guardpoint/guardpoint-server/internal/app"
 	"github.com/guardpoint/guardpoint-server/internal/config"
@@ -45,12 +47,23 @@ func main() {
 
 	slog.Info("starting guardpoint-server", "env", cfg.Env)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-	defer cancel()
+	var pool *pgxpool.Pool
 
-	pool, err := db.NewPool(ctx, cfg.DatabaseURL)
+	for attempt := 1; attempt <= 5; attempt++ {
+		ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+		pool, err = db.NewPool(ctx, cfg.DatabaseURL)
+		cancel()
+		if err == nil {
+			break
+		}
+		slog.Error("failed to connect to database", "attempt", attempt, "error", err)
+		if attempt < 5 {
+			slog.Info("retrying database connection in 3s...")
+			time.Sleep(3 * time.Second)
+		}
+	}
 	if err != nil {
-		slog.Error("failed to connect to database", "error", err)
+		slog.Error("failed to connect to database after 5 attempts", "error", err)
 		os.Exit(1)
 	}
 	defer pool.Close()
@@ -62,7 +75,7 @@ func main() {
 		userRepo := repository.NewUserRepository(pool)
 		configEscalonamentoRepo := repository.NewConfigEscalonamentoRepository(pool)
 		empresaService := service.NewEmpresaService(empresaRepo, configEscalonamentoRepo)
-		if err := seed.Run(ctx, empresaRepo, userRepo, empresaService); err != nil {
+		if err := seed.Run(context.Background(), empresaRepo, userRepo, empresaService); err != nil {
 			slog.Error("seed failed", "error", err)
 			os.Exit(1)
 		}

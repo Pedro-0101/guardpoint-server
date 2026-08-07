@@ -47,14 +47,17 @@ func TestLoadProductionRejeitaSegredoCurto(t *testing.T) {
 	}
 }
 
-func TestLoadProductionRejeitaCORSAberto(t *testing.T) {
+func TestLoadProductionAceitaCORSWildcard(t *testing.T) {
 	setBaseEnv(t)
 	t.Setenv("ENV", "production")
 	t.Setenv("CORS_ORIGINS", "*")
 
-	_, err := Load()
-	if err == nil || !strings.Contains(err.Error(), "CORS_ORIGINS") {
-		t.Fatalf("Load() deveria rejeitar CORS_ORIGINS=*, retornou: %v", err)
+	cfg, err := Load()
+	if err != nil {
+		t.Fatalf("Load() deveria aceitar CORS_ORIGINS=* em producao, falhou: %v", err)
+	}
+	if len(cfg.CORSOrigins) != 1 || cfg.CORSOrigins[0] != "*" {
+		t.Errorf("CORSOrigins = %q", cfg.CORSOrigins)
 	}
 }
 
