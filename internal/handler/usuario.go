@@ -23,7 +23,7 @@ type UsuarioHandler struct {
 func NewUsuarioHandler(usuarioService *service.UsuarioService) *UsuarioHandler {
 	return &UsuarioHandler{
 		usuarioService: usuarioService,
-		validate:       validator.New(),
+		validate:       NewValidator(),
 	}
 }
 

@@ -23,7 +23,7 @@ type EscalaHandler struct {
 func NewEscalaHandler(escalaService *service.EscalaService) *EscalaHandler {
 	return &EscalaHandler{
 		escalaService: escalaService,
-		validate:      validator.New(),
+		validate:      NewValidator(),
 	}
 }
 

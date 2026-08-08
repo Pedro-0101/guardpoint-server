@@ -22,7 +22,7 @@ type EscalonamentoHandler struct {
 func NewEscalonamentoHandler(svc *service.EscalonamentoService) *EscalonamentoHandler {
 	return &EscalonamentoHandler{
 		service:  svc,
-		validate: validator.New(),
+		validate: NewValidator(),
 	}
 }
 

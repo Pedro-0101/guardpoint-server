@@ -5,11 +5,24 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"reflect"
 	"strconv"
 	"strings"
 
 	"github.com/go-playground/validator/v10"
 )
+
+func NewValidator() *validator.Validate {
+	validate := NewValidator()
+	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
+		name := strings.SplitN(fld.Tag.Get("json"), ",", 2)[0]
+		if name == "-" {
+			return ""
+		}
+		return name
+	})
+	return validate
+}
 
 func writeJSON(w http.ResponseWriter, status int, data interface{}) {
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
@@ -32,7 +45,11 @@ func writeValidationError(w http.ResponseWriter, err error) {
 			if i > 0 {
 				errMsg += "; "
 			}
-			errMsg += fe.Field()
+			errMsg += fe.Field() + " (" + fe.Tag() + ""
+			if fe.Param() != "" {
+				errMsg += "=" + fe.Param()
+			}
+			errMsg += ")"
 		}
 	} else {
 		errMsg = err.Error()

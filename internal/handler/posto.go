@@ -22,7 +22,7 @@ type PostoHandler struct {
 func NewPostoHandler(postoService *service.PostoService) *PostoHandler {
 	return &PostoHandler{
 		postoService: postoService,
-		validate:     validator.New(),
+		validate:     NewValidator(),
 	}
 }
 

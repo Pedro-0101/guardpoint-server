@@ -19,7 +19,7 @@ type EmpresaHandler struct {
 }
 
 func NewEmpresaHandler(empresaService *service.EmpresaService) *EmpresaHandler {
-	return &EmpresaHandler{empresaService: empresaService, validate: validator.New()}
+	return &EmpresaHandler{empresaService: empresaService, validate: NewValidator()}
 }
 
 // Get godoc

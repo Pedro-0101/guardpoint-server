@@ -22,7 +22,7 @@ type AlertaHandler struct {
 func NewAlertaHandler(alertaService *service.AlertaService) *AlertaHandler {
 	return &AlertaHandler{
 		alertaService: alertaService,
-		validate:      validator.New(),
+		validate:      NewValidator(),
 	}
 }
 

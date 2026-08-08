@@ -23,7 +23,7 @@ type SubstituicaoHandler struct {
 func NewSubstituicaoHandler(service *service.SubstituicaoService) *SubstituicaoHandler {
 	return &SubstituicaoHandler{
 		service:  service,
-		validate: validator.New(),
+		validate: NewValidator(),
 	}
 }
 

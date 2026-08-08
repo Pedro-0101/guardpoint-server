@@ -26,7 +26,7 @@ func NewTurnoHandler(turnoService *service.TurnoService, syncReconciler *worker.
 	return &TurnoHandler{
 		turnoService:   turnoService,
 		syncReconciler: syncReconciler,
-		validate:       validator.New(),
+		validate:       NewValidator(),
 	}
 }
 

@@ -23,7 +23,7 @@ type SenhaVigiaHandler struct {
 func NewSenhaVigiaHandler(s *service.SenhaVigiaService) *SenhaVigiaHandler {
 	return &SenhaVigiaHandler{
 		service:  s,
-		validate: validator.New(),
+		validate: NewValidator(),
 	}
 }
 
