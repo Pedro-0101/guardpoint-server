@@ -1198,11 +1198,15 @@ definitions:
         type: integer
       posto:
         $ref: '#/definitions/model.Posto'
+      posto_nome:
+        type: string
       proximo_deadline:
         type: string
       status:
         type: string
       tipo_proximo_deadline:
+        type: string
+      token_sessao:
         type: string
       ultimo_checkin:
         $ref: '#/definitions/model.Checkin'
@@ -1236,7 +1240,7 @@ paths:
         name: status
         type: string
       - description: Tipo do alerta (atraso, no_show, senha_emergencia, senha_customizada,
-          sabotagem)
+          sabotagem, desvio_rota)
         in: query
         name: tipo
         type: string

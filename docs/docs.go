@@ -37,7 +37,7 @@ const docTemplate = `{
                     },
                     {
                         "type": "string",
-                        "description": "Tipo do alerta (atraso, no_show, senha_emergencia, senha_customizada, sabotagem)",
+                        "description": "Tipo do alerta (atraso, no_show, senha_emergencia, senha_customizada, sabotagem, desvio_rota)",
                         "name": "tipo",
                         "in": "query"
                     },
@@ -4386,6 +4386,9 @@ const docTemplate = `{
                 "posto": {
                     "$ref": "#/definitions/model.Posto"
                 },
+                "posto_nome": {
+                    "type": "string"
+                },
                 "proximo_deadline": {
                     "type": "string"
                 },
@@ -4393,6 +4396,9 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "tipo_proximo_deadline": {
+                    "type": "string"
+                },
+                "token_sessao": {
                     "type": "string"
                 },
                 "ultimo_checkin": {

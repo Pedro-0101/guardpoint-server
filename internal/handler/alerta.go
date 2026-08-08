@@ -31,7 +31,7 @@ func NewAlertaHandler(alertaService *service.AlertaService) *AlertaHandler {
 // @Description  Para supervisores, os alertas sao automaticamente filtrados pelos postos aos quais estao vinculados (via posto_supervisores). Admins veem todos os alertas. Os filtros de query sao adicionais — posto_id pode ser usado para refinar a busca.
 // @Tags         alertas
 // @Param        status query string false "Status do alerta (aberto, reconhecido, encerrado)"
-// @Param        tipo query string false "Tipo do alerta (atraso, no_show, senha_emergencia, senha_customizada, sabotagem)"
+// @Param        tipo query string false "Tipo do alerta (atraso, no_show, senha_emergencia, senha_customizada, sabotagem, desvio_rota)"
 // @Param        turno_id query string false "ID do turno (uuid)"
 // @Param        posto_id query string false "ID do posto (uuid)"
 // @Param        limit query int false "Limite de itens (max 100)"

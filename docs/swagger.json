@@ -30,7 +30,7 @@
                     },
                     {
                         "type": "string",
-                        "description": "Tipo do alerta (atraso, no_show, senha_emergencia, senha_customizada, sabotagem)",
+                        "description": "Tipo do alerta (atraso, no_show, senha_emergencia, senha_customizada, sabotagem, desvio_rota)",
                         "name": "tipo",
                         "in": "query"
                     },
@@ -4379,6 +4379,9 @@
                 "posto": {
                     "$ref": "#/definitions/model.Posto"
                 },
+                "posto_nome": {
+                    "type": "string"
+                },
                 "proximo_deadline": {
                     "type": "string"
                 },
@@ -4386,6 +4389,9 @@
                     "type": "string"
                 },
                 "tipo_proximo_deadline": {
+                    "type": "string"
+                },
+                "token_sessao": {
                     "type": "string"
                 },
                 "ultimo_checkin": {

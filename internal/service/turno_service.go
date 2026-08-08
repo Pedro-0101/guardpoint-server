@@ -302,6 +302,12 @@ func (s *TurnoService) Iniciar(ctx context.Context, userID, empresaID string, re
 		return nil, fmt.Errorf("criar checkin de inicio: %w", err)
 	}
 
+	if flagGeofence != nil && *flagGeofence == "desvio_rota" {
+		if _, err := s.alertaService.CreateAlerta(ctx, parsedEmpresaID, turno.ID, turno.PostoID, "desvio_rota", "Vigia iniciou turno fora da cerca do posto"); err != nil {
+			slog.Error("criar alerta de fora de cerca", "error", err, "turno_id", turno.ID)
+		}
+	}
+
 	if senha != nil && senha.Tipo != "ok" {
 		turno.Status = "critico"
 	}
@@ -453,6 +459,12 @@ func (s *TurnoService) Checkin(ctx context.Context, userID, empresaID string, re
 	// relativa que o antigo bloco de coacao ocupava
 	s.aplicarConsequenciaSenha(ctx, empresaID, parsedEmpresaID, parsedTurnoID, parsedUserID, turno.PostoID, req.Senha)
 
+	if flagGeofence != nil && *flagGeofence == "desvio_rota" {
+		if _, err := s.alertaService.CreateAlerta(ctx, parsedEmpresaID, parsedTurnoID, turno.PostoID, "desvio_rota", "Vigia fez checkin fora da cerca do posto"); err != nil {
+			slog.Error("criar alerta de fora de cerca", "error", err, "turno_id", parsedTurnoID)
+		}
+	}
+
 	s.emitirGPSUpdate(empresaID, req.TurnoID, req.Latitude, req.Longitude, timestampCriacao, flagGeofence)
 
 	posto, err := s.postoRepo.FindByID(ctx, parsedEmpresaID, turno.PostoID)
@@ -540,6 +552,12 @@ func (s *TurnoService) Finalizar(ctx context.Context, userID, empresaID string, 
 	// final do turno e sempre "finalizado" -- e sobrescrito logo abaixo. O
 	// alerta e quem carrega a urgencia, nao o status final do turno.
 	s.aplicarConsequenciaSenha(ctx, empresaID, parsedEmpresaID, parsedTurnoID, parsedUserID, turno.PostoID, req.Senha)
+
+	if flagGeofence != nil && *flagGeofence == "desvio_rota" {
+		if _, err := s.alertaService.CreateAlerta(ctx, parsedEmpresaID, parsedTurnoID, turno.PostoID, "desvio_rota", "Vigia finalizou turno fora da cerca do posto"); err != nil {
+			slog.Error("criar alerta de fora de cerca", "error", err, "turno_id", parsedTurnoID)
+		}
+	}
 
 	now := timeutil.NowBRT()
 	if err := s.turnoRepo.UpdateStatus(ctx, parsedTurnoID, parsedEmpresaID, "finalizado", &now); err != nil {
