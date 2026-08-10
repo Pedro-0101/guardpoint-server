@@ -81,27 +81,6 @@ definitions:
         example: atraso
         type: string
     type: object
-  model.AlertaRecente:
-    properties:
-      created_at:
-        example: "2025-07-10T15:04:05Z"
-        type: string
-      id:
-        example: 550e8400-e29b-41d4-a716-446655440000
-        type: string
-      mensagem:
-        example: Atraso de 5 minutos detectado.
-        type: string
-      posto_id:
-        example: 880e8400-e29b-41d4-a716-446655440000
-        type: string
-      tipo:
-        example: atraso
-        type: string
-      turno_id:
-        example: 770e8400-e29b-41d4-a716-446655440000
-        type: string
-    type: object
   model.BatchAlertaRequest:
     properties:
       ids:
@@ -435,28 +414,72 @@ definitions:
     - nome
     - senha
     type: object
-  model.DashboardSummary:
+  model.DashboardLinha:
     properties:
-      alertas_abertos:
-        example: 5
+      atrasado:
+        example: false
+        type: boolean
+      fim_previsto:
+        example: "2025-07-10T18:00:00Z"
+        type: string
+      inicio_previsto:
+        example: "2025-07-10T08:00:00Z"
+        type: string
+      inicio_real:
+        example: "2025-07-10T08:02:00Z"
+        type: string
+      intervalo_min:
+        example: 30
         type: integer
-      alertas_recentes:
+      posto_id:
+        example: 550e8400-e29b-41d4-a716-446655440000
+        type: string
+      posto_latitude:
+        example: -23.55052
+        type: number
+      posto_longitude:
+        example: -46.633308
+        type: number
+      posto_nome:
+        example: Portaria Principal
+        type: string
+      posto_raio_m:
+        example: 100
+        type: integer
+      proximo_checkin:
+        example: "2025-07-10T16:00:00Z"
+        type: string
+      turno_id:
+        example: 880e8400-e29b-41d4-a716-446655440000
+        type: string
+      turno_status:
+        example: em_andamento
+        type: string
+      ultimo_checkin:
+        example: "2025-07-10T15:30:00Z"
+        type: string
+      vigia_id:
+        example: 770e8400-e29b-41d4-a716-446655440000
+        type: string
+      vigia_nome:
+        example: Carlos Silva
+        type: string
+    type: object
+  model.DashboardTableResponse:
+    properties:
+      limit:
+        example: 20
+        type: integer
+      linhas:
         items:
-          $ref: '#/definitions/model.AlertaRecente'
+          $ref: '#/definitions/model.DashboardLinha'
         type: array
-      checkins_ultima_hora:
-        example: 48
+      offset:
+        example: 0
         type: integer
-      desvios_rota:
-        example: 2
-        type: integer
-      turnos_ativos:
+      total:
         example: 12
         type: integer
-      turnos_por_posto:
-        items:
-          $ref: '#/definitions/model.TurnoPorPosto'
-        type: array
     type: object
   model.DiaEscalaEntry:
     properties:
@@ -958,18 +981,6 @@ definitions:
         $ref: '#/definitions/model.Checkin'
       usuario_nome:
         type: string
-    type: object
-  model.TurnoPorPosto:
-    properties:
-      posto_id:
-        example: 550e8400-e29b-41d4-a716-446655440000
-        type: string
-      posto_nome:
-        example: Portaria Principal
-        type: string
-      quantidade:
-        example: 3
-        type: integer
     type: object
   model.TurnoStatusResponse:
     properties:
@@ -1759,18 +1770,29 @@ paths:
         (somente admin)
       tags:
       - escalonamento
-  /dashboard/summary:
+  /dashboard/table:
     get:
+      description: Lista turnos ativos com dados de posto, vigia e checkins. Ordenado
+        por proximidade do proximo checkin (mais urgente primeiro). Suporta paginacao.
+      parameters:
+      - description: Limite de registros (default 20, max 100)
+        in: query
+        name: limit
+        type: integer
+      - description: Offset para paginacao (default 0)
+        in: query
+        name: offset
+        type: integer
       responses:
         "200":
           description: OK
           schema:
-            $ref: '#/definitions/model.DashboardSummary'
+            $ref: '#/definitions/model.DashboardTableResponse'
         "500":
           description: Internal Server Error
           schema:
             $ref: '#/definitions/model.ErrorResponse'
-      summary: Resumo do dashboard da empresa
+      summary: Tabela gerencial de postos x turnos
       tags:
       - dashboard
   /empresa:

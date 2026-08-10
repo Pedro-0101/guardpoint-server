@@ -811,17 +811,32 @@
                 }
             }
         },
-        "/dashboard/summary": {
+        "/dashboard/table": {
             "get": {
+                "description": "Lista turnos ativos com dados de posto, vigia e checkins. Ordenado por proximidade do proximo checkin (mais urgente primeiro). Suporta paginacao.",
                 "tags": [
                     "dashboard"
                 ],
-                "summary": "Resumo do dashboard da empresa",
+                "summary": "Tabela gerencial de postos x turnos",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Limite de registros (default 20, max 100)",
+                        "name": "limit",
+                        "in": "query"
+                    },
+                    {
+                        "type": "integer",
+                        "description": "Offset para paginacao (default 0)",
+                        "name": "offset",
+                        "in": "query"
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "OK",
                         "schema": {
-                            "$ref": "#/definitions/model.DashboardSummary"
+                            "$ref": "#/definitions/model.DashboardTableResponse"
                         }
                     },
                     "500": {
@@ -2759,35 +2774,6 @@
                 }
             }
         },
-        "model.AlertaRecente": {
-            "type": "object",
-            "properties": {
-                "created_at": {
-                    "type": "string",
-                    "example": "2025-07-10T15:04:05Z"
-                },
-                "id": {
-                    "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
-                },
-                "mensagem": {
-                    "type": "string",
-                    "example": "Atraso de 5 minutos detectado."
-                },
-                "posto_id": {
-                    "type": "string",
-                    "example": "880e8400-e29b-41d4-a716-446655440000"
-                },
-                "tipo": {
-                    "type": "string",
-                    "example": "atraso"
-                },
-                "turno_id": {
-                    "type": "string",
-                    "example": "770e8400-e29b-41d4-a716-446655440000"
-                }
-            }
-        },
         "model.BatchAlertaRequest": {
             "type": "object",
             "required": [
@@ -3260,36 +3246,95 @@
                 }
             }
         },
-        "model.DashboardSummary": {
+        "model.DashboardLinha": {
             "type": "object",
             "properties": {
-                "alertas_abertos": {
-                    "type": "integer",
-                    "example": 5
+                "atrasado": {
+                    "type": "boolean",
+                    "example": false
                 },
-                "alertas_recentes": {
+                "fim_previsto": {
+                    "type": "string",
+                    "example": "2025-07-10T18:00:00Z"
+                },
+                "inicio_previsto": {
+                    "type": "string",
+                    "example": "2025-07-10T08:00:00Z"
+                },
+                "inicio_real": {
+                    "type": "string",
+                    "example": "2025-07-10T08:02:00Z"
+                },
+                "intervalo_min": {
+                    "type": "integer",
+                    "example": 30
+                },
+                "posto_id": {
+                    "type": "string",
+                    "example": "550e8400-e29b-41d4-a716-446655440000"
+                },
+                "posto_latitude": {
+                    "type": "number",
+                    "example": -23.55052
+                },
+                "posto_longitude": {
+                    "type": "number",
+                    "example": -46.633308
+                },
+                "posto_nome": {
+                    "type": "string",
+                    "example": "Portaria Principal"
+                },
+                "posto_raio_m": {
+                    "type": "integer",
+                    "example": 100
+                },
+                "proximo_checkin": {
+                    "type": "string",
+                    "example": "2025-07-10T16:00:00Z"
+                },
+                "turno_id": {
+                    "type": "string",
+                    "example": "880e8400-e29b-41d4-a716-446655440000"
+                },
+                "turno_status": {
+                    "type": "string",
+                    "example": "em_andamento"
+                },
+                "ultimo_checkin": {
+                    "type": "string",
+                    "example": "2025-07-10T15:30:00Z"
+                },
+                "vigia_id": {
+                    "type": "string",
+                    "example": "770e8400-e29b-41d4-a716-446655440000"
+                },
+                "vigia_nome": {
+                    "type": "string",
+                    "example": "Carlos Silva"
+                }
+            }
+        },
+        "model.DashboardTableResponse": {
+            "type": "object",
+            "properties": {
+                "limit": {
+                    "type": "integer",
+                    "example": 20
+                },
+                "linhas": {
                     "type": "array",
                     "items": {
-                        "$ref": "#/definitions/model.AlertaRecente"
+                        "$ref": "#/definitions/model.DashboardLinha"
                     }
                 },
-                "checkins_ultima_hora": {
+                "offset": {
                     "type": "integer",
-                    "example": 48
+                    "example": 0
                 },
-                "desvios_rota": {
-                    "type": "integer",
-                    "example": 2
-                },
-                "turnos_ativos": {
+                "total": {
                     "type": "integer",
                     "example": 12
-                },
-                "turnos_por_posto": {
-                    "type": "array",
-                    "items": {
-                        "$ref": "#/definitions/model.TurnoPorPosto"
-                    }
                 }
             }
         },
@@ -4029,23 +4074,6 @@
                 },
                 "usuario_nome": {
                     "type": "string"
-                }
-            }
-        },
-        "model.TurnoPorPosto": {
-            "type": "object",
-            "properties": {
-                "posto_id": {
-                    "type": "string",
-                    "example": "550e8400-e29b-41d4-a716-446655440000"
-                },
-                "posto_nome": {
-                    "type": "string",
-                    "example": "Portaria Principal"
-                },
-                "quantidade": {
-                    "type": "integer",
-                    "example": 3
                 }
             }
         },

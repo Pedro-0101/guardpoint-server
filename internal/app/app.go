@@ -78,7 +78,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 	usuarioHandler := handler.NewUsuarioHandler(usuarioService)
 
 	dashboardRepo := repository.NewDashboardRepository(pool)
-	dashboardService := service.NewDashboardService(dashboardRepo, alertaRepo)
+	dashboardService := service.NewDashboardService(dashboardRepo)
 	dashboardHandler := handler.NewDashboardHandler(dashboardService)
 
 	alertaHandler := handler.NewAlertaHandler(alertaService)
@@ -132,7 +132,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 
 			r.Group(func(r chi.Router) {
 				r.Use(middleware.RequireRole("admin", "supervisor"))
-				r.Get("/dashboard/summary", dashboardHandler.Summary)
+				r.Get("/dashboard/table", dashboardHandler.Table)
 			})
 
 			r.Route("/postos", func(r chi.Router) {

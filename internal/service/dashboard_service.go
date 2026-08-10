@@ -12,60 +12,38 @@ import (
 
 type DashboardService struct {
 	dashboardRepo *repository.DashboardRepository
-	alertaRepo    *repository.AlertaRepository
 }
 
-func NewDashboardService(dashboardRepo *repository.DashboardRepository, alertaRepo *repository.AlertaRepository) *DashboardService {
-	return &DashboardService{dashboardRepo: dashboardRepo, alertaRepo: alertaRepo}
+func NewDashboardService(dashboardRepo *repository.DashboardRepository) *DashboardService {
+	return &DashboardService{dashboardRepo: dashboardRepo}
 }
 
-func (s *DashboardService) Summary(ctx context.Context, empresaID string) (*model.DashboardSummary, error) {
+func (s *DashboardService) Table(ctx context.Context, empresaID string, limit, offset int) (*model.DashboardTableResponse, error) {
 	parsedEmpresaID, err := uuid.Parse(empresaID)
 	if err != nil {
 		return nil, fmt.Errorf("empresa_id invalido: %w", err)
 	}
 
-	summary := &model.DashboardSummary{}
-
-	turnosAtivos, err := s.dashboardRepo.CountTurnosAtivos(ctx, parsedEmpresaID)
-	if err == nil {
-		summary.TurnosAtivos = turnosAtivos
+	if limit <= 0 || limit > 100 {
+		limit = 20
+	}
+	if offset < 0 {
+		offset = 0
 	}
 
-	checkinsUltimaHora, err := s.dashboardRepo.CountCheckinsUltimaHora(ctx, parsedEmpresaID)
-	if err == nil {
-		summary.CheckinsUltimaHora = checkinsUltimaHora
+	linhas, total, err := s.dashboardRepo.ListTurnosDetalhados(ctx, parsedEmpresaID, limit, offset)
+	if err != nil {
+		return nil, fmt.Errorf("listar turnos detalhados: %w", err)
 	}
 
-	desviosRota, err := s.dashboardRepo.CountDesviosRota(ctx, parsedEmpresaID)
-	if err == nil {
-		summary.DesviosRota = desviosRota
+	if linhas == nil {
+		linhas = []model.DashboardLinha{}
 	}
 
-	alertasAbertos, err := s.alertaRepo.CountAbertos(ctx, parsedEmpresaID)
-	if err == nil {
-		summary.AlertasAbertos = alertasAbertos
-	}
-
-	recentes, err := s.alertaRepo.ListRecentes(ctx, parsedEmpresaID, 5)
-	if err == nil {
-		summary.AlertasRecentes = recentes
-	}
-
-	turnosPorPosto, err := s.dashboardRepo.AggregateTurnosPorPosto(ctx, parsedEmpresaID)
-	if err == nil {
-		summary.TurnosPorPosto = turnosPorPosto
-	}
-
-	summary.AlertasRecentes = safeSlice(summary.AlertasRecentes, func() []model.AlertaRecente { return []model.AlertaRecente{} })
-	summary.TurnosPorPosto = safeSlice(summary.TurnosPorPosto, func() []model.TurnoPorPosto { return []model.TurnoPorPosto{} })
-
-	return summary, nil
-}
-
-func safeSlice[T any](s []T, fallback func() []T) []T {
-	if s == nil {
-		return fallback()
-	}
-	return s
+	return &model.DashboardTableResponse{
+		Linhas: linhas,
+		Total:  total,
+		Limit:  limit,
+		Offset: offset,
+	}, nil
 }

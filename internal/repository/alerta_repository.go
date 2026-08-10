@@ -141,55 +141,6 @@ func (r *AlertaRepository) UpdateStatus(ctx context.Context, id, empresaID uuid.
 	return nil
 }
 
-func (r *AlertaRepository) CountAbertos(ctx context.Context, empresaID uuid.UUID) (int, error) {
-	var count int
-	err := r.db.QueryRow(ctx, `
-		SELECT COUNT(*) FROM alertas
-		WHERE empresa_id = $1 AND status = 'aberto'
-	`, empresaID).Scan(&count)
-	if err != nil {
-		return 0, fmt.Errorf("contar alertas abertos: %w", err)
-	}
-	return count, nil
-}
-
-func (r *AlertaRepository) ListRecentes(ctx context.Context, empresaID uuid.UUID, limit int) ([]model.AlertaRecente, error) {
-	query := `
-		SELECT id, tipo, turno_id, posto_id, COALESCE(mensagem, ''), created_at
-		FROM alertas
-		WHERE empresa_id = $1 AND status = 'aberto'
-		ORDER BY created_at DESC
-		LIMIT $2
-	`
-	rows, err := r.db.Query(ctx, query, empresaID, limit)
-	if err != nil {
-		return nil, fmt.Errorf("listar alertas recentes: %w", err)
-	}
-	defer rows.Close()
-
-	var alertas []model.AlertaRecente
-	for rows.Next() {
-		var ar model.AlertaRecente
-		var id uuid.UUID
-		var turnoID *uuid.UUID
-		var postoID *uuid.UUID
-		var createdAt time.Time
-		if err := rows.Scan(&id, &ar.Tipo, &turnoID, &postoID, &ar.Mensagem, &createdAt); err != nil {
-			return nil, fmt.Errorf("scan alerta recente: %w", err)
-		}
-		ar.ID = id.String()
-		if turnoID != nil {
-			ar.TurnoID = turnoID.String()
-		}
-		if postoID != nil {
-			ar.PostoID = postoID.String()
-		}
-		ar.CreatedAt = createdAt.Format(time.RFC3339)
-		alertas = append(alertas, ar)
-	}
-	return alertas, rows.Err()
-}
-
 func (r *AlertaRepository) CountByTurnoETipo(ctx context.Context, turnoID uuid.UUID, tipo string) (int, error) {
 	var count int
 	err := r.db.QueryRow(ctx, `
