@@ -147,10 +147,11 @@ func (s *TurnoService) resolverSenha(ctx context.Context, empresaID, usuarioID u
 	return senha, nil
 }
 
-// aplicarConsequenciaSenha resolve o PIN e, se nao for 'ok', marca o turno como
-// critico e dispara o alerta via AlertaService.CreateAlertaPorSenha. Erros de
-// resolucao (PIN invalido/vigia sem PINs) sao SEMPRE ENGOLIDOS aqui (so logados) --
-// a acao chamadora ja foi ou sera persistida com sucesso independente do resultado.
+// aplicarConsequenciaSenha resolve o PIN e, se nao for 'ok', dispara o alerta
+// via AlertaService.CreateAlertaImediato. O status do turno NAO e alterado --
+// o alerta carrega a urgencia, nao o status visivel ao vigia. Erros de resolucao
+// (PIN invalido/vigia sem PINs) sao SEMPRE ENGOLIDOS aqui (so logados) -- a acao
+// chamadora ja foi ou sera persistida com sucesso independente do resultado.
 // Retorna o *model.SenhaVigia resolvido (ou nil) para popular
 // Checkin.TipoSenha/SenhaVigiaID antes do INSERT.
 func (s *TurnoService) aplicarConsequenciaSenha(ctx context.Context, empresaIDStr string, empresaID, turnoID, usuarioID, postoID uuid.UUID, codigo string) *model.SenhaVigia {
@@ -163,8 +164,6 @@ func (s *TurnoService) aplicarConsequenciaSenha(ctx context.Context, empresaIDSt
 		return senha
 	}
 
-	_ = s.turnoRepo.UpdateStatus(ctx, turnoID, empresaID, "critico", nil)
-
 	tipoAlerta := "senha_emergencia"
 	mensagem := "Senha de emergencia detectada"
 	if senha.Tipo == "customizada" {
@@ -175,7 +174,6 @@ func (s *TurnoService) aplicarConsequenciaSenha(ctx context.Context, empresaIDSt
 	if _, err := s.alertaService.CreateAlertaImediato(ctx, empresaID, turnoID, postoID, tipoAlerta, mensagem, senha.NivelEscalonamentoID); err != nil {
 		slog.Error("criar alerta de senha", "error", err, "turno_id", turnoID)
 	}
-	s.hub.Broadcast(empresaIDStr, ws.NewStatusChangeEvent(turnoID.String(), "critico"))
 	return senha
 }
 
@@ -306,10 +304,6 @@ func (s *TurnoService) Iniciar(ctx context.Context, userID, empresaID string, re
 		if _, err := s.alertaService.CreateAlerta(ctx, parsedEmpresaID, turno.ID, turno.PostoID, "desvio_rota", "Vigia iniciou turno fora da cerca do posto"); err != nil {
 			slog.Error("criar alerta de fora de cerca", "error", err, "turno_id", turno.ID)
 		}
-	}
-
-	if senha != nil && senha.Tipo != "ok" {
-		turno.Status = "critico"
 	}
 
 	dl, tipo := calcularProximoDeadline(now, intervaloMin, fimPrevisto)
