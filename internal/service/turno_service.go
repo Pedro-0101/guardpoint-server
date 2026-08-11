@@ -21,7 +21,8 @@ import (
 var (
 	ErrTurnoJaAtivo              = errors.New("usuario ja possui um turno em andamento")
 	ErrTurnoNaoEncontrado        = errors.New("turno nao encontrado")
-	ErrTurnoJaFinalizado         = errors.New("turno ja finalizado")
+	ErrTurnoJaFinalizado              = errors.New("turno ja finalizado")
+	ErrTurnoFinalizacaoAntecipada     = errors.New("finalizacao antes do horario previsto")
 	ErrPostoNaoEncontrado        = errors.New("posto nao encontrado")
 	ErrTurnoNaoPertenceAoUsuario = errors.New("turno nao pertence ao usuario")
 	ErrDeviceNaoRegistrado       = errors.New("device nao registrado para biometric login")
@@ -511,6 +512,10 @@ func (s *TurnoService) Finalizar(ctx context.Context, userID, empresaID string, 
 	timestampCriacao, err := time.Parse(time.RFC3339, req.Timestamp)
 	if err != nil {
 		timestampCriacao = timeutil.NowBRT()
+	}
+
+	if timestampCriacao.Before(turno.FimPrevisto) {
+		return nil, ErrTurnoFinalizacaoAntecipada
 	}
 
 	flagGeofence := s.calcularGeofence(ctx, turno.PostoID, parsedEmpresaID, req.Latitude, req.Longitude)

@@ -140,7 +140,7 @@ func (h *TurnoHandler) Checkin(w http.ResponseWriter, r *http.Request) {
 // @Tags         turnos
 // @Param        request body model.FinalizarTurnoRequest true "Dados de finalizacao"
 // @Success      200 {object} model.Turno
-// @Failure      400 {object} model.ErrorResponse
+// @Failure      400 {object} model.ErrorResponse "json invalido ou finalizacao antes do horario previsto"
 // @Failure      403 {object} model.ErrorResponse
 // @Failure      404 {object} model.ErrorResponse
 // @Failure      409 {object} model.ErrorResponse
@@ -168,6 +168,10 @@ func (h *TurnoHandler) Finalizar(w http.ResponseWriter, r *http.Request) {
 		}
 		if errors.Is(err, service.ErrTurnoJaFinalizado) {
 			writeError(w, http.StatusConflict, "turno ja finalizado")
+			return
+		}
+		if errors.Is(err, service.ErrTurnoFinalizacaoAntecipada) {
+			writeError(w, http.StatusBadRequest, "finalizacao antes do horario previsto")
 			return
 		}
 		if errors.Is(err, service.ErrTurnoNaoPertenceAoUsuario) {
