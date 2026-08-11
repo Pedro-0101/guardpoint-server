@@ -30,6 +30,7 @@ const (
 	tipoSenhaOK          = "ok"
 	tipoSenhaEmergencia  = "emergencia"
 	tipoSenhaCustomizada = "customizada"
+	tipoSenhaInicio      = "inicio"
 )
 
 type SenhaVigiaService struct {

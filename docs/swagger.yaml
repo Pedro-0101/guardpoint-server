@@ -165,7 +165,7 @@ definitions:
       timestamp_recebimento:
         type: string
       tipo_senha:
-        description: ok | emergencia | customizada (nil p/ sabotagem)
+        description: inicio | ok | emergencia | customizada (nil p/ sabotagem)
         type: string
       turno_id:
         type: string
@@ -2517,7 +2517,7 @@ paths:
           schema:
             $ref: '#/definitions/model.Turno'
         "400":
-          description: Bad Request
+          description: json invalido ou finalizacao antes do horario previsto
           schema:
             $ref: '#/definitions/model.ErrorResponse'
         "403":

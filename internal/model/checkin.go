@@ -15,7 +15,7 @@ type Checkin struct {
 	TimestampCriacao     time.Time  `json:"timestamp_criacao"`
 	TimestampRecebimento time.Time  `json:"timestamp_recebimento"`
 	Evento               string     `json:"evento"`               // inicio | checkin | finalizacao | sabotagem
-	TipoSenha            *string    `json:"tipo_senha,omitempty"` // ok | emergencia | customizada (nil p/ sabotagem)
+	TipoSenha            *string    `json:"tipo_senha,omitempty"` // inicio | ok | emergencia | customizada (nil p/ sabotagem)
 	SenhaVigiaID         *uuid.UUID `json:"senha_vigia_id,omitempty"`
 	FlagGeofence         *string    `json:"flag_geofence,omitempty"`
 	OrigemRede           string     `json:"origem_rede"`

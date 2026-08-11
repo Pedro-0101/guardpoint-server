@@ -290,9 +290,9 @@ func (s *TurnoService) Iniciar(ctx context.Context, userID, empresaID string, re
 		FlagGeofence:     flagGeofence,
 		OrigemRede:       "online",
 	}
+	tipoSenha := tipoSenhaInicio
+	checkinInicio.TipoSenha = &tipoSenha
 	if senha != nil {
-		tipoSenha := senha.Tipo
-		checkinInicio.TipoSenha = &tipoSenha
 		senhaID := senha.ID
 		checkinInicio.SenhaVigiaID = &senhaID
 	}

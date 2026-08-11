@@ -1882,7 +1882,7 @@ const docTemplate = `{
                         }
                     },
                     "400": {
-                        "description": "Bad Request",
+                        "description": "json invalido ou finalizacao antes do horario previsto",
                         "schema": {
                             "$ref": "#/definitions/model.ErrorResponse"
                         }
@@ -2906,7 +2906,7 @@ const docTemplate = `{
                     "type": "string"
                 },
                 "tipo_senha": {
-                    "description": "ok | emergencia | customizada (nil p/ sabotagem)",
+                    "description": "inicio | ok | emergencia | customizada (nil p/ sabotagem)",
                     "type": "string"
                 },
                 "turno_id": {
