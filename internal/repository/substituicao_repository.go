@@ -262,6 +262,45 @@ type SubstituicaoSemTurno struct {
 	ToleranciaMin int
 }
 
+// FindSubstituicoesConcluidasSemTurno busca substituicoes cujo turno ja passou
+// do horario de termino e nenhum vigia iniciou. Usado pelo worker de nao-realizado.
+func (r *SubstituicaoRepository) FindSubstituicoesConcluidasSemTurno(ctx context.Context, dataVerificacao time.Time, horaAgora time.Time) ([]SubstituicaoSemTurno, error) {
+	query := `
+		SELECT s.id, s.empresa_id, s.usuario_id, s.posto_id, s.hora_inicio::text, s.hora_fim::text, s.tolerancia_min
+		FROM substituicoes s
+		WHERE s.ativo = true
+		  AND s.data_inicio <= $1::date AND s.data_fim >= $1::date
+		  AND ($1::date + s.hora_inicio) < ($1::date + $2::time)
+		  AND ($1::date + s.hora_fim +
+		       CASE WHEN s.hora_fim <= s.hora_inicio THEN interval '1 day' ELSE interval '0' END
+		      ) < ($1::date + $2::time)
+		  AND NOT EXISTS (
+		      SELECT 1 FROM turnos t
+		      WHERE t.usuario_id = s.usuario_id
+		        AND t.posto_id = s.posto_id
+		        AND t.empresa_id = s.empresa_id
+		        AND t.inicio_previsto::date = $1::date
+		  )
+	`
+	rows, err := r.db.Query(ctx, query,
+		dataVerificacao.Format("2006-01-02"), horaAgora.Format("15:04:05"),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("buscar substituicoes concluidas sem turno: %w", err)
+	}
+	defer rows.Close()
+
+	var result []SubstituicaoSemTurno
+	for rows.Next() {
+		var s SubstituicaoSemTurno
+		if err := rows.Scan(&s.ID, &s.EmpresaID, &s.UsuarioID, &s.PostoID, &s.HoraInicio, &s.HoraFim, &s.ToleranciaMin); err != nil {
+			return nil, fmt.Errorf("scan substituicao concluida sem turno: %w", err)
+		}
+		result = append(result, s)
+	}
+	return result, rows.Err()
+}
+
 func (r *SubstituicaoRepository) FindSubstituicoesSemTurno(ctx context.Context, horaCorte time.Time) ([]SubstituicaoSemTurno, error) {
 	query := `
 		SELECT s.id, s.empresa_id, s.usuario_id, s.posto_id, s.hora_inicio::text, s.hora_fim::text, s.tolerancia_min

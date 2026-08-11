@@ -1737,7 +1737,7 @@ const docTemplate = `{
                 "parameters": [
                     {
                         "type": "string",
-                        "description": "Status (agendado,em_andamento,pausado,critico,finalizado,atrasado) - multiplos separados por virgula",
+                        "description": "Status (agendado,em_andamento,pausado,critico,finalizado,atrasado,nao_realizado) - multiplos separados por virgula",
                         "name": "status",
                         "in": "query"
                     },

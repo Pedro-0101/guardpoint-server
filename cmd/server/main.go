@@ -88,6 +88,7 @@ func main() {
 
 	go a.TimeoutChecker.Run(workerCtx)
 	go a.AlertDispatcher.Run(workerCtx)
+	go a.NaoRealizadoChecker.Run(workerCtx)
 
 	srv := &http.Server{
 		Addr:         ":" + cfg.Port,

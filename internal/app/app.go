@@ -34,9 +34,10 @@ type App struct {
 	JWTService      *auth.JWTService
 	AlertaService   *service.AlertaService
 	TurnoService    *service.TurnoService
-	TimeoutChecker  *worker.TimeoutChecker
-	AlertDispatcher *worker.AlertDispatcher
-	SyncReconciler  *worker.SyncReconciler
+	TimeoutChecker     *worker.TimeoutChecker
+	AlertDispatcher    *worker.AlertDispatcher
+	SyncReconciler     *worker.SyncReconciler
+	NaoRealizadoChecker *worker.NaoRealizadoChecker
 	EmpresaRepo     *repository.EmpresaRepository
 	UserRepo        *repository.UserRepository
 }
@@ -95,6 +96,7 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 
 	timeoutChecker := worker.NewTimeoutChecker(pool, alertaService, configEscalonamentoRepo, escalaRepo, substituicaoRepo)
 	alertDispatcher := worker.NewAlertDispatcher(alertaService.AlertChannel())
+	naoRealizadoChecker := worker.NewNaoRealizadoChecker(pool, escalaRepo, substituicaoRepo)
 
 	r := chi.NewRouter()
 	r.Use(chimw.RequestID)
@@ -297,9 +299,10 @@ func New(cfg *config.Config, pool *pgxpool.Pool) *App {
 		JWTService:      jwtService,
 		AlertaService:   alertaService,
 		TurnoService:    turnoService,
-		TimeoutChecker:  timeoutChecker,
-		AlertDispatcher: alertDispatcher,
-		SyncReconciler:  syncReconciler,
+		TimeoutChecker:     timeoutChecker,
+		AlertDispatcher:    alertDispatcher,
+		SyncReconciler:     syncReconciler,
+		NaoRealizadoChecker: naoRealizadoChecker,
 		EmpresaRepo:     empresaRepo,
 		UserRepo:        userRepo,
 	}

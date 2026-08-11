@@ -408,3 +408,42 @@ type EscalaSemTurno struct {
 	HoraFim       string
 	ToleranciaMin int
 }
+
+// FindEscalasConcluidasSemTurno busca escalas cujo turno ja passou do horario
+// de termino e nenhum vigia iniciou. Usado pelo worker de nao-realizado.
+func (r *EscalaRepository) FindEscalasConcluidasSemTurno(ctx context.Context, dataVerificacao time.Time, horaAgora time.Time) ([]EscalaSemTurno, error) {
+	query := `
+		SELECT e.id, e.empresa_id, e.usuario_id, e.posto_id, e.hora_inicio::text, e.hora_fim::text, e.tolerancia_min
+		FROM escalas e
+		WHERE e.ativo = true
+		  AND e.dia_semana_inicio = $1
+		  AND ($2::date + e.hora_inicio) < ($2::date + $3::time)
+		  AND ($2::date + e.hora_fim +
+		       CASE WHEN e.hora_fim <= e.hora_inicio THEN interval '1 day' ELSE interval '0' END
+		      ) < ($2::date + $3::time)
+		  AND NOT EXISTS (
+		      SELECT 1 FROM turnos t
+		      WHERE t.usuario_id = e.usuario_id
+		        AND t.posto_id = e.posto_id
+		        AND t.empresa_id = e.empresa_id
+		        AND t.inicio_previsto::date = $2::date
+		  )
+	`
+	rows, err := r.db.Query(ctx, query,
+		int16(dataVerificacao.Weekday()), dataVerificacao.Format("2006-01-02"), horaAgora.Format("15:04:05"),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("buscar escalas concluidas sem turno: %w", err)
+	}
+	defer rows.Close()
+
+	var result []EscalaSemTurno
+	for rows.Next() {
+		var e EscalaSemTurno
+		if err := rows.Scan(&e.ID, &e.EmpresaID, &e.UsuarioID, &e.PostoID, &e.HoraInicio, &e.HoraFim, &e.ToleranciaMin); err != nil {
+			return nil, fmt.Errorf("scan escala concluida sem turno: %w", err)
+		}
+		result = append(result, e)
+	}
+	return result, rows.Err()
+}
